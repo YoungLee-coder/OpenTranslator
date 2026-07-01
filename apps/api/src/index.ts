@@ -42,7 +42,7 @@ app.get("/api/ping", (c) =>
 );
 
 // Database initializer — guarded by JWT_SECRET. Idempotent, safe to call
-// repeatedly. Used by the GitHub Action after deploy, or manually once.
+// repeatedly. Call it manually once after first deploy to create tables.
 app.get("/api/init/:secret", async (c) => {
   const secret = c.req.param("secret");
   if (!c.env.JWT_SECRET || secret !== c.env.JWT_SECRET) {
@@ -62,6 +62,12 @@ app.route("/api/admin/settings", adminSettingsRoute);
 app.route("/api/admin/features", adminFeaturesRoute);
 app.route("/api/admin/glossary", adminGlossaryRoute);
 app.route("/api/admin/usage", adminUsageRoute);
+
+// Catch-all: anything that isn't an /api route is served as a static asset
+// from the bundled frontend (SPA). With run_worker_first = true, the Worker
+// runs first; non-API paths fall through to the ASSETS binding, which handles
+// client-side routing via single-page-application fallback.
+app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
 export default app;
 export { RateLimiter };

@@ -4,6 +4,7 @@ export interface AppBindings {
   DB: D1Database;
   SETTINGS_KV: KVNamespace;
   RATE_LIMITER: DurableObjectNamespace;
+  ASSETS: Fetcher;
   JWT_SECRET: string;
   ENCRYPTION_KEY: string;
   ENV: string;

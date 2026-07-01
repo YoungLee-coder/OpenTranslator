@@ -2,6 +2,14 @@ name = "opentranslator-api"
 main = "src/index.ts"
 compatibility_date = "2025-11-01"
 
+# Static assets — 前端打包产物（pnpm --filter @opentranslator/web build 输出到 ./dist）。
+# 同一个 Worker 既服务 SPA 又处理 /api/*，一次部署全搞定，同源无需 CORS。
+[assets]
+binding = "ASSETS"
+directory = "./dist"
+not_found_handling = "single-page-application"
+run_worker_first = true
+
 # D1 database — 在 Dashboard 创建后，到 Worker → Settings → Bindings 里绑定，
 # binding 名必须填 "DB"（与代码 env.DB 对应），无需在此手填 database_id。
 #[[d1_databases]]
@@ -25,8 +33,8 @@ new_classes = ["RateLimiter"]
 
 [vars]
 ENV = "development"
-# ORIGINS = "https://your-pages-domain.pages.dev"   # 逗号分隔的允许跨域来源；不填则默认仅允许 localhost
+# ORIGINS = "https://your-domain.com"   # 跨域来源白名单（逗号分隔）；同源部署时无需填写
 
 # Secrets — 在 Dashboard → Worker → Settings → Variables and Secrets 添加：
-#   JWT_SECRET       （随机字符串，32 位以上）
+#   JWT_SECRET       （随机字符串，32 位以上，同时作为 /api/init 的访问凭证）
 #   ENCRYPTION_KEY   （随机字符串，32 位以上，务必备份，丢了等于所有供应商密钥作废）

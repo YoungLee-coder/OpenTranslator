@@ -1,6 +1,0 @@
-name = "opentranslator-web"
-pages_build_output_dir = "dist"
-compatibility_date = "2025-11-01"
-
-# Build-time env (e.g. VITE_API_BASE_URL) is provided via shell / .env at build time,
-# not here — [vars] only affects Pages Functions runtime, not Vite build.
