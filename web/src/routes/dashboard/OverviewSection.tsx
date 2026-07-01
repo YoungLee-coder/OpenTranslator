@@ -1,7 +1,20 @@
 import { useEffect, useState } from "react";
 import type { UsageSummary } from "@opentranslator/shared-types";
-import { apiGet } from "../../lib/api-client";
-import { ApiError } from "../../lib/api-client";
+import { apiGet, ApiError } from "@/lib/api-client";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export function OverviewSection() {
   const [usage, setUsage] = useState<UsageSummary | null>(null);
@@ -22,44 +35,68 @@ export function OverviewSection() {
   }, []);
 
   return (
-    <section className="panel">
-      <h2>用量概览</h2>
-      {error && <p className="error-text">{error}</p>}
-      {usage ? (
-        <div className="stat-grid">
-          <div className="stat">
-            <div className="stat__value">{usage.totalRequests}</div>
-            <div className="stat__label">总请求数</div>
-          </div>
-          <div className="stat">
-            <div className="stat__value">{usage.totalChars.toLocaleString()}</div>
-            <div className="stat__label">总字符数</div>
-          </div>
-        </div>
-      ) : (
-        !error && <p className="hint">加载中…</p>
-      )}
+    <Card>
+      <CardHeader>
+        <CardTitle>用量概览</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {usage ? (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="rounded-lg border bg-muted/30 p-4">
+                <div className="text-2xl font-semibold tabular-nums">
+                  {usage.totalRequests}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  总请求数
+                </div>
+              </div>
+              <div className="rounded-lg border bg-muted/30 p-4">
+                <div className="text-2xl font-semibold tabular-nums">
+                  {usage.totalChars.toLocaleString()}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  总字符数
+                </div>
+              </div>
+            </div>
 
-      {usage && usage.byProvider.length > 0 && (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>供应商</th>
-              <th>请求数</th>
-              <th>字符数</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usage.byProvider.map((p) => (
-              <tr key={p.providerId}>
-                <td className="mono">{p.providerId.slice(0, 8)}</td>
-                <td>{p.requests}</td>
-                <td>{p.chars.toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </section>
+            {usage.byProvider.length > 0 && (
+              <div className="rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>供应商</TableHead>
+                      <TableHead className="text-right">请求数</TableHead>
+                      <TableHead className="text-right">字符数</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {usage.byProvider.map((p) => (
+                      <TableRow key={p.providerId}>
+                        <TableCell className="font-mono text-xs">
+                          {p.providerId.slice(0, 8)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {p.requests}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {p.chars.toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </>
+        ) : (
+          !error && (
+            <p className="text-sm text-muted-foreground">加载中…</p>
+          )
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -1,7 +1,31 @@
 import { useEffect, useState } from "react";
 import type { GlossaryTerm } from "@opentranslator/shared-types";
-import { ApiError, apiDelete, apiGet, apiPost } from "../lib/api-client";
-import { LANGUAGES, languageName } from "../lib/languages";
+import { apiDelete, apiGet, apiPost, ApiError } from "@/lib/api-client";
+import { LANGUAGES, languageName } from "@/lib/languages";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 /** Glossary feature admin page: CRUD site-wide term pairs. */
 export function GlossaryManager() {
@@ -57,70 +81,93 @@ export function GlossaryManager() {
   }
 
   return (
-    <section className="panel">
-      <h2>术语库</h2>
-      <p className="row__desc" style={{ marginTop: 0 }}>
-        按目标语言维护术语对。翻译时，匹配目标语言的术语会自动注入到提示词中强制替换。
-      </p>
+    <Card>
+      <CardHeader>
+        <CardTitle>术语库</CardTitle>
+        <CardDescription>
+          按目标语言维护术语对。翻译时，匹配目标语言的术语会自动注入到提示词中强制替换。
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <form className="flex flex-wrap gap-2" onSubmit={add}>
+          <Input
+            className="min-w-[140px] flex-1"
+            type="text"
+            placeholder="原文术语"
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+          />
+          <Input
+            className="min-w-[140px] flex-1"
+            type="text"
+            placeholder="目标译法"
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+          />
+          <Select value={targetLang} onValueChange={setTargetLang}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LANGUAGES.filter((l) => l.code !== "auto").map((l) => (
+                <SelectItem key={l.code} value={l.code}>
+                  {l.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button type="submit" disabled={adding}>
+            {adding ? "添加中…" : "添加"}
+          </Button>
+        </form>
 
-      <form className="glossary-form" onSubmit={add}>
-        <input
-          type="text"
-          placeholder="原文术语"
-          value={source}
-          onChange={(e) => setSource(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="目标译法"
-          value={target}
-          onChange={(e) => setTarget(e.target.value)}
-        />
-        <select value={targetLang} onChange={(e) => setTargetLang(e.target.value)}>
-          {LANGUAGES.filter((l) => l.code !== "auto").map((l) => (
-            <option key={l.code} value={l.code}>
-              {l.name}
-            </option>
-          ))}
-        </select>
-        <button className="btn btn-primary" type="submit" disabled={adding}>
-          添加
-        </button>
-      </form>
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
-      {error && <p className="error-text">{error}</p>}
-
-      <table className="table">
-        <thead>
-          <tr>
-            <th>原文术语</th>
-            <th>目标译法</th>
-            <th>目标语言</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {terms.length === 0 && (
-            <tr>
-              <td colSpan={4} className="hint">
-                暂无术语。
-              </td>
-            </tr>
-          )}
-          {terms.map((t) => (
-            <tr key={t.id}>
-              <td>{t.source}</td>
-              <td>{t.target}</td>
-              <td className="mono">{languageName(t.targetLang)}</td>
-              <td>
-                <button className="link-btn danger" type="button" onClick={() => remove(t.id)}>
-                  删除
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
+        <div className="rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>原文术语</TableHead>
+                <TableHead>目标译法</TableHead>
+                <TableHead>目标语言</TableHead>
+                <TableHead className="text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {terms.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={4}
+                    className="py-6 text-center text-sm text-muted-foreground"
+                  >
+                    暂无术语。
+                  </TableCell>
+                </TableRow>
+              )}
+              {terms.map((t) => (
+                <TableRow key={t.id}>
+                  <TableCell>{t.source}</TableCell>
+                  <TableCell>{t.target}</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {languageName(t.targetLang)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      type="button"
+                      onClick={() => remove(t.id)}
+                    >
+                      删除
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

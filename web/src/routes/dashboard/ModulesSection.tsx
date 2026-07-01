@@ -1,5 +1,21 @@
 import type { FeatureManifest } from "@opentranslator/shared-types";
-import { apiPut } from "../../lib/api-client";
+import { apiPut } from "@/lib/api-client";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
 
 interface Props {
   features: FeatureManifest[];
@@ -18,38 +34,48 @@ export function ModulesSection({ features, onChanged }: Props) {
   }
 
   return (
-    <section className="panel">
-      <h2>功能模块</h2>
-      <p className="row__desc" style={{ marginTop: 0 }}>
-        启用的模块会出现在控制台导航中。新增模块只需在后端注册 manifest + 前端注册组件。
-      </p>
-      <table className="table">
-        <thead>
-          <tr>
-            <th>模块</th>
-            <th>说明</th>
-            <th>状态</th>
-          </tr>
-        </thead>
-        <tbody>
-          {features.map((f) => (
-            <tr key={f.key}>
-              <td>{f.name}</td>
-              <td className="row__desc">{f.description ?? "—"}</td>
-              <td>
-                <label className="switch">
-                  <input
-                    type="checkbox"
-                    checked={f.enabled}
-                    onChange={() => void toggle(f.key, f.enabled)}
-                  />
-                  <span>{f.enabled ? "已启用" : "已停用"}</span>
-                </label>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle>功能模块</CardTitle>
+        <CardDescription>
+          启用的模块会出现在控制台导航中。新增模块只需在后端注册 manifest +
+          前端注册组件。
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>模块</TableHead>
+                <TableHead>说明</TableHead>
+                <TableHead>状态</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {features.map((f) => (
+                <TableRow key={f.key}>
+                  <TableCell className="font-medium">{f.name}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {f.description ?? "—"}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={f.enabled}
+                        onCheckedChange={() => void toggle(f.key, f.enabled)}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {f.enabled ? "已启用" : "已停用"}
+                      </span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

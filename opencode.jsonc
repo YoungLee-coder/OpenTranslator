@@ -1,0 +1,37 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // Project instructions — shared knowledge in .ai/ directory
+  "instructions": [
+    ".ai/project.md",
+    ".ai/architecture.md",
+    ".ai/coding-style.md",
+    ".ai/workflow.md",
+    ".ai/testing.md",
+    ".ai/security.md"
+  ],
+  // {{MODEL_CONFIG: uncomment and fill if you want to pin a model}}
+  // "model": "anthropic/claude-sonnet-4-5",
+  // {{CUSTOM_AGENTS: uncomment and fill if you want custom agents}}
+  // "agent": {
+  //   "code-reviewer": {
+  //     "description": "Reviews code for best practices",
+  //     "model": "anthropic/claude-sonnet-4-5",
+  //     "prompt": "You are a code reviewer…",
+  //     "tools": { "write": false, "edit": false }
+  //   }
+  // },
+  // {{MCP_SERVERS: uncomment and fill if you want MCP integrations}}
+  // "mcp": {
+  //   "github": {
+  //     "type": "remote",
+  //     "url": "https://github.com/mcp",
+  //     "enabled": true
+  //   }
+  // },
+  // {{FORMATTER: uncomment and fill if you want opencode's built-in formatter}}
+  // "formatter": true,
+  // {{LSP: uncomment and fill if you want LSP support}}
+  // "lsp": true,
+  // Add provider config, permissions, etc. per project needs.
+  // See https://opencode.ai/docs/config for the full schema.
+}

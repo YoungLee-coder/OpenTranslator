@@ -13,9 +13,10 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": ["vite/client"],
+    "types": ["vite/client", "node"],
     "paths": {
-      "@opentranslator/shared-types": ["../shared-types/index.ts"]
+      "@opentranslator/shared-types": ["../shared-types/index.ts"],
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src", "vite.config.ts"]

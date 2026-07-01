@@ -1,13 +1,21 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import type { FeatureManifest } from "@opentranslator/shared-types";
-import { useAuth } from "../../lib/auth";
-import { apiGet } from "../../lib/api-client";
-import { featureComponents } from "../../features/registry";
+import { useAuth } from "@/lib/auth";
+import { apiGet } from "@/lib/api-client";
+import { featureComponents } from "@/features/registry";
 import { OverviewSection } from "./OverviewSection";
 import { ProvidersSection } from "./ProvidersSection";
 import { SettingsSection } from "./SettingsSection";
 import { ModulesSection } from "./ModulesSection";
+import { Button } from "@/components/ui/button";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 interface SystemTab {
   key: string;
@@ -28,7 +36,9 @@ export function DashboardPage() {
 
   async function refreshFeatures() {
     try {
-      const res = await apiGet<{ features: FeatureManifest[] }>("/api/admin/features");
+      const res = await apiGet<{ features: FeatureManifest[] }>(
+        "/api/admin/features",
+      );
       setFeatures(res.features);
     } catch {
       // non-fatal: nav falls back to system tabs only
@@ -39,7 +49,14 @@ export function DashboardPage() {
     void refreshFeatures();
   }, []);
 
-  if (loading) return <div className="page">加载中…</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" />
+        加载中…
+      </div>
+    );
+  }
   if (!user) return <Navigate to="/login" replace />;
 
   const enabledFeatures = features.filter((f) => f.enabled);
@@ -51,42 +68,54 @@ export function DashboardPage() {
   const isSystemTab = SYSTEM_TABS.some((t) => t.key === tab);
 
   return (
-    <div className="page dashboard">
-      <div className="dashboard__head">
-        <h1>控制台</h1>
-        <div className="dashboard__user">
-          <span>{user.email}</span>
-          <button className="link-btn" onClick={() => void logout()} type="button">
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold tracking-tight">控制台</h1>
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <span className="hidden sm:inline">{user.email}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            type="button"
+            onClick={() => void logout()}
+          >
             退出
-          </button>
+          </Button>
         </div>
       </div>
 
-      <nav className="tabs">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            className={tab === t.key ? "tab active" : "tab"}
-            onClick={() => setTab(t.key)}
-            type="button"
-          >
-            {t.name}
-          </button>
-        ))}
-      </nav>
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="max-w-full overflow-x-auto">
+          {tabs.map((t) => (
+            <TabsTrigger key={t.key} value={t.key}>
+              {t.name}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      <div className="dashboard__body">
-        {isSystemTab && tab === "overview" && <OverviewSection />}
-        {isSystemTab && tab === "providers" && <ProvidersSection />}
-        {isSystemTab && tab === "modules" && (
+        <TabsContent value="overview">
+          <OverviewSection />
+        </TabsContent>
+        <TabsContent value="providers">
+          <ProvidersSection />
+        </TabsContent>
+        <TabsContent value="modules">
           <ModulesSection features={features} onChanged={refreshFeatures} />
-        )}
-        {isSystemTab && tab === "settings" && <SettingsSection />}
-        {!isSystemTab && activeFeature && (() => {
-          const FeaturePage = activeFeature;
-          return <FeaturePage />;
-        })()}
-      </div>
+        </TabsContent>
+        <TabsContent value="settings">
+          <SettingsSection />
+        </TabsContent>
+        {!isSystemTab && activeFeature
+          ? (() => {
+              const FeaturePage = activeFeature;
+              return (
+                <TabsContent value={tab}>
+                  <FeaturePage />
+                </TabsContent>
+              );
+            })()
+          : null}
+      </Tabs>
     </div>
   );
 }

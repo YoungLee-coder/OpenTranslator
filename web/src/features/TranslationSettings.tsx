@@ -1,6 +1,23 @@
 import { useEffect, useState } from "react";
 import type { ProviderRecord } from "@opentranslator/shared-types";
-import { ApiError, apiGet, apiPut } from "../lib/api-client";
+import { apiGet, apiPut, ApiError } from "@/lib/api-client";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 /** Translate feature admin page: pick which enabled provider serves public use. */
 export function TranslationSettings() {
@@ -10,7 +27,9 @@ export function TranslationSettings() {
 
   async function load() {
     try {
-      const res = await apiGet<{ providers: ProviderRecord[] }>("/api/admin/providers");
+      const res = await apiGet<{ providers: ProviderRecord[] }>(
+        "/api/admin/providers",
+      );
       setProviders(res.providers.filter((p) => p.enabled));
       setError(null);
     } catch (e) {
@@ -35,44 +54,65 @@ export function TranslationSettings() {
   }
 
   return (
-    <section className="panel">
-      <h2>翻译设置</h2>
-      <p className="row__desc" style={{ marginTop: 0 }}>
-        选择对外公开访问时默认使用的供应商。匿名访客的翻译请求会路由到此供应商。
-      </p>
-      {error && <p className="error-text">{error}</p>}
-      {providers.length === 0 ? (
-        <p className="hint">暂无已启用的供应商，请先在「供应商」中添加。</p>
-      ) : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>名称</th>
-              <th>类型</th>
-              <th>模型</th>
-              <th>公开默认</th>
-            </tr>
-          </thead>
-          <tbody>
-            {providers.map((p) => (
-              <tr key={p.id}>
-                <td>{p.displayName}</td>
-                <td className="mono">{p.type}</td>
-                <td className="mono">{p.defaultModel ?? "—"}</td>
-                <td>
-                  <input
-                    type="radio"
-                    name="public-default"
-                    checked={p.isPublicDefault}
-                    onChange={() => void setDefault(p.id)}
-                    disabled={savingId !== null}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle>翻译设置</CardTitle>
+        <CardDescription>
+          选择对外公开访问时默认使用的供应商。匿名访客的翻译请求会路由到此供应商。
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {providers.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            暂无已启用的供应商，请先在「供应商」中添加。
+          </p>
+        ) : (
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>名称</TableHead>
+                  <TableHead>类型</TableHead>
+                  <TableHead>模型</TableHead>
+                  <TableHead className="text-right">公开默认</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {providers.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">
+                      {p.displayName}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {p.type}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {p.defaultModel ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {p.isPublicDefault ? (
+                        <Badge variant="accent">默认</Badge>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7"
+                          type="button"
+                          disabled={savingId !== null}
+                          onClick={() => void setDefault(p.id)}
+                        >
+                          设为默认
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

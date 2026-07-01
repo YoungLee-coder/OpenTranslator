@@ -1,8 +1,19 @@
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import type { AuthUser } from "@opentranslator/shared-types";
-import { ApiError, apiPost } from "../../lib/api-client";
-import { useAuth } from "../../lib/auth";
+import { ApiError, apiPost } from "@/lib/api-client";
+import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export function LoginPage() {
   const { user, loading, refresh } = useAuth();
@@ -33,56 +44,71 @@ export function LoginPage() {
     }
   }
 
+  const isLogin = mode === "login";
+
   return (
-    <div className="auth-page">
-      <form className="auth-card" onSubmit={submit}>
-        <h1>{mode === "login" ? "登录控制台" : "初始化管理员"}</h1>
-        <p className="subtitle">
-          {mode === "login"
-            ? "登录以管理供应商与站点设置。"
-            : "首次使用：创建第一个管理员账号。"}
-        </p>
+    <div className="flex justify-center pt-10 md:pt-16">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="text-xl">
+            {isLogin ? "登录控制台" : "初始化管理员"}
+          </CardTitle>
+          <CardDescription>
+            {isLogin
+              ? "登录以管理供应商与站点设置。"
+              : "首次使用：创建第一个管理员账号。"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={submit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="email">邮箱</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                required
+              />
+            </div>
 
-        <label className="field">
-          <span>邮箱</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            required
-          />
-        </label>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="password">
+                密码{!isLogin ? "（至少 8 位）" : ""}
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={isLogin ? "current-password" : "new-password"}
+                required
+                minLength={isLogin ? undefined : 8}
+              />
+            </div>
 
-        <label className="field">
-          <span>密码{mode === "setup" ? "（至少 8 位）" : ""}</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-            required
-            minLength={mode === "setup" ? 8 : undefined}
-          />
-        </label>
+            {error && <p className="text-sm text-destructive">{error}</p>}
 
-        {error && <p className="error-text">{error}</p>}
-
-        <button className="btn btn-primary btn-block" type="submit" disabled={submitting}>
-          {submitting ? "提交中…" : mode === "login" ? "登录" : "创建并登录"}
-        </button>
-
-        <button
-          type="button"
-          className="link-btn"
-          onClick={() => {
-            setMode(mode === "login" ? "setup" : "login");
-            setError(null);
-          }}
-        >
-          {mode === "login" ? "首次使用？初始化管理员 →" : "← 返回登录"}
-        </button>
-      </form>
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? "提交中…" : isLogin ? "登录" : "创建并登录"}
+            </Button>
+          </form>
+        </CardContent>
+        <CardFooter className="justify-center">
+          <Button
+            type="button"
+            variant="link"
+            size="sm"
+            onClick={() => {
+              setMode(isLogin ? "setup" : "login");
+              setError(null);
+            }}
+          >
+            {isLogin ? "首次使用？初始化管理员 →" : "← 返回登录"}
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 }
