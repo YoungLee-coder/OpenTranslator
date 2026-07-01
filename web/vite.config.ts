@@ -2,13 +2,12 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig({
+  root: import.meta.dirname,
   plugins: [react()],
-  // Production build output goes into the API Worker's assets directory so a
-  // single `wrangler deploy` ships both frontend and backend (same-origin, no
-  // CORS, no VITE_API_BASE_URL needed). Local dev is unaffected — Vite serves
-  // from memory and proxies /api to the local Worker.
+  // Production build output goes to the repo root ./dist so a single
+  // `wrangler deploy` ships both frontend (as [assets]) and backend.
   build: {
-    outDir: "../api/dist",
+    outDir: "../dist",
   },
   server: {
     port: 5173,

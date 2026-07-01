@@ -5,16 +5,34 @@
   "type": "module",
   "description": "DeepL-style AI translator — Vite SPA + Hono Worker on Cloudflare",
   "scripts": {
-    "dev:web": "pnpm --filter @opentranslator/web dev",
-    "dev:api": "pnpm --filter @opentranslator/api dev",
-    "dev": "pnpm -r --parallel run dev",
-    "build": "pnpm -r run build",
-    "typecheck": "pnpm -r run typecheck",
-    "db:init": "pnpm --filter @opentranslator/api db:init",
-    "db:init:remote": "pnpm --filter @opentranslator/api db:init:remote"
+    "dev": "pnpm run /dev:api & pnpm run /dev:web",
+    "/dev:api": "wrangler dev",
+    "/dev:web": "vite --config web/vite.config.ts",
+    "build": "vite build --config web/vite.config.ts",
+    "deploy": "pnpm build && wrangler deploy",
+    "typecheck:api": "tsc --noEmit -p tsconfig.json",
+    "typecheck:web": "tsc --noEmit -p web/tsconfig.json",
+    "typecheck": "pnpm run typecheck:api && pnpm run typecheck:web",
+    "db:init": "wrangler d1 execute opentranslator --local --file=src/db/schema.sql",
+    "db:init:remote": "wrangler d1 execute opentranslator --remote --file=src/db/schema.sql"
   },
   "packageManager": "pnpm@11.9.0",
   "engines": {
     "node": ">=22.13"
+  },
+  "dependencies": {
+    "hono": "^4.12.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.0.0",
+    "typescript": "^6.0.0",
+    "vite": "^8.0.0",
+    "wrangler": "^4.0.0"
   }
 }

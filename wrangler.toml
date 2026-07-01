@@ -2,7 +2,7 @@ name = "opentranslator"
 main = "src/index.ts"
 compatibility_date = "2025-11-01"
 
-# Static assets — 前端打包产物（pnpm --filter @opentranslator/web build 输出到 ./dist）。
+# Static assets — 前端打包产物（pnpm build 输出到 ./dist）。
 # 同一个 Worker 既服务 SPA 又处理 /api/*，一次部署全搞定，同源无需 CORS。
 [assets]
 binding = "ASSETS"
@@ -38,8 +38,3 @@ ENV = "development"
 # Secrets — 在 Dashboard → Worker → Settings → Variables and Secrets 添加：
 #   JWT_SECRET       （随机字符串，32 位以上，同时作为 /api/init 的访问凭证）
 #   ENCRYPTION_KEY   （随机字符串，32 位以上，务必备份，丢了等于所有供应商密钥作废）
-
-# 构建命令 — Cloudflare Workers Builds 连接仓库时会自动读这一段，
-# Dashboard 里无需手填 build / deploy 命令。
-[build]
-command = "pnpm --filter @opentranslator/web build"
