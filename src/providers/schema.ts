@@ -25,6 +25,10 @@ export const providerSchemas: Record<ProviderType, ProviderField[]> = {
     { key: "baseUrl", label: "Base URL", type: "text", placeholder: "https://openrouter.ai/api/v1" },
     { key: "defaultModel", label: "Default Model", type: "text", placeholder: "openrouter/auto" },
   ],
+  aihubmix: [
+    { key: "baseUrl", label: "Base URL", type: "text", placeholder: "https://aihubmix.com/v1" },
+    { key: "defaultModel", label: "Default Model", type: "text", placeholder: "gpt-4o-mini" },
+  ],
   azure_openai: [
     { key: "baseUrl", label: "Endpoint", type: "text", required: true },
     { key: "defaultModel", label: "Deployment", type: "text", required: true },

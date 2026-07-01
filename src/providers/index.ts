@@ -3,6 +3,7 @@ import {
   openaiProvider,
   deepseekProvider,
   openrouterProvider,
+  aihubmixProvider,
   customProvider,
 } from "./openai";
 import { claudeProvider } from "./claude";
@@ -16,6 +17,7 @@ import { azureOpenAIProvider } from "./azure-openai";
 providerRegistry.register("openai", openaiProvider);
 providerRegistry.register("deepseek", deepseekProvider);
 providerRegistry.register("openrouter", openrouterProvider);
+providerRegistry.register("aihubmix", aihubmixProvider);
 providerRegistry.register("claude", claudeProvider);
 providerRegistry.register("gemini", geminiProvider);
 providerRegistry.register("azure_openai", azureOpenAIProvider);

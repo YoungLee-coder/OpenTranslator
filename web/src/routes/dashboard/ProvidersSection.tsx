@@ -34,6 +34,7 @@ export function ProvidersSection() {
     gemini: [],
     deepseek: [],
     openrouter: [],
+    aihubmix: [],
     azure_openai: [],
     custom: [],
   });

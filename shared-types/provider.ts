@@ -6,6 +6,7 @@ export type ProviderType =
   | "gemini"
   | "deepseek"
   | "openrouter"
+  | "aihubmix"
   | "azure_openai"
   | "custom";
 

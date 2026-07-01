@@ -133,5 +133,10 @@ export const openrouterProvider = makeOpenAICompat(
   "https://openrouter.ai/api/v1",
   "openrouter/auto",
 );
+export const aihubmixProvider = makeOpenAICompat(
+  "aihubmix",
+  "https://aihubmix.com/v1",
+  "gpt-4o-mini",
+);
 // Generic OpenAI-compatible endpoint — baseUrl is required on the provider row.
 export const customProvider = makeOpenAICompat("custom", "", "");
