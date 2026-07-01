@@ -13,5 +13,8 @@
     "db:init": "pnpm --filter @opentranslator/api db:init",
     "db:init:remote": "pnpm --filter @opentranslator/api db:init:remote"
   },
-  "packageManager": "pnpm@11.9.0"
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22.13"
+  }
 }

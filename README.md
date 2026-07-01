@@ -41,7 +41,7 @@ packages/shared-types    # 前后端共享的 TypeScript 类型定义
 
 ## 前置条件
 
-- Node 20+、pnpm 11+
+- Node 22+（pnpm 11 要求 Node 22.13+）、pnpm 11+
 - Cloudflare 账号（仅部署 / 远程资源时需要；本地开发无需登录）
 
 ## 本地开发
