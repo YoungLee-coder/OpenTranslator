@@ -1,0 +1,17 @@
+{
+  "name": "opentranslator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "DeepL-style AI translator — Vite SPA + Hono Worker on Cloudflare",
+  "scripts": {
+    "dev:web": "pnpm --filter @opentranslator/web dev",
+    "dev:api": "pnpm --filter @opentranslator/api dev",
+    "dev": "pnpm -r --parallel run dev",
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck",
+    "db:init": "pnpm --filter @opentranslator/api db:init",
+    "db:init:remote": "pnpm --filter @opentranslator/api db:init:remote"
+  },
+  "packageManager": "pnpm@11.9.0"
+}

@@ -1,0 +1,30 @@
+name = "opentranslator-api"
+main = "src/index.ts"
+compatibility_date = "2025-11-01"
+
+# D1 database (providers, settings, users, usage logs)
+[[d1_databases]]
+binding = "DB"
+database_name = "opentranslator"
+database_id = "REPLACE_WITH_D1_ID"   # create with: wrangler d1 create opentranslator
+
+# KV namespace (settings cache, translation cache, simple rate counters)
+[[kv_namespaces]]
+binding = "SETTINGS_KV"
+id = "REPLACE_WITH_KV_ID"           # create with: wrangler kv namespace create SETTINGS_KV
+
+# Durable Object: per-IP sliding-window rate limiter
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiter"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["RateLimiter"]
+
+[vars]
+ENV = "development"
+
+# Secrets — set with:
+#   wrangler secret put JWT_SECRET
+#   wrangler secret put ENCRYPTION_KEY
