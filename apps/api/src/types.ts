@@ -7,6 +7,7 @@ export interface AppBindings {
   JWT_SECRET: string;
   ENCRYPTION_KEY: string;
   ENV: string;
+  ORIGINS?: string;
 }
 
 export interface AppVariables {

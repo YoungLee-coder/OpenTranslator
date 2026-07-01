@@ -10,6 +10,7 @@ import adminSettingsRoute from "./routes/admin-settings";
 import adminFeaturesRoute from "./routes/admin-features";
 import adminGlossaryRoute from "./routes/admin-glossary";
 import adminUsageRoute from "./routes/admin-usage";
+import { initDatabase } from "./db/init";
 import { RateLimiter } from "./durable-objects/rate-limiter";
 
 // Side-effect: register every provider adapter into the registry at startup.
@@ -21,8 +22,16 @@ app.use("*", logger());
 app.use(
   "*",
   cors({
-    // Lock down to your production domain before deploy.
-    origin: ["http://localhost:5173", "https://yourdomain.com"],
+    // Allowed origins come from the ORIGINS env var (comma-separated).
+    // Set it in Cloudflare Dashboard → Worker → Settings → Variables.
+    // Falls back to localhost for local dev when ORIGINS is unset.
+    origin: (origin, c) => {
+      const raw = c.env.ORIGINS;
+      const list = raw
+        ? raw.split(",").map((s: string) => s.trim()).filter(Boolean)
+        : ["http://localhost:5173"];
+      return list.includes(origin) ? origin : null;
+    },
     credentials: true,
   }),
 );
@@ -31,6 +40,17 @@ app.use(
 app.get("/api/ping", (c) =>
   c.json({ ok: true, service: "opentranslator-api", env: c.env.ENV }),
 );
+
+// Database initializer — guarded by JWT_SECRET. Idempotent, safe to call
+// repeatedly. Used by the GitHub Action after deploy, or manually once.
+app.get("/api/init/:secret", async (c) => {
+  const secret = c.req.param("secret");
+  if (!c.env.JWT_SECRET || secret !== c.env.JWT_SECRET) {
+    return c.text("Unauthorized", 401);
+  }
+  const result = await initDatabase({ env: c.env });
+  return c.json({ ok: true, applied: result.applied });
+});
 
 app.route("/api/translate", translateRoute);
 app.route("/api/auth", authRoute);

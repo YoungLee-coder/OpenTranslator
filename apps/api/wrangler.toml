@@ -2,18 +2,19 @@ name = "opentranslator-api"
 main = "src/index.ts"
 compatibility_date = "2025-11-01"
 
-# D1 database (providers, settings, users, usage logs)
-[[d1_databases]]
-binding = "DB"
-database_name = "opentranslator"
-database_id = "REPLACE_WITH_D1_ID"   # create with: wrangler d1 create opentranslator
+# D1 database — 在 Dashboard 创建后，到 Worker → Settings → Bindings 里绑定，
+# binding 名必须填 "DB"（与代码 env.DB 对应），无需在此手填 database_id。
+#[[d1_databases]]
+#binding = "DB"
+#database_name = "opentranslator"
+#database_id = ""
 
-# KV namespace (settings cache, translation cache, simple rate counters)
-[[kv_namespaces]]
-binding = "SETTINGS_KV"
-id = "REPLACE_WITH_KV_ID"           # create with: wrangler kv namespace create SETTINGS_KV
+# KV namespace — 同上，在 Dashboard 绑定，binding 名必须填 "SETTINGS_KV"。
+#[[kv_namespaces]]
+#binding = "SETTINGS_KV"
+#id = ""
 
-# Durable Object: per-IP sliding-window rate limiter
+# Durable Object: per-IP sliding-window rate limiter（无需 ID，部署时自动创建）
 [[durable_objects.bindings]]
 name = "RATE_LIMITER"
 class_name = "RateLimiter"
@@ -24,7 +25,8 @@ new_classes = ["RateLimiter"]
 
 [vars]
 ENV = "development"
+# ORIGINS = "https://your-pages-domain.pages.dev"   # 逗号分隔的允许跨域来源；不填则默认仅允许 localhost
 
-# Secrets — set with:
-#   wrangler secret put JWT_SECRET
-#   wrangler secret put ENCRYPTION_KEY
+# Secrets — 在 Dashboard → Worker → Settings → Variables and Secrets 添加：
+#   JWT_SECRET       （随机字符串，32 位以上）
+#   ENCRYPTION_KEY   （随机字符串，32 位以上，务必备份，丢了等于所有供应商密钥作废）

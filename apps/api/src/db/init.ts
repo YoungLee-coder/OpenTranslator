@@ -1,0 +1,149 @@
+/**
+ * Idempotent database initializer.
+ *
+ * 模式参照 cloud-mail：暴露一个 `/api/init/:secret` 接口，用 JWT_SECRET 做访问凭证，
+ * 被调用就在 Worker 里跑建表 + 种子数据 + 增量迁移，全部幂等，可重复执行。
+ *
+ * - 建表用 `CREATE TABLE IF NOT EXISTS`
+ * - 种子数据用 `INSERT OR IGNORE`
+ * - 增量改表（ALTER TABLE）用 try/catch 跳过已存在字段
+ * - 版本化迁移方法逐个执行，失败的不中断后续
+ */
+
+interface InitContext {
+  env: { DB: D1Database; SETTINGS_KV: KVNamespace };
+}
+
+/** 执行单条 SQL，吞掉「已存在」类错误，返回是否真的执行了。 */
+async function runSafe(db: D1Database, sql: string): Promise<boolean> {
+  try {
+    await db.prepare(sql).run();
+    return true;
+  } catch (e) {
+    console.warn(`[init] 跳过：${(e as Error).message}`);
+    return false;
+  }
+}
+
+/** v0.1.0：初始表结构 + 种子数据。 */
+async function v0_1_0({ env }: InitContext): Promise<void> {
+  const db = env.DB;
+
+  await db.batch([
+    db.prepare(`CREATE TABLE IF NOT EXISTS site_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS providers (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      display_name TEXT NOT NULL,
+      encrypted_api_key TEXT NOT NULL,
+      base_url TEXT,
+      default_model TEXT,
+      config_json TEXT,
+      enabled BOOLEAN DEFAULT 1,
+      is_public_default BOOLEAN DEFAULT 0,
+      created_at INTEGER,
+      updated_at INTEGER
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS admin_users (
+      id TEXT PRIMARY KEY,
+      email TEXT UNIQUE,
+      password_hash TEXT,
+      role TEXT DEFAULT 'admin',
+      created_at INTEGER
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS usage_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      provider_id TEXT,
+      char_count INTEGER,
+      is_public_request BOOLEAN,
+      client_ip TEXT,
+      created_at INTEGER
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS feature_modules (
+      key TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      enabled BOOLEAN DEFAULT 1,
+      config_json TEXT,
+      created_at INTEGER
+    )`),
+  ]);
+
+  const now = Math.floor(Date.now() / 1000);
+  await db.batch([
+    db.prepare(
+      `INSERT OR IGNORE INTO site_settings (key, value, updated_at) VALUES
+        ('site_public', 'true', ${now}),
+        ('public_rate_limit_per_minute', '20', ${now}),
+        ('authed_rate_limit_per_minute', '60', ${now}),
+        ('translation_cache_enabled', 'true', ${now})`,
+    ),
+    db.prepare(
+      `INSERT OR IGNORE INTO feature_modules (key, name, enabled, config_json, created_at) VALUES
+        ('translate', '翻译', 1, NULL, ${now}),
+        ('glossary', '术语库', 1, NULL, ${now})`,
+    ),
+  ]);
+}
+
+/** 迁移记录表，记录已执行的版本，避免重复跑。 */
+async function ensureMigrationTable(db: D1Database): Promise<void> {
+  await db
+    .prepare(`CREATE TABLE IF NOT EXISTS _migrations (
+      version TEXT PRIMARY KEY,
+      applied_at INTEGER
+    )`)
+    .run();
+}
+
+interface Migration {
+  version: string;
+  run: (ctx: InitContext) => Promise<void>;
+}
+
+const migrations: Migration[] = [
+  { version: "0.1.0", run: v0_1_0 },
+  // 后续 release 在这里追加，例如：
+  // { version: "0.2.0", run: v0_2_0 },
+];
+
+export async function initDatabase(ctx: InitContext): Promise<{
+  applied: string[];
+}> {
+  const { DB: db } = ctx.env;
+  await ensureMigrationTable(db);
+
+  const applied: string[] = [];
+  for (const m of migrations) {
+    const done = await db
+      .prepare("SELECT version FROM _migrations WHERE version = ?")
+      .bind(m.version)
+      .first<{ version: string }>();
+    if (done) continue;
+
+    await m.run(ctx).catch((e) =>
+      console.warn(`[init] 迁移 ${m.version} 失败：${(e as Error).message}`),
+    );
+
+    await db
+      .prepare("INSERT OR IGNORE INTO _migrations (version, applied_at) VALUES (?, ?)")
+      .bind(m.version, Math.floor(Date.now() / 1000))
+      .run();
+    applied.push(m.version);
+  }
+
+  return { applied };
+}
+
+/** 单条 ALTER TABLE 的快捷方式，用于增量迁移里加字段。 */
+export async function addColumn(
+  db: D1Database,
+  table: string,
+  column: string,
+  definition: string,
+): Promise<boolean> {
+  return runSafe(db, `ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
