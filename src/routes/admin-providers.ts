@@ -57,13 +57,17 @@ adminProvidersRoute.post("/", async (c) => {
     await clearPublicDefaultFlag(c.env.DB);
     await invalidateSiteSettings(c.env.SETTINGS_KV);
   }
+  // models 首项作为默认模型，兼容旧 defaultModel 字段与兜底展示。
+  const modelsJson = body.models?.length ? JSON.stringify(body.models) : null;
+  const defaultModel = body.models?.[0] ?? body.defaultModel ?? null;
   await insertProvider(c.env.DB, {
     id,
     type: body.type,
     display_name: body.displayName,
     encrypted_api_key: encrypted,
     base_url: body.baseUrl ?? null,
-    default_model: body.defaultModel ?? null,
+    default_model: defaultModel,
+    models: modelsJson,
     config_json: body.configJson ? JSON.stringify(body.configJson) : null,
     enabled: body.enabled === false ? 0 : 1,
     is_public_default: body.isPublicDefault ? 1 : 0,
@@ -84,7 +88,13 @@ adminProvidersRoute.put("/:id", async (c) => {
   if (body.type !== undefined) patch.type = body.type;
   if (body.displayName !== undefined) patch.display_name = body.displayName;
   if (body.baseUrl !== undefined) patch.base_url = body.baseUrl || null;
-  if (body.defaultModel !== undefined) patch.default_model = body.defaultModel || null;
+  // models 与 default_model 联动：传了 models 就从首项派生默认模型。
+  if (body.models !== undefined) {
+    patch.models = body.models.length ? JSON.stringify(body.models) : null;
+    patch.default_model = body.models[0] ?? null;
+  } else if (body.defaultModel !== undefined) {
+    patch.default_model = body.defaultModel || null;
+  }
   if (body.configJson !== undefined) {
     patch.config_json = body.configJson ? JSON.stringify(body.configJson) : null;
   }

@@ -3,6 +3,8 @@ import { streamSSE } from "hono/streaming";
 import type {
   ProviderContext,
   ProviderType,
+  TranslateModelOption,
+  TranslateModelsResponse,
   TranslateRequest,
   TranslateStreamEvent,
 } from "@opentranslator/shared-types";
@@ -12,7 +14,9 @@ import { getSiteSettings } from "../../settings/cache";
 import {
   getPublicDefaultProviderRow,
   getProviderRow,
+  listProviderRecords,
   logUsage,
+  type ProviderRow,
 } from "../../db/queries";
 import { decryptSecret } from "../../lib/crypto";
 import {
@@ -28,6 +32,62 @@ import { getClientIp, enforceRateLimit } from "../../middleware/rate-limit";
 import "../../providers";
 
 type C = Context<{ Bindings: AppBindings; Variables: AppVariables }>;
+
+/** 解析一行 provider 声明的可选模型集合；旧记录无 models 时回落到 default_model。 */
+function parseAllowedModels(row: ProviderRow): string[] {
+  let allowed: string[] = [];
+  if (row.models) {
+    try {
+      const parsed = JSON.parse(row.models) as unknown;
+      if (Array.isArray(parsed)) {
+        allowed = parsed.filter((m): m is string => typeof m === "string");
+      }
+    } catch {
+      // 损坏的 JSON 忽略
+    }
+  }
+  if (allowed.length === 0 && row.default_model) {
+    allowed = [row.default_model];
+  }
+  return allowed;
+}
+
+/** GET /api/translate/models — 返回当前用户可选的模型与默认项。 */
+export async function handleListModels(c: C): Promise<Response> {
+  const user = await getSessionUser(c.req.header("cookie"), c.env.JWT_SECRET);
+  const settings = await getSiteSettings(c.env.SETTINGS_KV, c.env.DB);
+
+  // 私站且未登录：不暴露任何模型
+  if (!user && !settings.sitePublic) {
+    return c.json({ models: [], default: null } satisfies TranslateModelsResponse);
+  }
+
+  const records = await listProviderRecords(c.env.DB);
+
+  if (user) {
+    // 登录用户：所有 enabled provider 的全部已声明模型
+    const models: TranslateModelOption[] = records
+      .filter((p) => p.enabled)
+      .flatMap((p) =>
+        (p.models?.length ? p.models : p.defaultModel ? [p.defaultModel] : []).map(
+          (m) => ({ providerId: p.id, model: m, providerName: p.displayName }),
+        ),
+      );
+    return c.json({ models, default: null } satisfies TranslateModelsResponse);
+  }
+
+  // 匿名：只返回公开白名单
+  const publicModels = settings.publicModels ?? [];
+  const nameOf = (id: string) =>
+    records.find((p) => p.id === id)?.displayName ?? "";
+  const models: TranslateModelOption[] = publicModels.map((m) => ({
+    providerId: m.providerId,
+    model: m.model,
+    providerName: nameOf(m.providerId),
+  }));
+  const def = settings.publicDefaultModel ?? publicModels[0] ?? null;
+  return c.json({ models, default: def } satisfies TranslateModelsResponse);
+}
 
 export async function handleTranslate(c: C): Promise<Response> {
   let req: TranslateRequest;
@@ -67,18 +127,62 @@ export async function handleTranslate(c: C): Promise<Response> {
   const blocked = await enforceRateLimit(c, limit);
   if (blocked) return blocked;
 
-  // Provider selection: explicit (authed) or public default / first enabled.
-  let row;
-  if (user && req.providerId) {
-    row = await getProviderRow(c.env.DB, req.providerId);
-    if (!row || !row.enabled) {
-      return c.json({ error: "provider not available" }, 404);
+  // ---- 选择 provider 与 model ----
+  // 登录用户：可选任意 enabled provider 的已声明 model；
+  // 匿名用户：只能在「公开模型」白名单内选，不选则用公开默认模型。
+  let row: ProviderRow | null = null;
+  let resolvedModel: string | undefined;
+
+  if (user) {
+    if (req.providerId) {
+      row = await getProviderRow(c.env.DB, req.providerId);
+      if (!row || !row.enabled) {
+        return c.json({ error: "provider not available" }, 404);
+      }
+    } else {
+      row = await getPublicDefaultProviderRow(c.env.DB);
+    }
+    if (!row) {
+      return c.json({ error: "no provider configured" }, 503);
+    }
+    // model 必须落在该供应商声明的集合内，避免越权调用其他模型
+    const allowedModels = parseAllowedModels(row);
+    resolvedModel = row.default_model ?? undefined;
+    if (req.model) {
+      if (!allowedModels.includes(req.model)) {
+        return c.json({ error: "model not available" }, 404);
+      }
+      resolvedModel = req.model;
     }
   } else {
-    row = await getPublicDefaultProviderRow(c.env.DB);
-  }
-  if (!row) {
-    return c.json({ error: "no provider configured" }, 503);
+    // 匿名：只能在公开模型白名单内翻译；未开放任何模型则拒绝
+    const publicModels = settings.publicModels ?? [];
+    if (req.providerId && req.model) {
+      const hit = publicModels.find(
+        (m) => m.providerId === req.providerId && m.model === req.model,
+      );
+      if (!hit) {
+        return c.json({ error: "model not available" }, 404);
+      }
+      row = await getProviderRow(c.env.DB, req.providerId);
+      if (!row || !row.enabled) {
+        return c.json({ error: "provider not available" }, 404);
+      }
+      resolvedModel = req.model;
+    } else {
+      const def = settings.publicDefaultModel ?? publicModels[0] ?? null;
+      if (!def) {
+        return c.json({ error: "no public model configured" }, 503);
+      }
+      row = await getProviderRow(c.env.DB, def.providerId);
+      if (!row || !row.enabled) {
+        return c.json({ error: "public default model unavailable" }, 503);
+      }
+      resolvedModel = def.model;
+    }
+    if (!row) {
+      return c.json({ error: "no provider configured" }, 503);
+    }
   }
 
   // Decrypt the stored API key.
@@ -92,7 +196,7 @@ export async function handleTranslate(c: C): Promise<Response> {
   const ctx: ProviderContext = {
     apiKey,
     baseUrl: row.base_url ?? undefined,
-    defaultModel: row.default_model ?? undefined,
+    defaultModel: resolvedModel,
     configJson: row.config_json
       ? (JSON.parse(row.config_json) as Record<string, unknown>)
       : undefined,

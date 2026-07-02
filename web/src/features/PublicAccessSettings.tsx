@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -23,15 +24,30 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Check } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 
+interface ModelOption {
+  providerId: string;
+  model: string;
+  providerName: string;
+}
+
+/** 把「providerId|model」拆成两段；模型名假定不含「|」。 */
+function decodeKey(key: string): { providerId: string; model: string } {
+  const sep = key.indexOf("|");
+  return { providerId: key.slice(0, sep), model: key.slice(sep + 1) };
+}
+
 /**
- * 公开访问模块设置页：选对外公开的默认供应商，并设置匿名访客的限流。
+ * 公开访问模块设置页：勾选对匿名访客开放的模型，并指定一个公开默认模型。
+ * 匿名访客在首页可在这些开放模型间切换；不主动选择时用公开默认模型。
  * 模块本身的启停（= site_public 总开关）在「设置 → 模块」里切换。
  */
 export function PublicAccessSettings() {
   const [providers, setProviders] = useState<ProviderRecord[]>([]);
   const [rateLimit, setRateLimit] = useState<number>(20);
+  // 开放集合与默认项均用「providerId|model」编码键
+  const [openKeys, setOpenKeys] = useState<Set<string>>(new Set());
+  const [defaultKey, setDefaultKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [savingId, setSavingId] = useState<string | null>(null);
   const [savingLimit, setSavingLimit] = useState(false);
 
   async function load() {
@@ -42,6 +58,10 @@ export function PublicAccessSettings() {
       ]);
       setProviders(provRes.providers.filter((p) => p.enabled));
       setRateLimit(setRes.settings.publicRateLimitPerMinute);
+      const pm = setRes.settings.publicModels ?? [];
+      setOpenKeys(new Set(pm.map((m) => `${m.providerId}|${m.model}`)));
+      const pdm = setRes.settings.publicDefaultModel;
+      setDefaultKey(pdm ? `${pdm.providerId}|${pdm.model}` : null);
       setError(null);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : String(e));
@@ -52,19 +72,46 @@ export function PublicAccessSettings() {
     void load();
   }, []);
 
-  async function setDefault(id: string, name: string) {
-    setSavingId(id);
+  // 所有 enabled provider 的模型展开
+  const allOptions: ModelOption[] = providers.flatMap((p) =>
+    (p.models?.length ? p.models : p.defaultModel ? [p.defaultModel] : []).map(
+      (m) => ({ providerId: p.id, model: m, providerName: p.displayName }),
+    ),
+  );
+
+  // 实时保存开放集合与默认项；乐观更新，失败回滚
+  async function persist(nextOpen: Set<string>, nextDefault: string | null) {
+    const prevOpen = openKeys;
+    const prevDefault = defaultKey;
+    setOpenKeys(nextOpen);
+    setDefaultKey(nextDefault);
     try {
-      await apiPut(`/api/admin/providers/${id}`, { isPublicDefault: true });
-      toast.success(`已将「${name}」设为公开默认`);
-      await load();
+      await apiPut("/api/admin/settings", {
+        publicModels: Array.from(nextOpen).map(decodeKey),
+        publicDefaultModel: nextDefault ? decodeKey(nextDefault) : null,
+      });
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : String(e);
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setSavingId(null);
+      setOpenKeys(prevOpen);
+      setDefaultKey(prevDefault);
+      toast.error(e instanceof ApiError ? e.message : "保存失败");
     }
+  }
+
+  function toggleOpen(key: string) {
+    const next = new Set(openKeys);
+    let nextDefault = defaultKey;
+    if (next.has(key)) {
+      next.delete(key);
+      if (defaultKey === key) nextDefault = null;
+    } else {
+      next.add(key);
+    }
+    void persist(next, nextDefault);
+  }
+
+  function setDefault(key: string) {
+    // 标为默认时自动加入开放集合
+    void persist(new Set(openKeys).add(key), key);
   }
 
   async function saveLimit() {
@@ -91,7 +138,7 @@ export function PublicAccessSettings() {
       <CardHeader>
         <CardTitle>公开访问</CardTitle>
         <CardDescription>
-          匿名访客的翻译入口。选择对外公开的默认供应商，并设置每分钟请求上限。
+          勾选对匿名访客开放的模型，并指定一个公开默认模型。匿名访客可在首页在这些模型间切换。
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
@@ -103,55 +150,68 @@ export function PublicAccessSettings() {
         )}
 
         <div className="space-y-2">
-          <div className="text-sm font-medium">公开默认供应商</div>
-          {providers.length === 0 ? (
+          <div className="text-sm font-medium">公开模型</div>
+          {allOptions.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              暂无已启用的供应商，请先在「供应商」中添加。
+              暂无已启用供应商的模型，请先在「供应商」中配置模型。
             </p>
           ) : (
-            <div className="overflow-hidden rounded-md border border-rule">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>名称</TableHead>
-                    <TableHead>类型</TableHead>
-                    <TableHead>模型</TableHead>
-                    <TableHead className="text-right">公开默认</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {providers.map((p) => (
-                    <TableRow key={p.id}>
-                      <TableCell className="font-medium">
-                        {p.displayName}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {p.type}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {p.defaultModel ?? "—"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {p.isPublicDefault ? (
-                          <Badge variant="accent">默认</Badge>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7"
-                            type="button"
-                            disabled={savingId !== null}
-                            onClick={() => void setDefault(p.id, p.displayName)}
-                          >
-                            设为默认
-                          </Button>
-                        )}
-                      </TableCell>
+            <>
+              <div className="overflow-hidden rounded-md border border-rule">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>供应商</TableHead>
+                      <TableHead>模型</TableHead>
+                      <TableHead>开放</TableHead>
+                      <TableHead className="text-right">公开默认</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {allOptions.map((o) => {
+                      const key = `${o.providerId}|${o.model}`;
+                      const isOpen = openKeys.has(key);
+                      const isDefault = defaultKey === key;
+                      return (
+                        <TableRow key={key}>
+                          <TableCell className="font-medium">
+                            {o.providerName}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">
+                            {o.model}
+                          </TableCell>
+                          <TableCell>
+                            <Switch
+                              checked={isOpen}
+                              onCheckedChange={() => toggleOpen(key)}
+                              aria-label={`开放 ${o.model}`}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {isDefault ? (
+                              <Badge variant="accent">默认</Badge>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7"
+                                type="button"
+                                onClick={() => setDefault(key)}
+                              >
+                                设为默认
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              <p className="pt-1 text-xs text-muted-foreground">
+                勾选与设默认即时保存。未开放任何模型时，匿名访客将无法翻译。
+              </p>
+            </>
           )}
         </div>
 

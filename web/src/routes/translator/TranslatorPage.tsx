@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeftRight, Check, Copy, Square } from "lucide-react";
-import type { ProviderRecord, TranslateStreamEvent } from "@opentranslator/shared-types";
+import type { TranslateModelOption, TranslateModelsResponse, TranslateStreamEvent } from "@opentranslator/shared-types";
 import { ApiError, apiGet, streamTranslate } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
 import { LANGUAGES } from "@/lib/languages";
@@ -27,23 +27,19 @@ export function TranslatorPage() {
   const [copied, setCopied] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const { user } = useAuth();
-  const [providers, setProviders] = useState<ProviderRecord[]>([]);
-  const [providerId, setProviderId] = useState<string | null>(null);
+  const [modelOptions, setModelOptions] = useState<TranslateModelOption[]>([]);
+  // 编码选中项：「providerId|model」；null 表示走站点默认
+  const [modelKey, setModelKey] = useState<string | null>(null);
 
-  // 登录后拉取启用的供应商列表（每条记录即一个模型配置），供「选择模型」使用
+  // 拉取当前用户可选的模型列表（登录返全部、匿名返公开白名单）
   useEffect(() => {
-    if (!user) {
-      setProviders([]);
-      setProviderId(null);
-      return;
-    }
     let cancelled = false;
     void (async () => {
       try {
-        const res = await apiGet<{ providers: ProviderRecord[] }>(
-          "/api/admin/providers",
+        const res = await apiGet<TranslateModelsResponse>(
+          "/api/translate/models",
         );
-        if (!cancelled) setProviders(res.providers.filter((p) => p.enabled));
+        if (!cancelled) setModelOptions(res.models);
       } catch {
         // 静默：拉取失败则不显示模型选择，回落到站点默认
       }
@@ -54,11 +50,13 @@ export function TranslatorPage() {
   }, [user]);
 
   const streaming = status === "streaming";
+  const noModel = modelOptions.length === 0;
   const canTranslate =
     sourceText.trim().length > 0 &&
     targetLang !== "" &&
     sourceLang !== targetLang &&
-    !streaming;
+    !streaming &&
+    !noModel;
 
   async function handleTranslate() {
     if (!canTranslate) return;
@@ -68,13 +66,24 @@ export function TranslatorPage() {
     const controller = new AbortController();
     abortRef.current = controller;
     try {
+      // 解析选中的 providerId 与 model
+      let providerId: string | undefined;
+      let model: string | undefined;
+      if (modelKey) {
+        const sep = modelKey.indexOf("|");
+        if (sep > 0) {
+          providerId = modelKey.slice(0, sep);
+          model = modelKey.slice(sep + 1);
+        }
+      }
       for await (const ev of streamTranslate(
         {
           text: sourceText,
           sourceLang,
           targetLang,
           stream: true,
-          providerId: providerId ?? undefined,
+          providerId,
+          model,
         },
         controller.signal,
       )) {
@@ -160,11 +169,11 @@ export function TranslatorPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {user && providers.length > 0 && (
+            {modelOptions.length > 0 && (
               <ModelSelect
-                value={providerId}
-                onChange={setProviderId}
-                providers={providers}
+                value={modelKey}
+                onChange={setModelKey}
+                options={modelOptions}
                 disabled={streaming}
               />
             )}
@@ -183,6 +192,7 @@ export function TranslatorPage() {
                 type="button"
                 onClick={handleTranslate}
                 disabled={!canTranslate}
+                title={noModel ? "暂无可用模型" : undefined}
                 className="gap-1.5"
               >
                 翻译
@@ -311,16 +321,21 @@ function LangSelect({
 }
 
 function ModelSelect({
-  providers,
+  options,
   value,
   onChange,
   disabled,
 }: {
-  providers: ProviderRecord[];
+  options: TranslateModelOption[];
   value: string | null;
   onChange: (v: string | null) => void;
   disabled?: boolean;
 }) {
+  // trigger 选中态只显示模型名；下拉项展示「供应商 · 模型」
+  const selected = value
+    ? options.find((o) => `${o.providerId}|${o.model}` === value)
+    : undefined;
+  const label = selected?.model ?? "默认";
   return (
     <div className="hidden sm:block">
       <Select
@@ -328,17 +343,19 @@ function ModelSelect({
         onValueChange={(v) => onChange(v === "default" ? null : v)}
         disabled={disabled}
       >
-        <SelectTrigger className="h-9 w-[160px]">
-          <SelectValue />
+        <SelectTrigger className="h-9 w-[180px]">
+          <span className="truncate">{label}</span>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="default">默认</SelectItem>
-          {providers.map((p) => (
-            <SelectItem key={p.id} value={p.id}>
-              {p.displayName}
-              {p.defaultModel ? ` · ${p.defaultModel}` : ""}
-            </SelectItem>
-          ))}
+          {options.map((o) => {
+            const key = `${o.providerId}|${o.model}`;
+            return (
+              <SelectItem key={key} value={key}>
+                {o.providerName} · {o.model}
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
     </div>

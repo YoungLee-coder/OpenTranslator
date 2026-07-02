@@ -7,6 +7,7 @@ interface ProviderRow {
   encrypted_api_key: string;
   base_url: string | null;
   default_model: string | null;
+  models: string | null;
   config_json: string | null;
   enabled: number;
   is_public_default: number;
@@ -23,12 +24,24 @@ interface AdminUserRow {
 }
 
 function toProviderRecord(row: ProviderRow): ProviderRecord {
+  let models: string[] | undefined;
+  if (row.models) {
+    try {
+      const parsed = JSON.parse(row.models) as unknown;
+      if (Array.isArray(parsed)) {
+        models = parsed.filter((m): m is string => typeof m === "string");
+      }
+    } catch {
+      // 损坏的 JSON 忽略，回落到 defaultModel
+    }
+  }
   return {
     id: row.id,
     type: row.type as ProviderType,
     displayName: row.display_name,
     baseUrl: row.base_url ?? undefined,
     defaultModel: row.default_model ?? undefined,
+    models,
     configJson: row.config_json ? (JSON.parse(row.config_json) as Record<string, unknown>) : undefined,
     enabled: row.enabled === 1,
     isPublicDefault: row.is_public_default === 1,
@@ -114,6 +127,7 @@ export interface ProviderInsert {
   encrypted_api_key: string;
   base_url?: string | null;
   default_model?: string | null;
+  models?: string | null;
   config_json?: string | null;
   enabled?: number;
   is_public_default?: number;
@@ -124,8 +138,8 @@ export async function insertProvider(db: D1Database, p: ProviderInsert): Promise
   await db
     .prepare(
       `INSERT INTO providers
-        (id, type, display_name, encrypted_api_key, base_url, default_model, config_json, enabled, is_public_default, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (id, type, display_name, encrypted_api_key, base_url, default_model, models, config_json, enabled, is_public_default, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       p.id,
@@ -134,6 +148,7 @@ export async function insertProvider(db: D1Database, p: ProviderInsert): Promise
       p.encrypted_api_key,
       p.base_url ?? null,
       p.default_model ?? null,
+      p.models ?? null,
       p.config_json ?? null,
       p.enabled ?? 1,
       p.is_public_default ?? 0,
@@ -149,6 +164,7 @@ export interface ProviderPatch {
   encrypted_api_key?: string;
   base_url?: string | null;
   default_model?: string | null;
+  models?: string | null;
   config_json?: string | null;
   enabled?: number;
   is_public_default?: number;
@@ -180,6 +196,10 @@ export async function updateProvider(
   if (patch.default_model !== undefined) {
     sets.push("default_model = ?");
     params.push(patch.default_model);
+  }
+  if (patch.models !== undefined) {
+    sets.push("models = ?");
+    params.push(patch.models);
   }
   if (patch.config_json !== undefined) {
     sets.push("config_json = ?");

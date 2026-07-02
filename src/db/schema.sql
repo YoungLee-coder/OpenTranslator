@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS providers (
   display_name TEXT NOT NULL,
   encrypted_api_key TEXT NOT NULL,
   base_url TEXT,
-  default_model TEXT,
+  default_model TEXT,                  -- 首选模型（= models[0]），兼容旧逻辑与兜底展示
+  models TEXT,                         -- JSON 数组：该供应商支持的全部模型名
   config_json TEXT,
   enabled BOOLEAN DEFAULT 1,
   is_public_default BOOLEAN DEFAULT 0,

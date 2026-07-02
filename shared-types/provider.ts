@@ -37,6 +37,8 @@ export interface ProviderRecord {
   displayName: string;
   baseUrl?: string;
   defaultModel?: string;
+  /** 该供应商支持的全部模型，首页按模型逐个展开供选择。 */
+  models?: string[];
   configJson?: Record<string, unknown>;
   enabled: boolean;
   isPublicDefault: boolean;
@@ -50,6 +52,8 @@ export interface CreateProviderRequest {
   apiKey: string; // plaintext, encrypted server-side
   baseUrl?: string;
   defaultModel?: string;
+  /** 该供应商支持的全部模型；首项视为默认模型。 */
+  models?: string[];
   configJson?: Record<string, unknown>;
   enabled?: boolean;
   isPublicDefault?: boolean;
@@ -58,7 +62,7 @@ export interface CreateProviderRequest {
 export type UpdateProviderRequest = Partial<CreateProviderRequest>;
 
 /** Dynamic form field descriptor for the dashboard provider form. */
-export type ProviderFieldType = "text" | "password" | "boolean" | "select";
+export type ProviderFieldType = "text" | "password" | "boolean" | "select" | "models";
 
 export interface ProviderField {
   key: string;

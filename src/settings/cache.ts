@@ -1,4 +1,4 @@
-import type { SiteSettings } from "@opentranslator/shared-types";
+import type { PublicModelRef, SiteSettings } from "@opentranslator/shared-types";
 import {
   TRANSLATION_CACHE_TTL_HOURS_DEFAULT,
   TRANSLATION_CACHE_TTL_HOURS_MAX,
@@ -24,6 +24,39 @@ export function clampCacheTtlHours(raw: string | number | undefined): number {
   return clamped;
 }
 
+function isPublicModelRef(m: unknown): m is PublicModelRef {
+  if (typeof m !== "object" || m === null) return false;
+  const r = m as Record<string, unknown>;
+  return typeof r.providerId === "string" && typeof r.model === "string";
+}
+
+/** 解析公开模型白名单（JSON 数组）；空或损坏返回 undefined。 */
+function parsePublicModels(raw: string | undefined): PublicModelRef[] | undefined {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (Array.isArray(parsed)) {
+      const arr = parsed.filter(isPublicModelRef);
+      return arr.length ? arr : undefined;
+    }
+  } catch {
+    // ignore corrupted JSON
+  }
+  return undefined;
+}
+
+/** 解析公开默认模型（JSON 对象）；空或损坏返回 null。 */
+function parsePublicModelRef(raw: string | undefined): PublicModelRef | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (isPublicModelRef(parsed)) return parsed;
+  } catch {
+    // ignore corrupted JSON
+  }
+  return null;
+}
+
 export async function getSiteSettings(
   kv: KVNamespace,
   db: D1Database,
@@ -40,6 +73,8 @@ export async function getSiteSettings(
   const settings: SiteSettings = {
     sitePublic: map.site_public === "true",
     publicDefaultProviderId: map.public_default_provider_id || undefined,
+    publicModels: parsePublicModels(map.public_models),
+    publicDefaultModel: parsePublicModelRef(map.public_default_model),
     publicRateLimitPerMinute: Number(map.public_rate_limit_per_minute ?? 20),
     authedRateLimitPerMinute: Number(map.authed_rate_limit_per_minute ?? 60),
     translationCacheEnabled: map.translation_cache_enabled !== "false",

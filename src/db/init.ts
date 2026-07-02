@@ -42,6 +42,7 @@ async function v0_1_0({ env }: InitContext): Promise<void> {
       encrypted_api_key TEXT NOT NULL,
       base_url TEXT,
       default_model TEXT,
+      models TEXT,
       config_json TEXT,
       enabled BOOLEAN DEFAULT 1,
       is_public_default BOOLEAN DEFAULT 0,
@@ -119,6 +120,11 @@ async function v0_3_0({ env }: InitContext): Promise<void> {
   ]);
 }
 
+/** v0.4.0：providers 表新增 models 列（JSON 数组），支持单供应商多模型。 */
+async function v0_4_0({ env }: InitContext): Promise<void> {
+  await addColumn(env.DB, "providers", "models", "TEXT");
+}
+
 /** 迁移记录表，记录已执行的版本，避免重复跑。 */
 async function ensureMigrationTable(db: D1Database): Promise<void> {
   await db
@@ -138,6 +144,7 @@ const migrations: Migration[] = [
   { version: "0.1.0", run: v0_1_0 },
   { version: "0.2.0", run: v0_2_0 },
   { version: "0.3.0", run: v0_3_0 },
+  { version: "0.4.0", run: v0_4_0 },
 ];
 
 export async function initDatabase(ctx: InitContext): Promise<{

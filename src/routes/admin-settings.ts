@@ -1,7 +1,13 @@
 import { Hono } from "hono";
-import type { SiteSettingsUpdate } from "@opentranslator/shared-types";
+import type { PublicModelRef, SiteSettingsUpdate } from "@opentranslator/shared-types";
 import type { AppBindings, AppVariables } from "../types";
 import { getSiteSettings, updateSetting, clampCacheTtlHours } from "../settings/cache";
+
+function isPublicModelRef(m: unknown): m is PublicModelRef {
+  if (typeof m !== "object" || m === null) return false;
+  const r = m as Record<string, unknown>;
+  return typeof r.providerId === "string" && typeof r.model === "string";
+}
 
 const adminSettingsRoute = new Hono<{
   Bindings: AppBindings;
@@ -58,6 +64,28 @@ adminSettingsRoute.put("/", async (c) => {
       c.env.DB,
       "public_default_provider_id",
       body.publicDefaultProviderId ?? "",
+    );
+  }
+  // 公开模型白名单：JSON 数组落库；空数组清空。
+  if (body.publicModels !== undefined) {
+    const arr = Array.isArray(body.publicModels)
+      ? body.publicModels.filter(isPublicModelRef)
+      : [];
+    await updateSetting(
+      c.env.SETTINGS_KV,
+      c.env.DB,
+      "public_models",
+      arr.length ? JSON.stringify(arr) : "",
+    );
+  }
+  // 公开默认模型：JSON 对象落库；非法或清空时存空串。
+  if (body.publicDefaultModel !== undefined) {
+    const m = body.publicDefaultModel;
+    await updateSetting(
+      c.env.SETTINGS_KV,
+      c.env.DB,
+      "public_default_model",
+      isPublicModelRef(m) ? JSON.stringify(m) : "",
     );
   }
 

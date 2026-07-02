@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -140,7 +141,8 @@ export function ProvidersSection() {
       apiKey: "",
       fields: {
         baseUrl: p.baseUrl ?? "",
-        defaultModel: p.defaultModel ?? "",
+        // 旧记录可能只有 defaultModel，回填时合并展示
+        models: (p.models?.length ? p.models : p.defaultModel ? [p.defaultModel] : []).join("\n"),
       },
       enabled: p.enabled,
       isPublicDefault: p.isPublicDefault,
@@ -175,10 +177,18 @@ export function ProvidersSection() {
       setError("Base URL 需填写完整地址（以 http:// 或 https:// 开头）");
       return null;
     }
-    const defaultModel = eff("defaultModel").trim() || undefined;
+    // models：一行一个模型名，去空、去重；首项视为默认模型
+    const models = Array.from(
+      new Set(
+        eff("models")
+          .split("\n")
+          .map((m) => m.trim())
+          .filter(Boolean),
+      ),
+    );
     const configJson: Record<string, string> = {};
     for (const f of schemaFields) {
-      if (f.key === "baseUrl" || f.key === "defaultModel") continue;
+      if (f.key === "baseUrl" || f.key === "models") continue;
       const v = (f.preset ?? form.fields[f.key] ?? "").trim();
       if (v) configJson[f.key] = v;
     }
@@ -187,7 +197,7 @@ export function ProvidersSection() {
       displayName: form.displayName.trim(),
       apiKey: form.apiKey,
       baseUrl,
-      defaultModel,
+      models: models.length ? models : undefined,
       configJson: Object.keys(configJson).length ? configJson : undefined,
       enabled: form.enabled,
       isPublicDefault: form.isPublicDefault,
@@ -359,7 +369,7 @@ export function ProvidersSection() {
                       {providerLabel(p.type)}
                     </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">
-                      {p.defaultModel ?? "—"}
+                      {p.models?.length ? p.models.join("、") : (p.defaultModel ?? "—")}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -495,21 +505,44 @@ export function ProvidersSection() {
                       已锁定
                     </span>
                   )}
+                  {f.type === "models" && (
+                    <span className="text-xs font-normal text-muted-foreground">
+                      一行一个，首项为默认
+                    </span>
+                  )}
                 </Label>
-                <Input
-                  id={`field-${f.key}`}
-                  type="text"
-                  value={f.preset ?? form.fields[f.key] ?? ""}
-                  placeholder={f.placeholder}
-                  required={f.required}
-                  disabled={!!f.preset}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      fields: { ...form.fields, [f.key]: e.target.value },
-                    })
-                  }
-                />
+                {f.type === "models" ? (
+                  <Textarea
+                    id={`field-${f.key}`}
+                    value={f.preset ?? form.fields[f.key] ?? ""}
+                    placeholder={f.placeholder}
+                    required={f.required}
+                    disabled={!!f.preset}
+                    rows={4}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        fields: { ...form.fields, [f.key]: e.target.value },
+                      })
+                    }
+                    className="font-mono text-xs"
+                  />
+                ) : (
+                  <Input
+                    id={`field-${f.key}`}
+                    type="text"
+                    value={f.preset ?? form.fields[f.key] ?? ""}
+                    placeholder={f.placeholder}
+                    required={f.required}
+                    disabled={!!f.preset}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        fields: { ...form.fields, [f.key]: e.target.value },
+                      })
+                    }
+                  />
+                )}
               </div>
             ))}
 

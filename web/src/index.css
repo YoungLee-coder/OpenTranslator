@@ -179,6 +179,8 @@
   html {
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
+    /* 始终预留滚动条槽位，避免切 tab 内容高度变化时滚动条出现/消失导致横向位移 */
+    scrollbar-gutter: stable;
   }
 
   body {

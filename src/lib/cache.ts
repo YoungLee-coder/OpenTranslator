@@ -26,7 +26,8 @@ export async function translationCacheKey(
 ): Promise<string> {
   const glossary = req.glossary ? await sha256Hex(JSON.stringify(req.glossary)) : "none";
   const text = await sha256Hex(req.text);
-  return `${PREFIX}${providerId}:${req.sourceLang}:${req.targetLang}:${glossary}:${text}`;
+  const model = req.model ?? "";
+  return `${PREFIX}${providerId}:${model}:${req.sourceLang}:${req.targetLang}:${glossary}:${text}`;
 }
 
 export async function getTranslationCache(
