@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS site_settings (
 -- Providers: `type` distinguishes vendor, config_json holds vendor-specific params.
 CREATE TABLE IF NOT EXISTS providers (
   id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,                  -- openai | claude | gemini | aihubmix | custom
+  type TEXT NOT NULL,                  -- openai | claude | gemini | aihubmix | custom | cloudflare
   display_name TEXT NOT NULL,
   encrypted_api_key TEXT NOT NULL,
   base_url TEXT,

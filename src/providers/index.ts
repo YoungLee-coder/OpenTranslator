@@ -6,6 +6,7 @@ import {
 } from "./openai";
 import { claudeProvider } from "./claude";
 import { geminiProvider } from "./gemini";
+import { cloudflareProvider } from "./cloudflare";
 
 /**
  * Provider registration side-effects. Importing this module wires every
@@ -16,3 +17,4 @@ providerRegistry.register("aihubmix", aihubmixProvider);
 providerRegistry.register("claude", claudeProvider);
 providerRegistry.register("gemini", geminiProvider);
 providerRegistry.register("custom", customProvider);
+providerRegistry.register("cloudflare", cloudflareProvider);

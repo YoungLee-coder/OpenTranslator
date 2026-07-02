@@ -77,6 +77,7 @@ const PROVIDER_LABELS: Record<ProviderType, string> = {
   gemini: "Gemini",
   aihubmix: "AIHubMix",
   custom: "自定义",
+  cloudflare: "Cloudflare",
 };
 
 function providerLabel(t: ProviderType): string {
@@ -93,6 +94,7 @@ export function ProvidersSection() {
       gemini: [],
       aihubmix: [],
       custom: [],
+      cloudflare: [],
     },
   );
   const [loading, setLoading] = useState(true);
@@ -135,15 +137,24 @@ export function ProvidersSection() {
   }
 
   function startEdit(p: ProviderRecord) {
+    // 按 schema 回填字段：baseUrl/models 走专属列，其余自定义字段从 configJson 取
+    const fields: Record<string, string> = {};
+    for (const f of schemas[p.type] ?? []) {
+      if (f.key === "baseUrl") {
+        fields.baseUrl = p.baseUrl ?? "";
+      } else if (f.key === "models") {
+        // 旧记录可能只有 defaultModel，回填时合并展示
+        fields.models = (p.models?.length ? p.models : p.defaultModel ? [p.defaultModel] : []).join("\n");
+      } else {
+        const v = p.configJson?.[f.key];
+        fields[f.key] = typeof v === "string" ? v : "";
+      }
+    }
     setForm({
       type: p.type,
       displayName: p.displayName,
       apiKey: "",
-      fields: {
-        baseUrl: p.baseUrl ?? "",
-        // 旧记录可能只有 defaultModel，回填时合并展示
-        models: (p.models?.length ? p.models : p.defaultModel ? [p.defaultModel] : []).join("\n"),
-      },
+      fields,
       enabled: p.enabled,
       isPublicDefault: p.isPublicDefault,
     });

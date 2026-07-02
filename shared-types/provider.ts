@@ -5,7 +5,8 @@ export type ProviderType =
   | "claude"
   | "gemini"
   | "aihubmix"
-  | "custom";
+  | "custom"
+  | "cloudflare";
 
 /**
  * Resolved per-provider configuration passed into an adapter.
