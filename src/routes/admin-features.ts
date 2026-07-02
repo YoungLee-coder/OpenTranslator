@@ -1,9 +1,10 @@
 import { Hono } from "hono";
 import type { FeatureManifest } from "@opentranslator/shared-types";
 import type { AppBindings, AppVariables } from "../types";
-import { translateManifest } from "../features/translate/manifest";
+import { publicAccessManifest } from "../features/public-access/manifest";
 import { glossaryManifest } from "../features/glossary/manifest";
-import { getFeatureModules, upsertFeatureModule } from "../db/queries";
+import { getFeatureModules, upsertFeatureModule, setSiteSetting } from "../db/queries";
+import { invalidateSiteSettings } from "../settings/cache";
 
 const adminFeaturesRoute = new Hono<{
   Bindings: AppBindings;
@@ -11,7 +12,7 @@ const adminFeaturesRoute = new Hono<{
 }>();
 
 /** Static manifests declared by each feature's manifest.ts. */
-const manifests: FeatureManifest[] = [translateManifest, glossaryManifest];
+const manifests: FeatureManifest[] = [publicAccessManifest, glossaryManifest];
 
 /**
  * GET /api/admin/features — manifests merged with the feature_modules table.
@@ -37,6 +38,11 @@ adminFeaturesRoute.put("/:key", async (c) => {
   const manifest = manifests.find((m) => m.key === key);
   if (!manifest) return c.json({ error: "unknown feature" }, 404);
   await upsertFeatureModule(c.env.DB, key, body.enabled);
+  // 公开访问模块的 enabled 与 site_public 合一：联动写入站点设置并失效缓存。
+  if (key === "public-access") {
+    await setSiteSetting(c.env.DB, "site_public", String(body.enabled));
+    await invalidateSiteSettings(c.env.SETTINGS_KV);
+  }
   return c.json({ feature: { ...manifest, enabled: body.enabled } });
 });
 

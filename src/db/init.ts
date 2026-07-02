@@ -83,8 +83,38 @@ async function v0_1_0({ env }: InitContext): Promise<void> {
     ),
     db.prepare(
       `INSERT OR IGNORE INTO feature_modules (key, name, enabled, config_json, created_at) VALUES
-        ('translate', '翻译', 1, NULL, ${now}),
+        ('public-access', '公开访问', 1, NULL, ${now}),
         ('glossary', '术语库', 1, NULL, ${now})`,
+    ),
+  ]);
+}
+
+/** v0.2.0：为翻译结果缓存补一个 TTL（小时）的种子配置项。 */
+async function v0_2_0({ env }: InitContext): Promise<void> {
+  const db = env.DB;
+  const now = Math.floor(Date.now() / 1000);
+  await db.batch([
+    db.prepare(
+      `INSERT OR IGNORE INTO site_settings (key, value, updated_at) VALUES
+        ('translation_cache_ttl_hours', '720', ${now})`,
+    ),
+  ]);
+}
+
+/** v0.3.0：把老的 translate 模块替换为 public-access，enabled 对齐当前 site_public。 */
+async function v0_3_0({ env }: InitContext): Promise<void> {
+  const db = env.DB;
+  const now = Math.floor(Date.now() / 1000);
+  // 以当前 site_public 的值作为 public-access 模块的初始 enabled，保持门禁语义一致。
+  const row = await db
+    .prepare("SELECT value FROM site_settings WHERE key = 'site_public'")
+    .first<{ value: string }>();
+  const enabled = row?.value === "false" ? 0 : 1;
+  await db.batch([
+    db.prepare(`DELETE FROM feature_modules WHERE key = 'translate'`),
+    db.prepare(
+      `INSERT OR IGNORE INTO feature_modules (key, name, enabled, config_json, created_at) VALUES
+        ('public-access', '公开访问', ${enabled}, NULL, ${now})`,
     ),
   ]);
 }
@@ -106,8 +136,8 @@ interface Migration {
 
 const migrations: Migration[] = [
   { version: "0.1.0", run: v0_1_0 },
-  // 后续 release 在这里追加，例如：
-  // { version: "0.2.0", run: v0_2_0 },
+  { version: "0.2.0", run: v0_2_0 },
+  { version: "0.3.0", run: v0_3_0 },
 ];
 
 export async function initDatabase(ctx: InitContext): Promise<{

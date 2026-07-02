@@ -8,7 +8,6 @@ import { utf8Encode } from "./bytes";
  * the upstream model.
  */
 
-const TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 const PREFIX = "tr:";
 
 async function sha256Hex(s: string): Promise<string> {
@@ -47,9 +46,13 @@ export async function setTranslationCache(
   kv: KVNamespace,
   key: string,
   value: TranslateResponse,
+  ttlSeconds: number,
 ): Promise<void> {
   try {
-    await kv.put(key, JSON.stringify(value), { expirationTtl: TTL_SECONDS });
+    await kv.put(key, JSON.stringify(value), {
+      // KV 要求 expirationTtl >= 60 秒；调用方按站点设置传入。
+      expirationTtl: Math.max(60, ttlSeconds),
+    });
   } catch {
     // KV is best-effort; a write failure must never break a translation.
   }

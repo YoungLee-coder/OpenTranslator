@@ -25,7 +25,6 @@ interface SystemTab {
 const SYSTEM_TABS: SystemTab[] = [
   { key: "overview", name: "概览" },
   { key: "providers", name: "供应商" },
-  { key: "modules", name: "模块" },
   { key: "settings", name: "设置" },
 ];
 
@@ -88,12 +87,10 @@ export function DashboardPage() {
         <TabsContent value="providers">
           <ProvidersSection />
         </TabsContent>
-        <TabsContent value="modules">
-          <ModulesSection features={features} onChanged={refreshFeatures} />
-        </TabsContent>
         <TabsContent value="settings">
           <div className="flex flex-col gap-6">
             <SettingsSection />
+            <ModulesSection features={features} onChanged={refreshFeatures} />
             <DbVersionSection />
           </div>
         </TabsContent>

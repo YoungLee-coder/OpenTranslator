@@ -37,9 +37,16 @@ app.use(
   }),
 );
 
-// Health check — minimum closed loop.
+// Health check — minimum closed loop. Also reports whether the D1 / KV
+// bindings are attached so the frontend can redirect to a setup-required
+// page when the Worker is deployed without them.
 app.get("/api/ping", (c) =>
-  c.json({ ok: true, service: "opentranslator-api", env: c.env.ENV }),
+  c.json({
+    ok: true,
+    service: "opentranslator-api",
+    env: c.env.ENV,
+    bindings: { db: !!c.env.DB, kv: !!c.env.SETTINGS_KV },
+  }),
 );
 
 // Database initializer — guarded by JWT_SECRET. Idempotent, safe to call

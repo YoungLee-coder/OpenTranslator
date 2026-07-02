@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
+import type { PingResponse } from "@opentranslator/shared-types";
 import { Languages, LayoutDashboard, LogOut, Menu, Moon, Sun } from "lucide-react";
+import { apiGet } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -65,12 +67,26 @@ function initialsOf(email: string): string {
 }
 
 export function RootLayout() {
-  const { user, loading, sitePublic, logout } = useAuth();
+  const { user, loading: authLoading, sitePublic, logout } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // 私有站点守卫：未登录访客访问任意页面（login 除外）一律重定向到登录页。
-  if (loading) {
+  // 绑定检测：DB / KV 未绑定时强制跳转初始化错误页。ping 不触碰 DB/KV，
+  // 可在 auth 流程之前安全执行；与 auth 并行，两者任一未就绪都显示加载态。
+  const [bindingCheck, setBindingCheck] = useState<
+    "loading" | "ok" | "missing"
+  >("loading");
+  useEffect(() => {
+    apiGet<PingResponse>("/api/ping")
+      .then((res) => {
+        setBindingCheck(
+          res.bindings?.db && res.bindings?.kv ? "ok" : "missing",
+        );
+      })
+      .catch(() => setBindingCheck("missing"));
+  }, []);
+
+  if (authLoading || bindingCheck === "loading") {
     return (
       <div className="flex min-h-svh items-center justify-center">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -79,6 +95,9 @@ export function RootLayout() {
         </div>
       </div>
     );
+  }
+  if (bindingCheck === "missing") {
+    return <Navigate to="/setup-required" replace />;
   }
   if (!sitePublic && !user && location.pathname !== "/login") {
     return <Navigate to="/login" replace />;

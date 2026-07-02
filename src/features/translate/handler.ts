@@ -112,6 +112,7 @@ export async function handleTranslate(c: C): Promise<Response> {
   const cacheKey = settings.translationCacheEnabled
     ? await translationCacheKey(req, row.id)
     : null;
+  const cacheTtlSeconds = settings.translationCacheTtlHours * 3600;
   if (cacheKey) {
     const cached = await getTranslationCache(c.env.SETTINGS_KV, cacheKey);
     if (cached) {
@@ -169,7 +170,7 @@ export async function handleTranslate(c: C): Promise<Response> {
             ...result,
           } satisfies TranslateStreamEvent),
         });
-        if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, result);
+        if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, result, cacheTtlSeconds);
         c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -185,7 +186,7 @@ export async function handleTranslate(c: C): Promise<Response> {
   // Non-streaming path.
   try {
     const result = await adapter.translate(req, ctx);
-    if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, result);
+    if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, result, cacheTtlSeconds);
     c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
     return c.json(result);
   } catch (e) {

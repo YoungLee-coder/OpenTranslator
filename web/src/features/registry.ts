@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { TranslationSettings } from "./TranslationSettings";
+import { PublicAccessSettings } from "./PublicAccessSettings";
 import { GlossaryManager } from "./GlossaryManager";
 
 /**
@@ -8,6 +8,6 @@ import { GlossaryManager } from "./GlossaryManager";
  * enabled feature key. New feature = add a page + register a line.
  */
 export const featureComponents: Record<string, ComponentType> = {
-  translate: TranslationSettings,
+  "public-access": PublicAccessSettings,
   glossary: GlossaryManager,
 };

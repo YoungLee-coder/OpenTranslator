@@ -9,6 +9,12 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
+      // tsconfig paths 已配，但 Vite 运行时只认 alias；前端值导入 shared-types
+      // 的运行时导出（如常量）时必须在此补上，否则 import-analysis 报错。
+      "@opentranslator/shared-types": path.resolve(
+        import.meta.dirname,
+        "../shared-types/index.ts",
+      ),
     },
   },
   // Production build output goes to the repo root ./dist so a single

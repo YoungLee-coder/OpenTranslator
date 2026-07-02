@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import type { SiteSettings } from "@opentranslator/shared-types";
+import {
+  TRANSLATION_CACHE_TTL_HOURS_MAX,
+  TRANSLATION_CACHE_TTL_HOURS_MIN,
+} from "@opentranslator/shared-types";
 import { apiGet, apiPut, ApiError } from "@/lib/api-client";
 import {
   Card,
@@ -94,36 +98,6 @@ export function SettingsSection() {
 
         <div className="divide-y divide-rule">
           <SettingRow
-            title="公开访问"
-            desc="关闭后，访客需登录才能使用翻译器。"
-          >
-            <Switch
-              checked={settings.sitePublic}
-              onCheckedChange={(v) =>
-                setSettings({ ...settings, sitePublic: v })
-              }
-            />
-          </SettingRow>
-
-          <SettingRow
-            title="公开模式限流（次/分钟）"
-            desc="匿名访客每分钟最大请求数。"
-          >
-            <Input
-              type="number"
-              min={1}
-              value={settings.publicRateLimitPerMinute}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  publicRateLimitPerMinute: Number(e.target.value),
-                })
-              }
-              className="w-24"
-            />
-          </SettingRow>
-
-          <SettingRow
             title="登录用户限流（次/分钟）"
             desc="登录管理员每分钟最大请求数。"
           >
@@ -152,6 +126,26 @@ export function SettingsSection() {
               }
             />
           </SettingRow>
+
+          <SettingRow
+            title="缓存保留时长（小时）"
+            desc={`相同结果在 KV 中的存活时间，到期自动清除。范围 ${TRANSLATION_CACHE_TTL_HOURS_MIN}–${TRANSLATION_CACHE_TTL_HOURS_MAX} 小时；关闭缓存时此值不生效。`}
+          >
+            <Input
+              type="number"
+              min={TRANSLATION_CACHE_TTL_HOURS_MIN}
+              max={TRANSLATION_CACHE_TTL_HOURS_MAX}
+              value={settings.translationCacheTtlHours}
+              disabled={!settings.translationCacheEnabled}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  translationCacheTtlHours: Number(e.target.value),
+                })
+              }
+              className="w-24"
+            />
+          </SettingRow>
         </div>
 
         <div className="pt-3">
@@ -160,10 +154,9 @@ export function SettingsSection() {
             disabled={saving}
             onClick={() =>
               save({
-                sitePublic: settings.sitePublic,
-                publicRateLimitPerMinute: settings.publicRateLimitPerMinute,
                 authedRateLimitPerMinute: settings.authedRateLimitPerMinute,
                 translationCacheEnabled: settings.translationCacheEnabled,
+                translationCacheTtlHours: settings.translationCacheTtlHours,
               })
             }
             className="gap-1.5"
