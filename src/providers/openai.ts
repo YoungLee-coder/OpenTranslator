@@ -29,10 +29,14 @@ function endpoint(baseUrl: string): string {
   return baseUrl.replace(/\/$/, "");
 }
 
-function authHeaders(apiKey: string): Record<string, string> {
+function authHeaders(
+  apiKey: string,
+  extraHeaders?: Record<string, string>,
+): Record<string, string> {
   return {
     "Content-Type": "application/json",
     Authorization: `Bearer ${apiKey}`,
+    ...extraHeaders,
   };
 }
 
@@ -52,6 +56,7 @@ export function makeOpenAICompat(
   name: ProviderType,
   defaultBaseUrl: string,
   defaultModel: string,
+  extraHeaders?: Record<string, string>,
 ): TranslationProvider {
   const resolveBaseUrl = (ctx: ProviderContext): string => {
     const baseUrl = ctx.baseUrl?.trim() || defaultBaseUrl;
@@ -68,7 +73,7 @@ export function makeOpenAICompat(
       const { system, user } = buildPrompt(req);
       const res = await fetch(endpoint(baseUrl), {
         method: "POST",
-        headers: authHeaders(ctx.apiKey),
+        headers: authHeaders(ctx.apiKey, extraHeaders),
         body: JSON.stringify(chatBody(model, system, user, false)),
       });
       if (!res.ok) throw new Error(`${name}: ${res.status} ${await safeText(res)}`);
@@ -87,7 +92,7 @@ export function makeOpenAICompat(
     },
     translateStream(req: TranslateRequest, ctx: ProviderContext): ReadableStream<Uint8Array> {
       return streamFromDeltas(
-        openaiDeltas(req, ctx, name, defaultBaseUrl, defaultModel, resolveBaseUrl),
+        openaiDeltas(req, ctx, name, defaultBaseUrl, defaultModel, resolveBaseUrl, extraHeaders),
       );
     },
   };
@@ -100,6 +105,7 @@ async function* openaiDeltas(
   defaultBaseUrl: string,
   defaultModel: string,
   resolveBaseUrl: (ctx: ProviderContext) => string,
+  extraHeaders?: Record<string, string>,
 ): AsyncGenerator<string> {
   const baseUrl = resolveBaseUrl(ctx);
   const model = ctx.defaultModel?.trim() || defaultModel;
@@ -128,6 +134,7 @@ export const aihubmixProvider = makeOpenAICompat(
   "aihubmix",
   "https://aihubmix.com/v1/chat/completions",
   "gpt-4o-mini",
+  { "APP-Code": "JFRG5263" },
 );
 // Generic OpenAI-compatible endpoint — baseUrl (full URL) is required on the provider row.
 export const customProvider = makeOpenAICompat("custom", "", "");

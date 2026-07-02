@@ -170,7 +170,7 @@ export async function handleTranslate(c: C): Promise<Response> {
           } satisfies TranslateStreamEvent),
         });
         if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, result);
-        void logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c));
+        c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         await stream.writeSSE({
@@ -186,7 +186,7 @@ export async function handleTranslate(c: C): Promise<Response> {
   try {
     const result = await adapter.translate(req, ctx);
     if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, result);
-    void logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c));
+    c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
     return c.json(result);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
