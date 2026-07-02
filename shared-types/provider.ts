@@ -4,10 +4,7 @@ export type ProviderType =
   | "openai"
   | "claude"
   | "gemini"
-  | "deepseek"
-  | "openrouter"
   | "aihubmix"
-  | "azure_openai"
   | "custom";
 
 /**
@@ -70,4 +67,6 @@ export interface ProviderField {
   placeholder?: string;
   options?: string[];
   required?: boolean;
+  /** 存在时该字段锁定为此预设值，前端不可编辑、提交取此值。 */
+  preset?: string;
 }

@@ -10,6 +10,7 @@ dist
 .dev.vars
 .env
 *.local
+wrangler.dev.toml
 
 # misc
 .DS_Store

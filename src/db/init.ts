@@ -147,3 +147,41 @@ export async function addColumn(
 ): Promise<boolean> {
   return runSafe(db, `ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }
+
+/** 代码定义的最新迁移版本（migrations 数组末项）。 */
+export function getLatestDbVersion(): string | null {
+  const last = migrations[migrations.length - 1];
+  return last ? last.version : null;
+}
+
+/**
+ * 查询 DB 当前已执行到的版本。纯读、无副作用：从代码 migrations 链末尾
+ * 往前找第一个已记录在 _migrations 表里的版本。表不存在（从未初始化）
+ * 或无任何已应用迁移时返回 null。
+ */
+export async function getCurrentDbVersion(db: D1Database): Promise<string | null> {
+  let rows: { version: string }[];
+  try {
+    const res = await db
+      .prepare("SELECT version FROM _migrations")
+      .all<{ version: string }>();
+    rows = res.results ?? [];
+  } catch {
+    // _migrations 表不存在（从未初始化）
+    return null;
+  }
+  const appliedSet = new Set(rows.map((r) => r.version));
+  for (let i = migrations.length - 1; i >= 0; i--) {
+    const m = migrations[i];
+    if (m && appliedSet.has(m.version)) return m.version;
+  }
+  return null;
+}
+
+/** 给定当前版本，返回尚未执行的迁移版本列表（按顺序）。 */
+export function getPendingMigrations(currentVersion: string | null): string[] {
+  if (!currentVersion) return migrations.map((m) => m.version);
+  const idx = migrations.findIndex((m) => m.version === currentVersion);
+  if (idx === -1) return migrations.map((m) => m.version);
+  return migrations.slice(idx + 1).map((m) => m.version);
+}

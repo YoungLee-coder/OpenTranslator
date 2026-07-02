@@ -1,18 +1,18 @@
 # OpenTranslator
 
 DeepL 风格的在线 AI 翻译器：以大模型为底座，多供应商动态切换，配置驱动、插件化扩展。
-架构是 **Vite + React SPA（前端）** 与 **Hono Worker（后端）** 合并部署到同一个 Cloudflare Worker——前端打包产物通过 `[assets]` 绑定由同一个 Worker 服务，同源无 CORS，一次 `wrangler deploy` 全搞定。全部跑在边缘网络，按量计费、几乎零成本。
+架构是 Vite + React SPA（前端）与 Hono Worker（后端）合并部署到同一个 Cloudflare Worker：前端打包产物通过 `[assets]` 绑定由同一个 Worker 服务，同源无 CORS，一次 `wrangler deploy` 同时发布前后端。全部跑在边缘网络，按量计费。
 
 ## 为什么用它
 
-- **多供应商，随时切换** — OpenAI、Claude、Gemini、DeepSeek、OpenRouter、AIHubMix、Azure OpenAI、自定义 OpenAI 兼容端点，八种 adapter 内置，在 Dashboard 里填 Key 即用，无需改代码。
-- **流式翻译** — 译文经 SSE 逐字渲染，跟读 DeepL 的即时手感。
-- **插件化扩展** — 供应商走注册表，功能模块走 DB 驱动开关。新增一家厂商或一个功能，只需加一个 adapter 文件 + 一行注册，核心逻辑不动。
-- **密钥加密存储** — 供应商 API Key 用 `ENCRYPTION_KEY` 加密后落 D1，明文绝不入库。
-- **细粒度限流** — 基于 Durable Object 的每 IP 滑动窗口，公开用户与登录用户分别配额。
-- **缓存与统计** — KV 翻译缓存避免重复请求；用量日志落 D1，Dashboard 可视化。
-- **术语库** — glossary 作为首个插件化功能验证案例，词条自动注入翻译提示词。
-- **站点开关** — 一键关闭公开访问，转为纯私有部署。
+- **多供应商，随时切换**，OpenAI、Claude、Gemini、DeepSeek、OpenRouter、AIHubMix、Azure OpenAI、自定义 OpenAI 兼容端点，八种 adapter 内置，在 Dashboard 里填 Key 即用，无需改代码。
+- **流式翻译**，译文经 SSE 逐字渲染，跟读 DeepL 的即时手感。
+- **插件化扩展**，供应商走注册表，功能模块走 DB 驱动开关。新增一家厂商或一个功能，只需加一个 adapter 文件 + 一行注册，核心逻辑不动。
+- **密钥加密存储**，供应商 API Key 用 `ENCRYPTION_KEY` 加密后落 D1，明文绝不入库。
+- **细粒度限流**，基于 Durable Object 的每 IP 滑动窗口，公开用户与登录用户分别配额。
+- **缓存与统计**，KV 翻译缓存避免重复请求，用量日志落 D1，Dashboard 可视化。
+- **术语库**，glossary 作为首个插件化功能验证案例，词条自动注入翻译提示词。
+- **站点开关**，一键关闭公开访问，转为纯私有部署。
 
 ## 技术栈
 
@@ -86,8 +86,8 @@ Dashboard → Workers & Pages → Create → Workers → Import a repository →
 
 创建后进 Worker → Settings：
 - **Variables and Secrets** 加两个 secret（32 位以上随机字符串）：
-  - `JWT_SECRET` — JWT 签名密钥，同时作为 `/api/init` 凭证
-  - `ENCRYPTION_KEY` — 供应商 API Key 加密密钥，**务必备份，丢了等于所有密钥作废**
+  - `JWT_SECRET`：JWT 签名密钥，同时作为 `/api/init` 凭证
+  - `ENCRYPTION_KEY`：供应商 API Key 加密密钥，**务必备份，丢了等于所有密钥作废**
 - **Bindings** → Add binding：
   - D1 binding，名字填 `DB` → 选 `opentranslator` 数据库
   - KV binding，名字填 `SETTINGS_KV` → 选刚才的命名空间

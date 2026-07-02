@@ -3,6 +3,8 @@ import ReactDOM from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
 import { router } from "./App";
 import { ThemeProvider, resolveInitialTheme } from "./components/theme-provider";
+import { AuthProvider } from "./lib/auth";
+import { Toaster } from "./components/ui/sonner";
 import "./index.css";
 
 const rootEl = document.getElementById("root");
@@ -14,9 +16,12 @@ document.documentElement.classList.toggle("dark", initialTheme === "dark");
 document.documentElement.style.colorScheme = initialTheme;
 
 ReactDOM.createRoot(rootEl).render(
-  <React.StrictMode>
-    <ThemeProvider>
-      <RouterProvider router={router} />
-    </ThemeProvider>
-  </React.StrictMode>,
+    <React.StrictMode>
+      <ThemeProvider>
+        <AuthProvider>
+          <RouterProvider router={router} />
+          <Toaster />
+        </AuthProvider>
+      </ThemeProvider>
+    </React.StrictMode>,
 );

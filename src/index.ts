@@ -10,6 +10,7 @@ import adminSettingsRoute from "./routes/admin-settings";
 import adminFeaturesRoute from "./routes/admin-features";
 import adminGlossaryRoute from "./routes/admin-glossary";
 import adminUsageRoute from "./routes/admin-usage";
+import adminDbRoute from "./routes/admin-db";
 import { initDatabase } from "./db/init";
 import { RateLimiter } from "./durable-objects/rate-limiter";
 
@@ -62,6 +63,7 @@ app.route("/api/admin/settings", adminSettingsRoute);
 app.route("/api/admin/features", adminFeaturesRoute);
 app.route("/api/admin/glossary", adminGlossaryRoute);
 app.route("/api/admin/usage", adminUsageRoute);
+app.route("/api/admin/db", adminDbRoute);
 
 // Catch-all: anything that isn't an /api route is served as a static asset
 // from the bundled frontend (SPA). With run_worker_first = true, the Worker

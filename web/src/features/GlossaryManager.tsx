@@ -26,6 +26,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, Plus, Trash2 } from "lucide-react";
+import { toast } from "@/components/ui/sonner";
 
 /** Glossary feature admin page: CRUD site-wide term pairs. */
 export function GlossaryManager() {
@@ -35,6 +46,7 @@ export function GlossaryManager() {
   const [target, setTarget] = useState("");
   const [targetLang, setTargetLang] = useState("zh");
   const [adding, setAdding] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<GlossaryTerm | null>(null);
 
   async function load() {
     try {
@@ -63,33 +75,44 @@ export function GlossaryManager() {
       });
       setSource("");
       setTarget("");
+      toast.success("术语已添加");
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      const msg = e instanceof ApiError ? e.message : String(e);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setAdding(false);
     }
   }
 
-  async function remove(id: string) {
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
     try {
-      await apiDelete(`/api/admin/glossary/${id}`);
+      await apiDelete(`/api/admin/glossary/${target.id}`);
+      toast.success(`已删除「${target.source}」`);
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      toast.error(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setDeleteTarget(null);
     }
   }
 
   return (
-    <Card>
+    <Card className="animate-rise">
       <CardHeader>
         <CardTitle>术语库</CardTitle>
         <CardDescription>
           按目标语言维护术语对。翻译时，匹配目标语言的术语会自动注入到提示词中强制替换。
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <form className="flex flex-wrap gap-2" onSubmit={add}>
+      <CardContent className="flex flex-col gap-5">
+        <form
+          className="flex flex-wrap items-center gap-2 rounded-md border border-rule bg-muted/20 p-2.5"
+          onSubmit={add}
+        >
           <Input
             className="min-w-[140px] flex-1"
             type="text"
@@ -116,14 +139,20 @@ export function GlossaryManager() {
               ))}
             </SelectContent>
           </Select>
-          <Button type="submit" disabled={adding}>
+          <Button type="submit" disabled={adding} className="gap-1.5">
+            <Plus className="size-4" />
             {adding ? "添加中…" : "添加"}
           </Button>
         </form>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-        <div className="rounded-lg border">
+        <div className="overflow-hidden rounded-md border border-rule">
           <Table>
             <TableHeader>
               <TableRow>
@@ -138,7 +167,7 @@ export function GlossaryManager() {
                 <TableRow>
                   <TableCell
                     colSpan={4}
-                    className="py-6 text-center text-sm text-muted-foreground"
+                    className="py-10 text-center text-sm text-muted-foreground"
                   >
                     暂无术语。
                   </TableCell>
@@ -146,19 +175,20 @@ export function GlossaryManager() {
               )}
               {terms.map((t) => (
                 <TableRow key={t.id}>
-                  <TableCell>{t.source}</TableCell>
+                  <TableCell className="font-medium">{t.source}</TableCell>
                   <TableCell>{t.target}</TableCell>
-                  <TableCell className="font-mono text-xs">
+                  <TableCell className="font-mono text-xs text-muted-foreground">
                     {languageName(t.targetLang)}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      className="h-7 gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
                       type="button"
-                      onClick={() => remove(t.id)}
+                      onClick={() => setDeleteTarget(t)}
                     >
+                      <Trash2 className="size-3" />
                       删除
                     </Button>
                   </TableCell>
@@ -168,6 +198,36 @@ export function GlossaryManager() {
           </Table>
         </div>
       </CardContent>
+
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>删除术语</DialogTitle>
+            <DialogDescription>
+              确认删除术语对「{deleteTarget?.source} → {deleteTarget?.target}」？
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => void confirmDelete()}
+            >
+              删除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

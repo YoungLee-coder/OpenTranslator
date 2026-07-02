@@ -9,7 +9,7 @@ import { OverviewSection } from "./OverviewSection";
 import { ProvidersSection } from "./ProvidersSection";
 import { SettingsSection } from "./SettingsSection";
 import { ModulesSection } from "./ModulesSection";
-import { Button } from "@/components/ui/button";
+import { DbVersionSection } from "./DbVersionSection";
 import {
   Tabs,
   TabsContent,
@@ -30,7 +30,7 @@ const SYSTEM_TABS: SystemTab[] = [
 ];
 
 export function DashboardPage() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading } = useAuth();
   const [features, setFeatures] = useState<FeatureManifest[]>([]);
   const [tab, setTab] = useState<string>("overview");
 
@@ -69,23 +69,12 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">控制台</h1>
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <span className="hidden sm:inline">{user.email}</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            type="button"
-            onClick={() => void logout()}
-          >
-            退出
-          </Button>
-        </div>
-      </div>
+      <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+        控制台
+      </h1>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="max-w-full overflow-x-auto">
+        <TabsList>
           {tabs.map((t) => (
             <TabsTrigger key={t.key} value={t.key}>
               {t.name}
@@ -103,7 +92,10 @@ export function DashboardPage() {
           <ModulesSection features={features} onChanged={refreshFeatures} />
         </TabsContent>
         <TabsContent value="settings">
-          <SettingsSection />
+          <div className="flex flex-col gap-6">
+            <SettingsSection />
+            <DbVersionSection />
+          </div>
         </TabsContent>
         {!isSystemTab && activeFeature
           ? (() => {

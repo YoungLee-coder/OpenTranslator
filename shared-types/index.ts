@@ -5,3 +5,4 @@ export * from "./feature";
 export * from "./auth";
 export * from "./usage";
 export * from "./glossary";
+export * from "./db";

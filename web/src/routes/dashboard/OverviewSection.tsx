@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Activity, FileText, AlertCircle } from "lucide-react";
 import type { UsageSummary } from "@opentranslator/shared-types";
 import { apiGet, ApiError } from "@/lib/api-client";
 import {
@@ -15,6 +16,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function OverviewSection() {
   const [usage, setUsage] = useState<UsageSummary | null>(null);
@@ -35,35 +38,35 @@ export function OverviewSection() {
   }, []);
 
   return (
-    <Card>
+    <Card className="animate-rise">
       <CardHeader>
         <CardTitle>用量概览</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {error && <p className="text-sm text-destructive">{error}</p>}
+      <CardContent className="flex flex-col gap-6">
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         {usage ? (
           <>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-2xl font-semibold tabular-nums">
-                  {usage.totalRequests}
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  总请求数
-                </div>
-              </div>
-              <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-2xl font-semibold tabular-nums">
-                  {usage.totalChars.toLocaleString()}
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  总字符数
-                </div>
-              </div>
+            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-rule bg-rule">
+              <StatTile
+                icon={<Activity className="size-4" />}
+                value={usage.totalRequests}
+                label="总请求数"
+              />
+              <StatTile
+                icon={<FileText className="size-4" />}
+                value={usage.totalChars.toLocaleString()}
+                label="总字符数"
+              />
             </div>
 
             {usage.byProvider.length > 0 && (
-              <div className="rounded-lg border">
+              <div className="overflow-hidden rounded-md border border-rule">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -75,7 +78,7 @@ export function OverviewSection() {
                   <TableBody>
                     {usage.byProvider.map((p) => (
                       <TableRow key={p.providerId}>
-                        <TableCell className="font-mono text-xs">
+                        <TableCell className="font-mono text-xs text-muted-foreground">
                           {p.providerId.slice(0, 8)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
@@ -93,10 +96,38 @@ export function OverviewSection() {
           </>
         ) : (
           !error && (
-            <p className="text-sm text-muted-foreground">加载中…</p>
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-rule bg-rule">
+                <Skeleton className="h-24 rounded-none" />
+                <Skeleton className="h-24 rounded-none" />
+              </div>
+              <Skeleton className="h-40 rounded-md" />
+            </div>
           )
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function StatTile({
+  icon,
+  value,
+  label,
+}: {
+  icon: React.ReactNode;
+  value: string | number;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-col gap-2 bg-card p-5">
+      <div className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+        {icon}
+      </div>
+      <div className="font-display text-2xl font-semibold tabular-nums tracking-tight">
+        {value}
+      </div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+    </div>
   );
 }

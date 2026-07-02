@@ -9,10 +9,10 @@ import { buildPrompt } from "./prompt";
 import { parseSSEEvents, streamFromDeltas, safeText } from "./sse";
 
 /**
- * OpenAI-compatible chat completions adapter. DeepSeek, OpenRouter and custom
- * OpenAI-compatible endpoints reuse the same wire format with different
- * defaults — add a line here (or call makeOpenAICompat) to support another
- * OpenAI-compatible vendor.
+ * OpenAI-compatible chat completions adapter. baseUrl 需填完整端点 URL
+ * （含 /chat/completions），adapter 直接使用、不再拼接路径。custom 及其它
+ * OpenAI-compatible 端点复用同一 wire 格式，仅默认值不同 —— 加一行
+ * makeOpenAICompat 即可接入新厂商。
  */
 
 interface OpenAIChoice {
@@ -25,7 +25,8 @@ interface OpenAIResponse {
 }
 
 function endpoint(baseUrl: string): string {
-  return `${baseUrl.replace(/\/$/, "")}/chat/completions`;
+  // baseUrl 即完整端点 URL，仅去尾斜杠
+  return baseUrl.replace(/\/$/, "");
 }
 
 function authHeaders(apiKey: string): Record<string, string> {
@@ -120,23 +121,13 @@ async function* openaiDeltas(
 
 export const openaiProvider = makeOpenAICompat(
   "openai",
-  "https://api.openai.com/v1",
+  "https://api.openai.com/v1/chat/completions",
   "gpt-4o-mini",
-);
-export const deepseekProvider = makeOpenAICompat(
-  "deepseek",
-  "https://api.deepseek.com",
-  "deepseek-chat",
-);
-export const openrouterProvider = makeOpenAICompat(
-  "openrouter",
-  "https://openrouter.ai/api/v1",
-  "openrouter/auto",
 );
 export const aihubmixProvider = makeOpenAICompat(
   "aihubmix",
-  "https://aihubmix.com/v1",
+  "https://aihubmix.com/v1/chat/completions",
   "gpt-4o-mini",
 );
-// Generic OpenAI-compatible endpoint — baseUrl is required on the provider row.
+// Generic OpenAI-compatible endpoint — baseUrl (full URL) is required on the provider row.
 export const customProvider = makeOpenAICompat("custom", "", "");

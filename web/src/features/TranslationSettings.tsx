@@ -18,6 +18,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { toast } from "@/components/ui/sonner";
 
 /** Translate feature admin page: pick which enabled provider serves public use. */
 export function TranslationSettings() {
@@ -41,20 +44,23 @@ export function TranslationSettings() {
     void load();
   }, []);
 
-  async function setDefault(id: string) {
+  async function setDefault(id: string, name: string) {
     setSavingId(id);
     try {
       await apiPut(`/api/admin/providers/${id}`, { isPublicDefault: true });
+      toast.success(`已将「${name}」设为公开默认`);
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      const msg = e instanceof ApiError ? e.message : String(e);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSavingId(null);
     }
   }
 
   return (
-    <Card>
+    <Card className="animate-rise">
       <CardHeader>
         <CardTitle>翻译设置</CardTitle>
         <CardDescription>
@@ -62,13 +68,18 @@ export function TranslationSettings() {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
         {providers.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             暂无已启用的供应商，请先在「供应商」中添加。
           </p>
         ) : (
-          <div className="rounded-lg border">
+          <div className="overflow-hidden rounded-md border border-rule">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -84,10 +95,10 @@ export function TranslationSettings() {
                     <TableCell className="font-medium">
                       {p.displayName}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell className="font-mono text-xs text-muted-foreground">
                       {p.type}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell className="font-mono text-xs text-muted-foreground">
                       {p.defaultModel ?? "—"}
                     </TableCell>
                     <TableCell className="text-right">
@@ -100,7 +111,7 @@ export function TranslationSettings() {
                           className="h-7"
                           type="button"
                           disabled={savingId !== null}
-                          onClick={() => void setDefault(p.id)}
+                          onClick={() => void setDefault(p.id, p.displayName)}
                         >
                           设为默认
                         </Button>

@@ -6,6 +6,7 @@ import type {
 import type { AppBindings, AppVariables } from "../types";
 import { populateUser } from "../middleware/auth";
 import { getAdminByEmail, getAdminCount, createAdmin } from "../db/queries";
+import { getSiteSettings } from "../settings/cache";
 import { hashPassword, verifyPassword } from "../lib/password";
 import {
   clearSessionCookie,
@@ -19,9 +20,16 @@ const authRoute = new Hono<{
 }>();
 
 authRoute.use("/me", populateUser);
-authRoute.get("/me", (c) => {
+authRoute.get("/me", async (c) => {
   const user = c.get("user");
-  return c.json({ authenticated: !!user, user: user ?? undefined });
+  const setupCompleted = (await getAdminCount(c.env.DB)) > 0;
+  const settings = await getSiteSettings(c.env.SETTINGS_KV, c.env.DB);
+  return c.json({
+    authenticated: !!user,
+    user: user ?? undefined,
+    setupCompleted,
+    sitePublic: settings.sitePublic,
+  });
 });
 
 /** POST /api/auth/setup — create the first admin. 409 once one exists. */

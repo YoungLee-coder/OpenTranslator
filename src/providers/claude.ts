@@ -9,7 +9,8 @@ import { parseSSEEvents, safeText, streamFromDeltas } from "./sse";
 
 /**
  * Anthropic Messages API adapter.
- * Docs: POST {baseUrl}/v1/messages with x-api-key + anthropic-version.
+ * Docs: POST {baseUrl}，baseUrl 需填完整端点 URL（含 /v1/messages），
+ * adapter 直接使用、不再拼接路径。请求头带 x-api-key + anthropic-version。
  */
 
 interface ClaudeContent {
@@ -25,15 +26,15 @@ interface ClaudeStreamEvent {
   delta?: { text?: string };
 }
 
-const DEFAULT_BASE_URL = "https://api.anthropic.com";
+const DEFAULT_BASE_URL = "https://api.anthropic.com/v1/messages";
 const DEFAULT_MODEL = "claude-sonnet-4-5";
 const MAX_TOKENS = 8192;
 const ANTHROPIC_VERSION = "2023-06-01";
 
 function resolve(baseUrl: string | undefined, apiKey: string) {
-  const base = (baseUrl?.trim() || DEFAULT_BASE_URL).replace(/\/$/, "");
+  const url = (baseUrl?.trim() || DEFAULT_BASE_URL).replace(/\/$/, "");
   return {
-    url: `${base}/v1/messages`,
+    url,
     headers: {
       "Content-Type": "application/json",
       "x-api-key": apiKey,

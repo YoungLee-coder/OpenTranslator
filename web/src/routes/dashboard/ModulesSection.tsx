@@ -1,5 +1,5 @@
 import type { FeatureManifest } from "@opentranslator/shared-types";
-import { apiPut } from "@/lib/api-client";
+import { apiPut, ApiError } from "@/lib/api-client";
 import {
   Card,
   CardContent,
@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
+import { toast } from "@/components/ui/sonner";
 
 interface Props {
   features: FeatureManifest[];
@@ -24,17 +25,18 @@ interface Props {
 
 /** Modules (system) tab: enable/disable feature modules — drives the dynamic nav. */
 export function ModulesSection({ features, onChanged }: Props) {
-  async function toggle(key: string, enabled: boolean) {
+  async function toggle(key: string, enabled: boolean, name: string) {
     try {
       await apiPut(`/api/admin/features/${key}`, { enabled: !enabled });
-    } catch {
-      // ignore — refresh reflects server truth either way
+      toast.success(`已${enabled ? "停用" : "启用"}「${name}」`);
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "操作失败");
     }
     await onChanged();
   }
 
   return (
-    <Card>
+    <Card className="animate-rise">
       <CardHeader>
         <CardTitle>功能模块</CardTitle>
         <CardDescription>
@@ -43,7 +45,7 @@ export function ModulesSection({ features, onChanged }: Props) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="rounded-lg border">
+        <div className="overflow-hidden rounded-md border border-rule">
           <Table>
             <TableHeader>
               <TableRow>
@@ -63,7 +65,9 @@ export function ModulesSection({ features, onChanged }: Props) {
                     <div className="flex items-center gap-2">
                       <Switch
                         checked={f.enabled}
-                        onCheckedChange={() => void toggle(f.key, f.enabled)}
+                        onCheckedChange={() =>
+                          void toggle(f.key, f.enabled, f.name)
+                        }
                       />
                       <span className="text-xs text-muted-foreground">
                         {f.enabled ? "已启用" : "已停用"}
