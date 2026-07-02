@@ -3,6 +3,7 @@ import { streamSSE } from "hono/streaming";
 import type {
   ProviderContext,
   ProviderType,
+  PublicModelRef,
   TranslateModelOption,
   TranslateModelsResponse,
   TranslateRequest,
@@ -76,16 +77,35 @@ export async function handleListModels(c: C): Promise<Response> {
     return c.json({ models, default: null } satisfies TranslateModelsResponse);
   }
 
-  // 匿名：只返回公开白名单
+  // 匿名：只返回公开白名单中仍有效的项——provider 存在且 enabled、
+  // 且 model 仍在该 provider 声明的 models 集合内。读取兜底，避免白名单
+  // 残留已删除/已禁用的模型而暴露给访客（写入侧见 admin-providers 的级联清理）。
   const publicModels = settings.publicModels ?? [];
-  const nameOf = (id: string) =>
-    records.find((p) => p.id === id)?.displayName ?? "";
-  const models: TranslateModelOption[] = publicModels.map((m) => ({
-    providerId: m.providerId,
-    model: m.model,
-    providerName: nameOf(m.providerId),
-  }));
-  const def = settings.publicDefaultModel ?? publicModels[0] ?? null;
+  const models: TranslateModelOption[] = [];
+  const validRefs: PublicModelRef[] = [];
+  for (const m of publicModels) {
+    const p = records.find((r) => r.id === m.providerId && r.enabled);
+    if (!p) continue;
+    const allowed = p.models?.length
+      ? p.models
+      : p.defaultModel
+        ? [p.defaultModel]
+        : [];
+    if (!allowed.includes(m.model)) continue;
+    models.push({
+      providerId: m.providerId,
+      model: m.model,
+      providerName: p.displayName,
+    });
+    validRefs.push(m);
+  }
+  const isRefValid = (
+    m: PublicModelRef | null | undefined,
+  ): m is PublicModelRef =>
+    !!m && validRefs.some((v) => v.providerId === m.providerId && v.model === m.model);
+  const def = isRefValid(settings.publicDefaultModel)
+    ? settings.publicDefaultModel
+    : (validRefs[0] ?? null);
   return c.json({ models, default: def } satisfies TranslateModelsResponse);
 }
 

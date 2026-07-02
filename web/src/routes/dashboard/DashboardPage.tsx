@@ -10,6 +10,7 @@ import { ProvidersSection } from "./ProvidersSection";
 import { SettingsSection } from "./SettingsSection";
 import { ModulesSection } from "./ModulesSection";
 import { DbVersionSection } from "./DbVersionSection";
+import { DbAuditSection } from "./DbAuditSection";
 import {
   Tabs,
   TabsContent,
@@ -92,6 +93,7 @@ export function DashboardPage() {
             <SettingsSection />
             <ModulesSection features={features} onChanged={refreshFeatures} />
             <DbVersionSection />
+            <DbAuditSection />
           </div>
         </TabsContent>
         {!isSystemTab && activeFeature

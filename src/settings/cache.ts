@@ -103,3 +103,51 @@ export async function updateSetting(
   await setSiteSetting(db, key, stored);
   await invalidateSiteSettings(kv);
 }
+
+/**
+ * 级联清理公开模型白名单与公开默认项中的失效引用。
+ *
+ * public_models / public_default_model 是独立存储的引用快照：删除 provider
+ * 或从其 models 集合移除某个模型时，必须调用本函数剔除指向已失效 provider/模型
+ * 的引用，否则匿名访客的模型列表会出现「幽灵」选项（handleListModels 另有读取兜底）。
+ *
+ * @param isStaleRef 判定某个 {providerId, model} 引用是否已失效（应移除）
+ * @param isStaleProviderId 可选，判定公开默认 provider id 是否已失效；
+ *   仅在删除整个 provider 时需要传入
+ */
+export async function prunePublicModelRefs(
+  kv: KVNamespace,
+  db: D1Database,
+  isStaleRef: (ref: PublicModelRef) => boolean,
+  isStaleProviderId?: (providerId: string) => boolean,
+): Promise<void> {
+  const map = await getSiteSettingsMap(db);
+  let changed = false;
+
+  // public_models：JSON 数组，剔除失效引用；全空则写空串清空。
+  const models = parsePublicModels(map.public_models);
+  if (models) {
+    const kept = models.filter((m) => !isStaleRef(m));
+    const next = kept.length ? JSON.stringify(kept) : "";
+    if (next !== (map.public_models ?? "")) {
+      await setSiteSetting(db, "public_models", next);
+      changed = true;
+    }
+  }
+
+  // public_default_model：单个 ref，失效则清空。
+  const def = parsePublicModelRef(map.public_default_model);
+  if (def && isStaleRef(def)) {
+    await setSiteSetting(db, "public_default_model", "");
+    changed = true;
+  }
+
+  // public_default_provider_id：仅在删除 provider 时清理。
+  const pid = map.public_default_provider_id;
+  if (pid && isStaleProviderId?.(pid)) {
+    await setSiteSetting(db, "public_default_provider_id", "");
+    changed = true;
+  }
+
+  if (changed) await invalidateSiteSettings(kv);
+}

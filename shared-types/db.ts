@@ -19,3 +19,37 @@ export interface DbMigrateResult {
   latest: string | null;
   needsUpdate: boolean;
 }
+
+/** 一致性问题的严重级别。 */
+export type DbAuditSeverity = "error" | "warning";
+
+/** 一项 DB 一致性问题。 */
+export interface DbAuditIssue {
+  /** 机器码，用于定位修复逻辑。 */
+  code: string;
+  /** 人类可读标题。 */
+  title: string;
+  /** 详情。 */
+  detail: string;
+  severity: DbAuditSeverity;
+  /** 是否可自动修复。 */
+  repairable: boolean;
+  /** 涉及对象标识（providerId 或 setting key），供前端展示。 */
+  ref?: string;
+}
+
+/** GET /api/admin/db/audit — 一致性检测结果。 */
+export interface DbAuditResult {
+  issues: DbAuditIssue[];
+  /** 是否存在可自动修复项。 */
+  hasRepairable: boolean;
+}
+
+/** POST /api/admin/db/repair — 修复结果。 */
+export interface DbAuditRepairResult {
+  ok: boolean;
+  /** 本次实际修复的问题 code 列表。 */
+  repaired: string[];
+  /** 修复后仍残留的问题（不可自动修复或未选中）。 */
+  remaining: DbAuditIssue[];
+}

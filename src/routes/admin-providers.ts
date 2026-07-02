@@ -16,7 +16,7 @@ import {
   type ProviderPatch,
 } from "../db/queries";
 import { encryptSecret } from "../lib/crypto";
-import { invalidateSiteSettings } from "../settings/cache";
+import { invalidateSiteSettings, prunePublicModelRefs } from "../settings/cache";
 
 const adminProvidersRoute = new Hono<{
   Bindings: AppBindings;
@@ -110,15 +110,29 @@ adminProvidersRoute.put("/:id", async (c) => {
     patch.encrypted_api_key = await encryptSecret(body.apiKey, c.env.ENCRYPTION_KEY);
   }
   await updateProvider(c.env.DB, id, patch);
+  // 改了 models 时，级联剔除公开白名单中已被移除的模型引用。
+  if (body.models !== undefined) {
+    const newModels = new Set(body.models);
+    await prunePublicModelRefs(c.env.SETTINGS_KV, c.env.DB, (r) =>
+      r.providerId === id && !newModels.has(r.model),
+    );
+  }
   const row = await getProviderRow(c.env.DB, id);
   return c.json({ provider: row ? providerRowToRecord(row) : null });
 });
 
 /** DELETE /api/admin/providers/:id. */
 adminProvidersRoute.delete("/:id", async (c) => {
-  const ok = await deleteProvider(c.env.DB, c.req.param("id"));
+  const id = c.req.param("id");
+  const ok = await deleteProvider(c.env.DB, id);
   if (!ok) return c.json({ error: "not found" }, 404);
-  await invalidateSiteSettings(c.env.SETTINGS_KV);
+  // 级联清理公开白名单中指向该 provider 的引用（含公开默认 provider 与默认模型）。
+  await prunePublicModelRefs(
+    c.env.SETTINGS_KV,
+    c.env.DB,
+    (r) => r.providerId === id,
+    (pid) => pid === id,
+  );
   return c.json({ ok: true });
 });
 
