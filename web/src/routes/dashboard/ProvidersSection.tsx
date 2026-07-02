@@ -360,14 +360,14 @@ export function ProvidersSection() {
           </div>
         ) : (
           <div className="overflow-hidden rounded-md border border-rule">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead>名称</TableHead>
-                  <TableHead>类型</TableHead>
+                  <TableHead className="w-40">名称</TableHead>
+                  <TableHead className="w-28">类型</TableHead>
                   <TableHead>模型</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
+                  <TableHead className="w-44">状态</TableHead>
+                  <TableHead className="w-44 text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -379,7 +379,7 @@ export function ProvidersSection() {
                     <TableCell className="text-muted-foreground">
                       {providerLabel(p.type)}
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
+                    <TableCell className="break-words font-mono text-xs text-muted-foreground">
                       {p.models?.length ? p.models.join("、") : (p.defaultModel ?? "—")}
                     </TableCell>
                     <TableCell>

@@ -25,12 +25,12 @@ export const providerSchemas: Record<ProviderType, ProviderField[]> = {
     { key: "baseUrl", label: "Base URL", type: "text", preset: "https://aihubmix.com/v1/chat/completions" },
     { key: "models", label: "模型", type: "models", placeholder: "gpt-4o-mini\ngpt-4o" },
   ],
-  custom: [
-    { key: "baseUrl", label: "Base URL", type: "text", required: true, placeholder: "https://your-endpoint/v1/chat/completions" },
-    { key: "models", label: "模型", type: "models" },
-  ],
   cloudflare: [
     { key: "accountId", label: "Account ID", type: "text", required: true, placeholder: "Cloudflare 账户 ID（Dashboard 右侧栏可见）" },
     { key: "models", label: "模型", type: "models", placeholder: "@cf/google/gemma-4-26b-a4b-it\n@cf/meta/llama-3.1-8b-instruct" },
+  ],
+  custom: [
+    { key: "baseUrl", label: "Base URL", type: "text", required: true, placeholder: "https://your-endpoint/v1/chat/completions" },
+    { key: "models", label: "模型", type: "models" },
   ],
 };
