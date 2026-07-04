@@ -1,4 +1,5 @@
 <div align="center">
+<img src="./docs/images/icon.svg" alt="" width="80" height="80" />
 
 # OpenTranslator
 
