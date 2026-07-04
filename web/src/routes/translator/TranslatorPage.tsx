@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeftRight, Check, Copy, Square } from "lucide-react";
-import type { TranslateModelOption, TranslateModelsResponse, TranslateStreamEvent } from "@opentranslator/shared-types";
+import type { TranslateModelOption, TranslateModelsResponse, TranslateStreamEvent, AiExpertMeta, AiExpertsPublicResponse } from "@opentranslator/shared-types";
 import { ApiError, apiGet, streamTranslate } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
-import { LANGUAGES } from "@/lib/languages";
+import { LANGUAGES, languageName } from "@/lib/languages";
+import { expertLabel, useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 type Status = "idle" | "streaming" | "done" | "error";
 
 export function TranslatorPage() {
+  const { t } = useTranslation();
   const [sourceText, setSourceText] = useState("");
   const [targetText, setTargetText] = useState("");
   const [sourceLang, setSourceLang] = useState("auto");
@@ -30,6 +32,9 @@ export function TranslatorPage() {
   const [modelOptions, setModelOptions] = useState<TranslateModelOption[]>([]);
   // 编码选中项：「providerId|model」；null 表示走站点默认
   const [modelKey, setModelKey] = useState<string | null>(null);
+  const [expertOptions, setExpertOptions] = useState<AiExpertMeta[]>([]);
+  const [expertId, setExpertId] = useState<string>("general");
+  const [defaultExpertId, setDefaultExpertId] = useState<string>("general");
 
   // 拉取当前用户可选的模型列表（登录返全部、匿名返公开白名单）
   useEffect(() => {
@@ -48,6 +53,26 @@ export function TranslatorPage() {
       cancelled = true;
     };
   }, [user]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await apiGet<AiExpertsPublicResponse>("/api/translate/experts");
+        if (cancelled) return;
+        setExpertOptions(res.experts);
+        setDefaultExpertId(res.defaultExpertId ?? "general");
+        setExpertId(res.defaultExpertId ?? "general");
+      } catch {
+        // 静默：无专家模块或未启用
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const showExpertSelect = expertOptions.length > 0;
 
   const streaming = status === "streaming";
   const noModel = modelOptions.length === 0;
@@ -84,6 +109,7 @@ export function TranslatorPage() {
           stream: true,
           providerId,
           model,
+          expertId: expertId === "general" ? undefined : expertId,
         },
         controller.signal,
       )) {
@@ -132,6 +158,10 @@ export function TranslatorPage() {
 
   return (
     <div className="animate-rise">
+      <div className="mb-5">
+        <h1 className="font-display text-2xl font-semibold tracking-tight">{t("translator.title")}</h1>
+      </div>
+
       {/* 主面板：发丝线框，无重影 */}
       <div className="relative overflow-hidden rounded-lg border border-rule bg-card shadow-sm">
         {/* 顶部墨蓝签名线：两端淡出，像一枚印刷记号 */}
@@ -159,7 +189,7 @@ export function TranslatorPage() {
                   <ArrowLeftRight className="size-3.5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>交换语言</TooltipContent>
+              <TooltipContent>{t("translator.swapLanguages")}</TooltipContent>
             </Tooltip>
             <LangSelect
               value={targetLang}
@@ -169,6 +199,15 @@ export function TranslatorPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {showExpertSelect && (
+              <ExpertSelect
+                value={expertId}
+                onChange={setExpertId}
+                options={expertOptions}
+                defaultExpertId={defaultExpertId}
+                disabled={streaming}
+              />
+            )}
             {modelOptions.length > 0 && (
               <ModelSelect
                 value={modelKey}
@@ -185,17 +224,17 @@ export function TranslatorPage() {
                 className="gap-1.5"
               >
                 <Square className="size-3 fill-current" />
-                停止
+                {t("common.stop")}
               </Button>
             ) : (
               <Button
                 type="button"
                 onClick={handleTranslate}
                 disabled={!canTranslate}
-                title={noModel ? "暂无可用模型" : undefined}
+                title={noModel ? t("translator.noModel") : undefined}
                 className="gap-1.5"
               >
-                翻译
+                {t("translator.translate")}
               </Button>
             )}
           </div>
@@ -207,7 +246,7 @@ export function TranslatorPage() {
             <textarea
               value={sourceText}
               onChange={(e) => setSourceText(e.target.value)}
-              placeholder="输入要翻译的文本…"
+              placeholder={t("translator.inputPlaceholder")}
               onKeyDown={(e) => {
                 if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleTranslate();
               }}
@@ -219,7 +258,7 @@ export function TranslatorPage() {
             />
             <div className="flex h-9 items-center justify-between border-t border-rule px-5 text-xs text-muted-foreground sm:px-6">
               {sourceText.length > 0 ? (
-                <span className="tabular-nums">{sourceText.length} 字符</span>
+                <span className="tabular-nums">{t("common.chars", { count: sourceText.length })}</span>
               ) : (
                 <span />
               )}
@@ -236,11 +275,11 @@ export function TranslatorPage() {
                 <span className="animate-fade-in">{targetText}</span>
               ) : streaming ? (
                 <span className="font-sans text-sm text-muted-foreground/70">
-                  翻译中…
+                  {t("translator.translating")}
                 </span>
               ) : (
                 <span className="font-sans text-sm text-muted-foreground/40">
-                  译文
+                  {t("translator.outputPlaceholder")}
                 </span>
               )}
               {streaming && (
@@ -254,7 +293,7 @@ export function TranslatorPage() {
                 <span className="text-destructive">{error}</span>
               ) : targetText.length > 0 ? (
                 <span className="tabular-nums text-muted-foreground">
-                  {targetText.length} 字符
+                  {t("common.chars", { count: targetText.length })}
                 </span>
               ) : (
                 <span />
@@ -272,17 +311,17 @@ export function TranslatorPage() {
                       {copied ? (
                         <>
                           <Check className="size-3 text-success" />
-                          已复制
+                          {t("common.copied")}
                         </>
                       ) : (
                         <>
                           <Copy className="size-3" />
-                          复制
+                          {t("common.copy")}
                         </>
                       )}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>复制译文</TooltipContent>
+                  <TooltipContent>{t("translator.copyTranslation")}</TooltipContent>
                 </Tooltip>
               )}
             </div>
@@ -304,6 +343,7 @@ function LangSelect({
   disabled?: boolean;
   includeAuto?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger className="h-9 w-[130px] sm:w-[160px]">
@@ -312,11 +352,50 @@ function LangSelect({
       <SelectContent>
         {LANGUAGES.filter((l) => includeAuto || l.code !== "auto").map((l) => (
           <SelectItem key={l.code} value={l.code}>
-            {l.name}
+            {languageName(l.code, t)}
           </SelectItem>
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+function ExpertSelect({
+  options,
+  value,
+  onChange,
+  defaultExpertId,
+  disabled,
+}: {
+  options: AiExpertMeta[];
+  value: string;
+  onChange: (v: string) => void;
+  defaultExpertId: string;
+  disabled?: boolean;
+}) {
+  const { t, locale } = useTranslation();
+  const expert = options.find((o) => o.id === value);
+  const label =
+    value === "general"
+      ? t("translator.general")
+      : expertLabel(expert, locale) || t("translator.expert");
+  return (
+    <div className="hidden md:block">
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
+        <SelectTrigger className="h-9 w-[160px]">
+          <span className="truncate">{label}</span>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="general">{t("translator.general")}</SelectItem>
+          {options.map((o) => (
+            <SelectItem key={o.id} value={o.id}>
+              {expertLabel(o, locale)}
+              {o.id === defaultExpertId ? t("common.defaultSuffix") : ""}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 
@@ -331,11 +410,12 @@ function ModelSelect({
   onChange: (v: string | null) => void;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation();
   // trigger 选中态只显示模型名；下拉项展示「供应商 · 模型」
   const selected = value
     ? options.find((o) => `${o.providerId}|${o.model}` === value)
     : undefined;
-  const label = selected?.modelLabel ?? "默认";
+  const label = selected?.modelLabel ?? t("common.default");
   return (
     <div className="hidden sm:block">
       <Select
@@ -347,7 +427,7 @@ function ModelSelect({
           <span className="truncate">{label}</span>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="default">默认</SelectItem>
+          <SelectItem value="default">{t("common.default")}</SelectItem>
           {options.map((o) => {
             const key = `${o.providerId}|${o.model}`;
             return (

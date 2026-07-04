@@ -25,7 +25,9 @@ import {
   setTranslationCache,
   translationCacheKey,
 } from "../../lib/cache";
-import { getGlossaryForTarget } from "../glossary/store";
+import { getAiExpertsConfig, resolveExpertId, isAiExpertsFeatureEnabled } from "../ai-experts/store";
+import { listExpertMeta, GENERAL_EXPERT_ID } from "../../experts/registry";
+import { buildTranslationPrompt } from "../../experts/prompt";
 import { providerRegistry } from "../../providers/registry";
 import { resolveModelLabel } from "../../providers/schema";
 import { getClientIp, enforceRateLimit } from "../../middleware/rate-limit";
@@ -116,12 +118,39 @@ export async function handleListModels(c: C): Promise<Response> {
   return c.json({ models, default: def } satisfies TranslateModelsResponse);
 }
 
+/** GET /api/translate/experts — enabled AI experts for the translator UI. */
+export async function handleListExperts(c: C): Promise<Response> {
+  const user = await getSessionUser(c.req.header("cookie"), c.env.JWT_SECRET);
+  const settings = await getSiteSettings(c.env.SETTINGS_KV, c.env.DB);
+
+  if (!user && !settings.sitePublic) {
+    return c.json({ experts: [], defaultExpertId: GENERAL_EXPERT_ID });
+  }
+
+  if (!(await isAiExpertsFeatureEnabled(c.env.DB))) {
+    return c.json({ experts: [], defaultExpertId: GENERAL_EXPERT_ID });
+  }
+
+  const config = await getAiExpertsConfig(c.env.SETTINGS_KV, c.env.DB);
+  const experts = listExpertMeta(config.enabledIds);
+  return c.json({
+    experts,
+    defaultExpertId: config.defaultExpertId ?? GENERAL_EXPERT_ID,
+  });
+}
+
 export async function handleTranslate(c: C): Promise<Response> {
   let req: TranslateRequest;
   try {
     req = (await c.req.json()) as TranslateRequest;
   } catch {
     return c.json({ error: "invalid JSON body" }, 400);
+  }
+
+  // Ignore client-supplied prompt overrides — only the write API sets these server-side.
+  if (req.promptOverride) {
+    const { promptOverride: _, ...rest } = req;
+    req = rest;
   }
 
   if (!req.text?.trim() || !req.targetLang?.trim()) {
@@ -137,15 +166,17 @@ export async function handleTranslate(c: C): Promise<Response> {
     return c.json({ error: "site is private", authenticated: false }, 403);
   }
 
-  // Apply the site-wide glossary for this target language (plugin hook).
-  const siteGlossary = await getGlossaryForTarget(
-    c.env.SETTINGS_KV,
-    c.env.DB,
-    req.targetLang,
-  );
-  if (Object.keys(siteGlossary).length > 0) {
-    req = { ...req, glossary: { ...siteGlossary, ...req.glossary } };
+  // Resolve AI expert (when feature enabled via non-empty enabledIds).
+  const expertId = await resolveExpertId(c.env.SETTINGS_KV, c.env.DB, req.expertId);
+  if (expertId) {
+    req = { ...req, expertId };
+  } else {
+    const { expertId: _, ...rest } = req;
+    req = rest;
   }
+
+  const promptBuilt = buildTranslationPrompt(req);
+  const needsPostProcess = !!promptBuilt.postProcess;
 
   // Rate limit: stricter for anonymous, looser for logged-in admins.
   const limit = user
@@ -241,7 +272,8 @@ export async function handleTranslate(c: C): Promise<Response> {
   // 适配器不支持流式（如 DeepL）则一次性翻译后包成单帧 delta + done。
   // 否则前端 streamTranslate 按 SSE 协议解析普通 JSON 响应，零事件 → 结果不显示。
   const clientWantsStream = req.stream === true;
-  const wantStream = clientWantsStream && adapter.translateStream !== undefined;
+  const wantStream =
+    clientWantsStream && adapter.translateStream !== undefined && !needsPostProcess;
 
   // Translation cache: serve identical repeats without hitting the upstream.
   const cacheKey = settings.translationCacheEnabled
@@ -318,25 +350,21 @@ export async function handleTranslate(c: C): Promise<Response> {
     });
   }
 
-  // 适配器不支持流式但客户端请求了 SSE：一次性翻译，包成单帧 delta + done。
-  // DeepL 等非流式供应商走此分支；前端 streamTranslate 无感接收。
-  if (clientWantsStream) {
+  // YAML-output experts need the full response before extraction — same as DeepL 非流式路径。
+  if (clientWantsStream && (needsPostProcess || !adapter.translateStream)) {
     try {
       const result = await adapter.translate(req, ctx);
-      if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, result, cacheTtlSeconds);
+      let text = result.translatedText;
+      if (promptBuilt.postProcess) text = promptBuilt.postProcess(text);
+      const final = { ...result, translatedText: text };
+      if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, final, cacheTtlSeconds);
       c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
       return streamSSE(c, async (stream) => {
         await stream.writeSSE({
-          data: JSON.stringify({
-            type: "delta",
-            text: result.translatedText,
-          } satisfies TranslateStreamEvent),
+          data: JSON.stringify({ type: "delta", text } satisfies TranslateStreamEvent),
         });
         await stream.writeSSE({
-          data: JSON.stringify({
-            type: "done",
-            ...result,
-          } satisfies TranslateStreamEvent),
+          data: JSON.stringify({ type: "done", ...final } satisfies TranslateStreamEvent),
         });
       });
     } catch (e) {
@@ -352,9 +380,12 @@ export async function handleTranslate(c: C): Promise<Response> {
   // 非流式 JSON 路径（客户端未请求 SSE）。
   try {
     const result = await adapter.translate(req, ctx);
-    if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, result, cacheTtlSeconds);
+    let text = result.translatedText;
+    if (promptBuilt.postProcess) text = promptBuilt.postProcess(text);
+    const final = { ...result, translatedText: text };
+    if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, final, cacheTtlSeconds);
     c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
-    return c.json(result);
+    return c.json(final);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return c.json({ error: msg }, 502);

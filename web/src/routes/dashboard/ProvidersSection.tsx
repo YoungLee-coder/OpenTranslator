@@ -51,6 +51,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Plus, RotateCw, Server, Star, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
+import { useTranslation } from "@/lib/i18n";
+import type { MessageKey } from "@/locales/zh-CN";
 
 interface FormState {
   type: ProviderType;
@@ -70,22 +72,26 @@ const EMPTY_FORM: FormState = {
   isPublicDefault: false,
 };
 
-// 技术类型 ID → 展示名，表格与下拉均用此映射
-const PROVIDER_LABELS: Record<ProviderType, string> = {
+// 技术类型 ID → 展示名，表格与下拉均用此映射（custom 走 i18n）
+const PROVIDER_LABELS: Record<Exclude<ProviderType, "custom">, string> = {
   openai: "OpenAI",
   claude: "Claude",
   gemini: "Gemini",
   aihubmix: "AIHubMix",
-  custom: "自定义",
   cloudflare: "Cloudflare",
   deepl: "DeepL",
 };
 
-function providerLabel(t: ProviderType): string {
-  return PROVIDER_LABELS[t] ?? t;
+function providerLabel(
+  type: ProviderType,
+  t: (key: MessageKey, params?: Record<string, string | number>) => string,
+): string {
+  if (type === "custom") return t("providers.typeCustom");
+  return PROVIDER_LABELS[type] ?? type;
 }
 
 export function ProvidersSection() {
+  const { t } = useTranslation();
   const [providers, setProviders] = useState<ProviderRecord[]>([]);
   const [types, setTypes] = useState<ProviderType[]>([]);
   const [schemas, setSchemas] = useState<Record<ProviderType, ProviderField[]>>(
@@ -180,14 +186,14 @@ export function ProvidersSection() {
     // 必填校验（preset / defaultValue 恒有值，跳过）
     for (const f of schemaFields) {
       if (f.required && !f.preset && !eff(f.key).trim()) {
-        setError(`「${f.label}」为必填项`);
+        setError(t("providers.fieldRequired", { label: f.label }));
         return null;
       }
     }
     const baseUrl = eff("baseUrl").trim() || undefined;
     // Base URL 需为完整地址（以 http:// 或 https:// 开头）
     if (baseUrl && !/^https?:\/\//i.test(baseUrl)) {
-      setError("Base URL 需填写完整地址（以 http:// 或 https:// 开头）");
+      setError(t("providers.baseUrlInvalid"));
       return null;
     }
     // models：一行一个模型名，去空、去重；首项视为默认模型
@@ -220,7 +226,7 @@ export function ProvidersSection() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.displayName.trim() || (!editing?.id && !form.apiKey)) {
-      setError("显示名称和 API Key 为必填项");
+      setError(t("providers.nameKeyRequired"));
       return;
     }
     const built = buildRequest();
@@ -232,10 +238,10 @@ export function ProvidersSection() {
         const body: Partial<CreateProviderRequest> = { ...built };
         if (!body.apiKey) delete body.apiKey;
         await apiPut(`/api/admin/providers/${editing.id}`, body);
-        toast.success("供应商已更新");
+        toast.success(t("providers.updated"));
       } else {
         await apiPost("/api/admin/providers", built);
-        toast.success("供应商已添加");
+        toast.success(t("providers.added"));
       }
       closeDialog();
       await load();
@@ -251,7 +257,7 @@ export function ProvidersSection() {
     const target = deleteTarget;
     try {
       await apiDelete(`/api/admin/providers/${target.id}`);
-      toast.success(`已删除「${target.displayName}」`);
+      toast.success(t("providers.deleted", { name: target.displayName }));
       await load();
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : String(e));
@@ -270,10 +276,14 @@ export function ProvidersSection() {
     setBusyId(p.id);
     try {
       await apiPut(`/api/admin/providers/${p.id}`, { enabled: !p.enabled });
-      toast.success(`已${p.enabled ? "停用" : "启用"}「${p.displayName}」`);
+      toast.success(
+        p.enabled
+          ? t("providers.disabledToast", { name: p.displayName })
+          : t("providers.enabledToast", { name: p.displayName }),
+      );
     } catch (e) {
       setProviders(prev);
-      toast.error(e instanceof ApiError ? e.message : "操作失败");
+      toast.error(e instanceof ApiError ? e.message : t("common.operationFailed"));
     } finally {
       setBusyId(null);
     }
@@ -289,10 +299,10 @@ export function ProvidersSection() {
     setBusyId(p.id);
     try {
       await apiPut(`/api/admin/providers/${p.id}`, { isPublicDefault: true });
-      toast.success(`已将「${p.displayName}」设为默认供应商`);
+      toast.success(t("providers.setDefaultToast", { name: p.displayName }));
     } catch (e) {
       setProviders(prev);
-      toast.error(e instanceof ApiError ? e.message : "操作失败");
+      toast.error(e instanceof ApiError ? e.message : t("common.operationFailed"));
     } finally {
       setBusyId(null);
     }
@@ -306,10 +316,10 @@ export function ProvidersSection() {
     <Card className="animate-rise">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>供应商</CardTitle>
+          <CardTitle>{t("providers.title")}</CardTitle>
           <Button type="button" size="sm" onClick={startCreate} className="gap-1.5">
             <Plus className="size-4" />
-            新增
+            {t("common.add")}
           </Button>
         </div>
       </CardHeader>
@@ -338,7 +348,7 @@ export function ProvidersSection() {
                 }}
               >
                 <RotateCw className="size-4" />
-                重试
+                {t("common.retry")}
               </Button>
             </div>
           </>
@@ -348,7 +358,7 @@ export function ProvidersSection() {
               <Server className="size-5" />
             </div>
             <div className="text-sm text-muted-foreground">
-              还没有供应商，添加一个即可开始翻译。
+              {t("providers.empty")}
             </div>
             <Button
               type="button"
@@ -357,7 +367,7 @@ export function ProvidersSection() {
               className="gap-1.5"
             >
               <Plus className="size-4" />
-              新增供应商
+              {t("providers.addProvider")}
             </Button>
           </div>
         ) : (
@@ -365,11 +375,11 @@ export function ProvidersSection() {
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-40">名称</TableHead>
-                  <TableHead className="w-28">类型</TableHead>
-                  <TableHead>模型</TableHead>
-                  <TableHead className="w-44">状态</TableHead>
-                  <TableHead className="w-44 text-right">操作</TableHead>
+                  <TableHead className="w-40">{t("providers.name")}</TableHead>
+                  <TableHead className="w-28">{t("providers.type")}</TableHead>
+                  <TableHead>{t("providers.models")}</TableHead>
+                  <TableHead className="w-44">{t("providers.status")}</TableHead>
+                  <TableHead className="w-44 text-right">{t("providers.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -379,7 +389,7 @@ export function ProvidersSection() {
                       {p.displayName}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {providerLabel(p.type)}
+                      {providerLabel(p.type, t)}
                     </TableCell>
                     <TableCell className="break-words font-mono text-xs text-muted-foreground">
                       {p.models?.length ? p.models.join("、") : (p.defaultModel ?? "—")}
@@ -390,10 +400,10 @@ export function ProvidersSection() {
                           checked={p.enabled}
                           disabled={busyId === p.id}
                           onCheckedChange={() => void toggleEnabled(p)}
-                          aria-label={`切换${p.displayName}启用状态`}
+                          aria-label={t("providers.toggleEnabled", { name: p.displayName })}
                         />
                         {p.isPublicDefault ? (
-                          <Badge variant="accent">默认</Badge>
+                          <Badge variant="accent">{t("common.default")}</Badge>
                         ) : (
                           <Button
                             variant="ghost"
@@ -404,7 +414,7 @@ export function ProvidersSection() {
                             onClick={() => void setDefault(p)}
                           >
                             <Star className="size-3" />
-                            设为默认
+                            {t("providers.setDefault")}
                           </Button>
                         )}
                       </div>
@@ -418,7 +428,7 @@ export function ProvidersSection() {
                           type="button"
                           onClick={() => startEdit(p)}
                         >
-                          编辑
+                          {t("common.edit")}
                         </Button>
                         <Button
                           variant="ghost"
@@ -428,7 +438,7 @@ export function ProvidersSection() {
                           onClick={() => setDeleteTarget(p)}
                         >
                           <Trash2 className="size-3" />
-                          删除
+                          {t("common.delete")}
                         </Button>
                       </div>
                     </TableCell>
@@ -444,16 +454,14 @@ export function ProvidersSection() {
       <Dialog open={editing !== null} onOpenChange={(o) => !o && closeDialog()}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>{editing?.id ? "编辑供应商" : "新增供应商"}</DialogTitle>
-            <DialogDescription>
-              配置模型供应商的连接信息。API Key 加密存储，明文不入库。
-            </DialogDescription>
+            <DialogTitle>{editing?.id ? t("providers.editTitle") : t("providers.addTitle")}</DialogTitle>
+            <DialogDescription>{t("providers.formDesc")}</DialogDescription>
           </DialogHeader>
 
           <form onSubmit={submit} className="flex flex-col gap-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label>类型</Label>
+                <Label>{t("providers.type")}</Label>
                 <Select
                   value={form.type}
                   onValueChange={(v) => onTypeChange(v as ProviderType)}
@@ -463,9 +471,9 @@ export function ProvidersSection() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {types.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {providerLabel(t)}
+                    {types.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {providerLabel(type, t)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -473,7 +481,7 @@ export function ProvidersSection() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="display-name">显示名称</Label>
+                <Label htmlFor="display-name">{t("providers.displayName")}</Label>
                 <Input
                   id="display-name"
                   type="text"
@@ -488,7 +496,8 @@ export function ProvidersSection() {
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="api-key">
-                API Key{editing?.id ? "（留空则不修改）" : ""}
+                {t("providers.apiKey")}
+                {editing?.id ? t("providers.apiKeyOptional") : ""}
               </Label>
               <Input
                 id="api-key"
@@ -515,12 +524,12 @@ export function ProvidersSection() {
                   )}
                   {f.preset && (
                     <span className="text-xs font-normal text-muted-foreground">
-                      已锁定
+                      {t("providers.locked")}
                     </span>
                   )}
                   {f.type === "models" && (
                     <span className="text-xs font-normal text-muted-foreground">
-                      一行一个，首项为默认
+                      {t("providers.modelsHint")}
                     </span>
                   )}
                 </Label>
@@ -598,7 +607,7 @@ export function ProvidersSection() {
                     setForm({ ...form, enabled: v })
                   }
                 />
-                <Label htmlFor="enabled">启用</Label>
+                <Label htmlFor="enabled">{t("providers.enable")}</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch
@@ -608,7 +617,7 @@ export function ProvidersSection() {
                     setForm({ ...form, isPublicDefault: v })
                   }
                 />
-                <Label htmlFor="public-default">设为公开默认</Label>
+                <Label htmlFor="public-default">{t("providers.publicDefault")}</Label>
               </div>
             </div>
 
@@ -618,10 +627,10 @@ export function ProvidersSection() {
                 variant="outline"
                 onClick={closeDialog}
               >
-                取消
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={saving}>
-                {saving ? "保存中…" : "保存"}
+                {saving ? t("common.saving") : t("common.save")}
               </Button>
             </DialogFooter>
           </form>
@@ -635,9 +644,9 @@ export function ProvidersSection() {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>删除供应商</DialogTitle>
+            <DialogTitle>{t("providers.deleteTitle")}</DialogTitle>
             <DialogDescription>
-              确认删除「{deleteTarget?.displayName}」？此操作不可撤销。
+              {t("providers.deleteConfirm", { name: deleteTarget?.displayName ?? "" })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -646,14 +655,14 @@ export function ProvidersSection() {
               variant="outline"
               onClick={() => setDeleteTarget(null)}
             >
-              取消
+              {t("common.cancel")}
             </Button>
             <Button
               type="button"
               variant="destructive"
               onClick={() => void confirmDelete()}
             >
-              删除
+              {t("common.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

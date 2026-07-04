@@ -21,6 +21,7 @@ interface AdminUserRow {
   password_hash: string;
   role: string;
   created_at: number | null;
+  avatar_updated_at: number | null;
 }
 
 function toProviderRecord(row: ProviderRow): ProviderRecord {
@@ -78,6 +79,10 @@ export async function setSiteSetting(
     )
     .bind(key, value, now)
     .run();
+}
+
+export async function deleteSiteSetting(db: D1Database, key: string): Promise<void> {
+  await db.prepare("DELETE FROM site_settings WHERE key = ?").bind(key).run();
 }
 
 /* ------------------------------- providers -------------------------------- */
@@ -267,6 +272,50 @@ export async function createAdmin(
     .run();
 }
 
+export async function getAdminById(
+  db: D1Database,
+  id: string,
+): Promise<AdminUserRow | null> {
+  return db
+    .prepare("SELECT * FROM admin_users WHERE id = ?")
+    .bind(id)
+    .first<AdminUserRow>();
+}
+
+export interface AdminPatch {
+  email?: string;
+  password_hash?: string;
+  avatar_updated_at?: number | null;
+}
+
+export async function updateAdmin(
+  db: D1Database,
+  id: string,
+  patch: AdminPatch,
+): Promise<boolean> {
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  if (patch.email !== undefined) {
+    sets.push("email = ?");
+    params.push(patch.email);
+  }
+  if (patch.password_hash !== undefined) {
+    sets.push("password_hash = ?");
+    params.push(patch.password_hash);
+  }
+  if (patch.avatar_updated_at !== undefined) {
+    sets.push("avatar_updated_at = ?");
+    params.push(patch.avatar_updated_at);
+  }
+  if (sets.length === 0) return true;
+  params.push(id);
+  const res = await db
+    .prepare(`UPDATE admin_users SET ${sets.join(", ")} WHERE id = ?`)
+    .bind(...params)
+    .run();
+  return res.meta.changes > 0;
+}
+
 /* -------------------------------- usage logs ------------------------------- */
 
 export async function logUsage(
@@ -345,4 +394,8 @@ export async function upsertFeatureModule(
     )
     .bind(key, key, enabled ? 1 : 0, now)
     .run();
+}
+
+export async function deleteFeatureModule(db: D1Database, key: string): Promise<void> {
+  await db.prepare("DELETE FROM feature_modules WHERE key = ?").bind(key).run();
 }

@@ -1,0 +1,88 @@
+id: paraphrase
+version: 1.1.2
+extensionVersion: 1.4.10
+priority: 10
+name: Paraphrase Expert
+description: Designed for nuanced, interpretive translations, this expert ensures that translations go beyond the literal to capture the essence and tone of the original text.
+avatar: https://s.immersivetranslate.com/assets/uploads/fluent-7JVve6.png
+author: Official
+homepage: https://immersivetranslate.com/
+details: |-
+  This expert specializes in interpretive translations, aiming to capture not just the words but the meaning and tone behind them. It's perfect for literature, idiomatic expressions, and any text where context matters as much as content. Use this expert to convey the essence of the original text in the target language, ensuring that cultural nuances and implied meanings are not lost in translation.
+i18n:
+  zh-CN:
+    name: 意译大师
+    description: 专门设计用于富有细腻差异和意译的翻译，经过先直译，再意译的步骤，确保翻译超越字面，捕捉原文的精髓和语调。
+    details: |-
+      该专家专注于意译翻译，旨在捕捉不仅仅是文字，而是背后的意义和语调。它非常适合文学、成语表达以及任何上下文和内容同等重要的文本。使用此专家可以确保在目标语言中传达原文的精髓，确保文化细微差别和隐含意义不会在翻译中丢失。
+  zh-TW:
+    name: 意譯專家
+    description: 專門設計用於豐富細膩差異和意譯的翻譯，經過先直譯，再意譯的步驟，確保翻譯超越字面，捕捉原文的精髓和語調。
+    details: |-
+      該專家專注於意譯翻譯，旨在捕捉不僅僅是文字，而是背後的意義和語調。它非常適合文學、成語表達以及任何上下文和內容同等重要的文本。使用此專家可以確保在目標語言中傳達原文的精髓，確保文化細膩差別和隱含意義不會在翻譯中丟失。
+  ja:
+    name: Paraphrase Expert
+    description: 直訳にとどまらず、原文の本質やニュアンス、トーンまで汲み取った意訳寄りの翻訳を行うエキスパートです。
+
+maxTextLengthPerRequest: 1500
+maxTextGroupLengthPerRequestForSubtitle: 1
+maxTextGroupLengthPerRequest: 1
+env:
+  imt_source_field: source
+  imt_trans_field: step2
+  imt_sub_source_field: source
+  imt_sub_trans_field: step2
+  imt_yaml_item: |-
+    - id: {{id}}
+      {{imt_source_field}}: {{text}}
+  imt_subtitle_yaml_item: |-
+    - id: {{id}}
+      {{imt_sub_source_field}}: {{text}}
+
+systemPrompt: "You are a professional, authentic machine translation engine.{{title_prompt}}{{summary_prompt}}{{terms_prompt}}"
+multipleSystemPrompt: "You are a professional multi-paragraph translation engine.{{title_prompt}}{{summary_prompt}}{{terms_prompt}}"
+prompt: |-
+  Here is the YAML input:
+
+  <yaml>
+  {{yaml}}
+  </yaml>
+
+  Please follow these steps:
+
+  1. Extract the content from the "source" field in the provided YAML object.
+
+  2. Translate the extracted content into {{to}}. Place this initial translation into the step1 field.
+
+  3. Refine the initial translation from step1 to make it more natural and understandable in {{to}}. Place this refined translation into the step2 field.
+
+  4. Format the result as a YAML array with id, step1, and step2 fields as shown in this example:
+
+  - id: 1 
+    step1: Initial translation
+    step2: Refined translation
+
+  Return the translated YAML directly without any <example_output> tags or additional information.
+multiplePrompt: |-
+  Here is the YAML input:
+
+  <yaml>
+  {{yaml}}
+  </yaml>
+
+  Please follow these steps:
+
+  1. Extract the content from the "source" field in the provided YAML object.
+
+  2. Translate the extracted content into {{to}}. Place this initial translation into the step1 field.
+
+  3. Refine the initial translation from step1 to make it more natural and understandable in {{to}}. Place this refined translation into the step2 field.
+
+  4. Format the result as a YAML array with id, step1, and step2 fields as shown in this example:
+
+  - id: 1 
+    step1: Initial translation
+    step2: Refined translation
+
+  Return the translated YAML directly without any <example_output> tags or additional information.
+langOverrides: []

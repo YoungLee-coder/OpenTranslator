@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 export function LoginPage() {
   const { user, loading, setupCompleted, refresh } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "setup">("login");
   const [email, setEmail] = useState("");
@@ -45,11 +47,11 @@ export function LoginPage() {
     <div className="flex flex-1 items-center justify-center px-4">
       <div className="w-full max-w-sm animate-rise rounded-xl border border-rule bg-card p-7 shadow-md">
         <h1 className="font-display mb-5 text-center text-xl font-semibold tracking-tight">
-          {isLogin ? "登录控制台" : "初始化管理员"}
+          {isLogin ? t("auth.loginTitle") : t("auth.setupTitle")}
         </h1>
         <form onSubmit={submit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="email">邮箱</Label>
+            <Label htmlFor="email">{t("auth.email")}</Label>
             <Input
               id="email"
               type="email"
@@ -64,7 +66,7 @@ export function LoginPage() {
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="password">
-              密码{!isLogin ? "（至少 8 位）" : ""}
+              {t("auth.password")}{!isLogin ? t("auth.passwordMin") : ""}
             </Label>
             <Input
               id="password"
@@ -90,7 +92,7 @@ export function LoginPage() {
             className="mt-1 h-10 w-full"
             disabled={submitting}
           >
-            {submitting ? "提交中…" : isLogin ? "登录" : "创建并登录"}
+            {submitting ? t("common.submitting") : isLogin ? t("auth.login") : t("auth.createAndLogin")}
           </Button>
         </form>
 
@@ -103,7 +105,7 @@ export function LoginPage() {
             }}
             className="mx-auto mt-5 block text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
           >
-            {isLogin ? "首次使用？初始化管理员 →" : "← 返回登录"}
+            {isLogin ? t("auth.firstUseSetup") : t("auth.backToLogin")}
           </button>
         )}
       </div>

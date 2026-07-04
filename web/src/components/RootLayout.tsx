@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import type { PingResponse } from "@opentranslator/shared-types";
-import { Languages, LayoutDashboard, LogOut, Menu, Moon, Sun } from "lucide-react";
+import { Languages, LayoutDashboard, LogOut, Menu, Moon, PenLine, Sun } from "lucide-react";
 import { apiGet } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,8 +21,11 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { LanguageMenuButton, LanguageMenuItems } from "@/components/LanguageMenu";
 import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/lib/auth";
+import { useTranslation } from "@/lib/i18n";
+import { UserAvatar } from "@/components/UserAvatar";
 import { cn } from "@/lib/utils";
 
 function BrandMark({ compact = false }: { compact?: boolean }) {
@@ -43,6 +45,7 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
 
 function ThemeToggle() {
   const { theme, toggle } = useTheme();
+  const { t } = useTranslation();
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -51,23 +54,19 @@ function ThemeToggle() {
           size="icon"
           type="button"
           onClick={toggle}
-          aria-label="切换主题"
+          aria-label={t("theme.toggle")}
         >
           {theme === "dark" ? <Sun /> : <Moon />}
         </Button>
       </TooltipTrigger>
-      <TooltipContent>{theme === "dark" ? "浅色" : "深色"}</TooltipContent>
+      <TooltipContent>{theme === "dark" ? t("theme.light") : t("theme.dark")}</TooltipContent>
     </Tooltip>
   );
 }
 
-function initialsOf(email: string): string {
-  const head = email.split("@")[0] ?? email;
-  return head.slice(0, 2).toUpperCase();
-}
-
 export function RootLayout() {
   const { user, loading: authLoading, sitePublic, logout } = useAuth();
+  const { t } = useTranslation();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -76,6 +75,7 @@ export function RootLayout() {
   const [bindingCheck, setBindingCheck] = useState<
     "loading" | "ok" | "missing"
   >("loading");
+
   useEffect(() => {
     apiGet<PingResponse>("/api/ping")
       .then((res) => {
@@ -91,7 +91,7 @@ export function RootLayout() {
       <div className="flex min-h-svh items-center justify-center">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span className="size-4 animate-spin rounded-full border-2 border-rule border-t-transparent" />
-          加载中…
+          {t("common.loading")}
         </div>
       </div>
     );
@@ -103,13 +103,32 @@ export function RootLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  const navLinks = user ? (
+  const navLinks = (
     <>
-      <NavLink to="/" label="翻译" icon={<Languages className="size-4" />} active={location.pathname === "/"} onGo={() => setMobileOpen(false)} />
-      <NavLink to="/dashboard" label="控制台" icon={<LayoutDashboard className="size-4" />} active={location.pathname.startsWith("/dashboard")} onGo={() => setMobileOpen(false)} />
+      <NavLink to="/" label={t("nav.translate")} icon={<Languages className="size-4" />} active={location.pathname === "/"} onGo={() => setMobileOpen(false)} />
+      <NavLink to="/write" label={t("nav.write")} icon={<PenLine className="size-4" />} active={location.pathname === "/write"} onGo={() => setMobileOpen(false)} />
+      {user ? (
+        <NavLink to="/dashboard" label={t("nav.dashboard")} icon={<LayoutDashboard className="size-4" />} active={location.pathname.startsWith("/dashboard")} onGo={() => setMobileOpen(false)} />
+      ) : (
+        <NavLink to="/login" label={t("nav.login")} active={location.pathname === "/login"} onGo={() => setMobileOpen(false)} />
+      )}
     </>
-  ) : (
-    <NavLink to="/login" label="登录" active={location.pathname === "/login"} onGo={() => setMobileOpen(false)} />
+  );
+
+  const desktopNav = (
+    <>
+      <PillLink to="/" label={t("nav.translate")} active={location.pathname === "/"} />
+      <PillLink to="/write" label={t("nav.write")} active={location.pathname === "/write"} />
+      {user ? (
+        <PillLink
+          to="/dashboard"
+          label={t("nav.dashboard")}
+          active={location.pathname.startsWith("/dashboard")}
+        />
+      ) : (
+        <PillLink to="/login" label={t("nav.login")} active={location.pathname === "/login"} />
+      )}
+    </>
   );
 
   return (
@@ -124,55 +143,34 @@ export function RootLayout() {
 
           {/* 桌面导航：药丸式 active */}
           <nav className="hidden items-center gap-1 md:flex">
-            <PillLink to="/" label="翻译" active={location.pathname === "/"} />
-            {user ? (
-              <PillLink
-                to="/dashboard"
-                label="控制台"
-                active={location.pathname.startsWith("/dashboard")}
-              />
-            ) : (
-              <PillLink
-                to="/login"
-                label="登录"
-                active={location.pathname === "/login"}
-              />
-            )}
+            {desktopNav}
           </nav>
 
           <span className="mx-1 hidden h-6 w-px bg-rule md:block" />
 
           <div className="hidden items-center gap-1 md:flex">
             <ThemeToggle />
+            {!user && <LanguageMenuButton />}
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
                     className="rounded-full outline-none ring-offset-background transition-shadow focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-                    aria-label="用户菜单"
+                    aria-label={t("user.menu")}
                   >
-                    <Avatar className="size-8 ring-1 ring-rule">
-                      <AvatarFallback className="text-[0.7rem]">
-                        {initialsOf(user.email)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar user={user} className="size-8 ring-1 ring-rule" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="min-w-52">
                   <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/dashboard">
-                      <LayoutDashboard /> 控制台
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  <LanguageMenuItems />
                   <DropdownMenuItem
                     onSelect={() => void logout()}
                     className="text-destructive focus:text-destructive"
                   >
-                    <LogOut /> 退出登录
+                    <LogOut /> {t("user.logout")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -182,9 +180,10 @@ export function RootLayout() {
           {/* 移动端：主题 + 汉堡 */}
           <div className="flex items-center gap-1 md:hidden">
             <ThemeToggle />
+            <LanguageMenuButton />
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="菜单" className="size-9 rounded-full">
+                <Button variant="ghost" size="icon" aria-label={t("nav.menu")} className="size-9 rounded-full">
                   <Menu className="size-4" />
                 </Button>
               </SheetTrigger>

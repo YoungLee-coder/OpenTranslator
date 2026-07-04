@@ -5,6 +5,7 @@ import {
   TRANSLATION_CACHE_TTL_HOURS_MIN,
 } from "@opentranslator/shared-types";
 import { apiGet, apiPut, ApiError } from "@/lib/api-client";
+import { useTranslation } from "@/lib/i18n";
 import {
   Card,
   CardContent,
@@ -20,6 +21,7 @@ import { AlertCircle, Check } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 
 export function SettingsSection() {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -49,7 +51,7 @@ export function SettingsSection() {
       );
       setSettings(res.settings);
       setError(null);
-      toast.success("设置已保存");
+      toast.success(t("settings.saved"));
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : String(e);
       setError(msg);
@@ -63,7 +65,7 @@ export function SettingsSection() {
     return (
       <Card className="animate-rise">
         <CardHeader>
-          <CardTitle>站点设置</CardTitle>
+          <CardTitle>{t("settings.title")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {error ? (
@@ -86,7 +88,7 @@ export function SettingsSection() {
   return (
     <Card className="animate-rise">
       <CardHeader>
-        <CardTitle>站点设置</CardTitle>
+        <CardTitle>{t("settings.title")}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {error && (
@@ -98,8 +100,8 @@ export function SettingsSection() {
 
         <div className="divide-y divide-rule">
           <SettingRow
-            title="登录用户限流（次/分钟）"
-            desc="登录管理员每分钟最大请求数。"
+            title={t("settings.authedRateLimit")}
+            desc={t("settings.authedRateLimitDesc")}
           >
             <Input
               type="number"
@@ -116,8 +118,8 @@ export function SettingsSection() {
           </SettingRow>
 
           <SettingRow
-            title="翻译结果缓存"
-            desc="相同文本+语言对命中 KV 缓存时直接返回，省时省额度。"
+            title={t("settings.translationCache")}
+            desc={t("settings.translationCacheDesc")}
           >
             <Switch
               checked={settings.translationCacheEnabled}
@@ -128,8 +130,11 @@ export function SettingsSection() {
           </SettingRow>
 
           <SettingRow
-            title="缓存保留时长（小时）"
-            desc={`相同结果在 KV 中的存活时间，到期自动清除。范围 ${TRANSLATION_CACHE_TTL_HOURS_MIN}–${TRANSLATION_CACHE_TTL_HOURS_MAX} 小时；关闭缓存时此值不生效。`}
+            title={t("settings.cacheTtl")}
+            desc={t("settings.cacheTtlDesc", {
+              min: TRANSLATION_CACHE_TTL_HOURS_MIN,
+              max: TRANSLATION_CACHE_TTL_HOURS_MAX,
+            })}
           >
             <Input
               type="number"
@@ -162,11 +167,11 @@ export function SettingsSection() {
             className="gap-1.5"
           >
             {saving ? (
-              "保存中…"
+              t("common.saving")
             ) : (
               <>
                 <Check className="size-4" />
-                保存设置
+                {t("common.saveSettings")}
               </>
             )}
           </Button>

@@ -26,25 +26,46 @@ import {
 } from "@/components/ui/dialog";
 import { AlertCircle, RotateCw, ShieldCheck, Wrench } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
+import { useTranslation } from "@/lib/i18n";
 
 export function DbAuditSection() {
+  const { t } = useTranslation();
   const [issues, setIssues] = useState<DbAuditIssue[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [checking, setChecking] = useState(false);
   const [repairing, setRepairing] = useState(false);
   const [repairingCode, setRepairingCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
 
-  async function load() {
-    setLoading(true);
-    setError(null);
+  async function load(opts: { notify?: boolean } = {}) {
+    const isInitial = issues === null;
+    if (isInitial) {
+      setLoading(true);
+      setError(null);
+    } else if (opts.notify) {
+      setChecking(true);
+    }
     try {
       const res = await apiGet<DbAuditResult>("/api/admin/db/audit");
       setIssues(res.issues);
+      if (opts.notify) {
+        if (res.issues.length === 0) {
+          toast.success(t("dbAudit.passed"));
+        } else {
+          toast.info(t("dbAudit.issuesFound", { count: res.issues.length }));
+        }
+      }
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      const msg = e instanceof ApiError ? e.message : String(e);
+      if (isInitial) {
+        setError(msg);
+      } else {
+        toast.error(msg);
+      }
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
+      if (opts.notify) setChecking(false);
     }
   }
 
@@ -60,9 +81,14 @@ export function DbAuditSection() {
     try {
       const res = await apiPost<DbAuditRepairResult>("/api/admin/db/repair", {});
       if (res.repaired.length > 0) {
-        toast.success(`已修复 ${res.repaired.length} 项：${res.repaired.join(", ")}`);
+        toast.success(
+          t("dbAudit.repaired", {
+            count: res.repaired.length,
+            list: res.repaired.join(", "),
+          }),
+        );
       } else {
-        toast.info("无可修复项");
+        toast.info(t("dbAudit.nothingToRepair"));
       }
       await load();
     } catch (e) {
@@ -82,9 +108,9 @@ export function DbAuditSection() {
         codes: [code],
       });
       if (res.repaired.length > 0) {
-        toast.success(`已修复：${res.repaired.join(", ")}`);
+        toast.success(t("dbAudit.repairedOne", { list: res.repaired.join(", ") }));
       } else {
-        toast.info("该项无需修复或未能修复");
+        toast.info(t("dbAudit.cannotRepair"));
       }
       await load();
     } catch (e) {
@@ -100,20 +126,17 @@ export function DbAuditSection() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ShieldCheck className="size-4" />
-          数据库一致性审计
+          {t("dbAudit.title")}
         </CardTitle>
-        <CardDescription>
-          扫描公开模型引用、默认模型与供应商标记的一致性问题，可按需修复。损坏的
-          JSON 字段需到供应商管理页重新填写。
-        </CardDescription>
+        <CardDescription>{t("dbAudit.description")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {loading ? (
+        {loading && issues === null ? (
           <div className="flex flex-col gap-3">
             <Skeleton className="h-16 rounded-md" />
             <Skeleton className="h-9 w-40 rounded-md" />
           </div>
-        ) : error ? (
+        ) : error && issues === null ? (
           <>
             <Alert variant="destructive">
               <AlertCircle />
@@ -127,16 +150,16 @@ export function DbAuditSection() {
               onClick={() => void load()}
             >
               <RotateCw className="size-4" />
-              重试
+              {t("common.retry")}
             </Button>
           </>
         ) : issues ? (
           <>
             {issues.length === 0 ? (
               <div className="flex items-center gap-2">
-                <Badge variant="success">无问题</Badge>
+                <Badge variant="success">{t("dbAudit.noIssues")}</Badge>
                 <span className="text-xs text-muted-foreground">
-                  所有检查项均通过
+                  {t("dbAudit.allPassed")}
                 </span>
               </div>
             ) : (
@@ -152,7 +175,7 @@ export function DbAuditSection() {
                           issue.severity === "error" ? "destructive" : "secondary"
                         }
                       >
-                        {issue.severity === "error" ? "错误" : "警告"}
+                        {issue.severity === "error" ? t("dbAudit.error") : t("dbAudit.warning")}
                       </Badge>
                       <span className="text-sm font-medium">{issue.title}</span>
                       {issue.ref && (
@@ -172,7 +195,7 @@ export function DbAuditSection() {
                         onClick={() => void repairOne(issue.code)}
                       >
                         <Wrench className="size-4" />
-                        {repairingCode === issue.code ? "修复中…" : "修复"}
+                        {repairingCode === issue.code ? t("dbAudit.repairing") : t("dbAudit.repair")}
                       </Button>
                     )}
                   </div>
@@ -186,11 +209,11 @@ export function DbAuditSection() {
                 variant="outline"
                 size="sm"
                 className="gap-1.5"
-                disabled={repairing || repairingCode !== null}
-                onClick={() => void load()}
+                disabled={repairing || repairingCode !== null || checking}
+                onClick={() => void load({ notify: true })}
               >
-                <RotateCw className="size-4" />
-                重新检测
+                <RotateCw className={`size-4 ${checking ? "animate-spin" : ""}`} />
+                {t("dbAudit.recheck")}
               </Button>
               <Button
                 type="button"
@@ -200,7 +223,7 @@ export function DbAuditSection() {
                 onClick={() => setConfirming(true)}
               >
                 <Wrench className="size-4" />
-                修复全部
+                {t("dbAudit.repairAll")}
               </Button>
             </div>
           </>
@@ -210,11 +233,8 @@ export function DbAuditSection() {
       <Dialog open={confirming} onOpenChange={(o) => !o && setConfirming(false)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>修复一致性问题</DialogTitle>
-            <DialogDescription>
-              将对失效的公开模型引用、越界默认模型与重复公开默认供应商标记执行安全修复，操作幂等、可重复执行。损坏的
-              JSON 字段不会自动修改，需到供应商管理页重填。确认继续？
-            </DialogDescription>
+            <DialogTitle>{t("dbAudit.repairTitle")}</DialogTitle>
+            <DialogDescription>{t("dbAudit.repairDesc")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
@@ -223,14 +243,14 @@ export function DbAuditSection() {
               onClick={() => setConfirming(false)}
               disabled={repairing}
             >
-              取消
+              {t("common.cancel")}
             </Button>
             <Button
               type="button"
               onClick={() => void repairAll()}
               disabled={repairing}
             >
-              {repairing ? "修复中…" : "确认修复"}
+              {repairing ? t("dbAudit.repairing") : t("dbAudit.confirmRepair")}
             </Button>
           </DialogFooter>
         </DialogContent>

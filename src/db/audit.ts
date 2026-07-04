@@ -1,19 +1,28 @@
-import type { DbAuditIssue, PublicModelRef } from "@opentranslator/shared-types";
+import type { DbAuditIssue, PublicModelRef, AiExpertsConfig } from "@opentranslator/shared-types";
 import {
   clearPublicDefaultFlag,
+  deleteFeatureModule,
+  deleteSiteSetting,
+  getFeatureModules,
   getSiteSettingsMap,
   listProviderRows,
+  setSiteSetting,
   updateProvider,
   type ProviderRow,
 } from "./queries";
 import { prunePublicModelRefs } from "../settings/cache";
+import { GENERAL_EXPERT_ID, validExpertIds } from "../experts/registry";
+
+const AI_EXPERTS_SETTING_KEY = "ai_experts_config";
+const AI_EXPERTS_KV_CACHE_KEY = "ai-experts:v1";
 
 /**
  * 数据库一致性审计与修复。
  *
  * 公开模型白名单（public_models / public_default_model / public_default_provider_id）
  * 是独立存储的引用快照，删 provider/模型时若未级联清理会残留「幽灵」引用；此外还可能
- * 出现默认模型越界、重复公开默认供应商标记、JSON 损坏等问题。本模块做只读体检 + 安全修复。
+ * 出现默认模型越界、重复公开默认供应商标记、JSON 损坏、AI 专家配置无效、术语库迁移
+ * 残留等问题。本模块做只读体检 + 安全修复。
  *
  * 关键约束（见 plan）：
  * - 读原始行：用 listProviderRows + getSiteSettingsMap 直接 parse，不用 listProviderRecords
@@ -134,11 +143,139 @@ function isStaleProviderId(
   return !entry || !entry.enabled;
 }
 
+type AiExpertsAuditParse =
+  | { ok: false; corrupted: true }
+  | { ok: true; config: AiExpertsConfig; rawPresent: boolean };
+
+/** 严格解析 ai_experts_config；损坏时不回落默认值（供审计用）。 */
+function parseAiExpertsConfigForAudit(raw: string | undefined): AiExpertsAuditParse {
+  if (!raw) {
+    return {
+      ok: true,
+      rawPresent: false,
+      config: { enabledIds: [], defaultExpertId: GENERAL_EXPERT_ID },
+    };
+  }
+  try {
+    const v = JSON.parse(raw) as Partial<AiExpertsConfig>;
+    if (!v || typeof v !== "object") return { ok: false, corrupted: true };
+    const enabledIds = Array.isArray(v.enabledIds)
+      ? v.enabledIds.filter((id): id is string => typeof id === "string")
+      : [];
+    const defaultExpertId =
+      typeof v.defaultExpertId === "string" ? v.defaultExpertId : GENERAL_EXPERT_ID;
+    return { ok: true, rawPresent: true, config: { enabledIds, defaultExpertId } };
+  } catch {
+    return { ok: false, corrupted: true };
+  }
+}
+
+function auditAiExpertsAndLegacy(
+  settings: Record<string, string>,
+  featureModules: Map<string, { key: string; enabled: number }>,
+  issues: DbAuditIssue[],
+): void {
+  const bundled = validExpertIds();
+
+  if (settings.glossary !== undefined) {
+    issues.push({
+      code: "glossary_setting_stale",
+      title: "残留术语库站点设置",
+      detail: "site_settings 中仍有 glossary 键（v0.6.0 已移除术语库），将被删除。",
+      severity: "warning",
+      repairable: true,
+      ref: "glossary",
+    });
+  }
+
+  if (featureModules.has("glossary")) {
+    issues.push({
+      code: "glossary_module_stale",
+      title: "残留术语库功能模块",
+      detail: "feature_modules 中仍有 glossary 行（已替换为 ai-experts），将被删除。",
+      severity: "warning",
+      repairable: true,
+      ref: "glossary",
+    });
+  }
+
+  const parsed = parseAiExpertsConfigForAudit(settings[AI_EXPERTS_SETTING_KEY]);
+  if (!parsed.ok) {
+    issues.push({
+      code: "ai_experts_config_corrupted",
+      title: "AI 专家配置损坏",
+      detail: "ai_experts_config 无法解析为 JSON，需在控制台 AI 专家页重新保存配置。",
+      severity: "warning",
+      repairable: false,
+      ref: AI_EXPERTS_SETTING_KEY,
+    });
+    return;
+  }
+
+  const { config } = parsed;
+  const unknownIds = config.enabledIds.filter((id) => !bundled.has(id));
+  if (unknownIds.length > 0) {
+    issues.push({
+      code: "ai_experts_unknown_ids",
+      title: "AI 专家启用列表含未知 id",
+      detail: `${unknownIds.length} 个 enabledIds 不在当前内置专家列表中，将被剔除。`,
+      severity: "warning",
+      repairable: true,
+      ref: unknownIds.join(","),
+    });
+  }
+
+  const validEnabled = config.enabledIds.filter((id) => bundled.has(id));
+  const def = config.defaultExpertId ?? GENERAL_EXPERT_ID;
+  const defaultUnknown = def !== GENERAL_EXPERT_ID && !bundled.has(def);
+  const defaultNotEnabled =
+    def !== GENERAL_EXPERT_ID && bundled.has(def) && !validEnabled.includes(def);
+  if (defaultUnknown || defaultNotEnabled) {
+    issues.push({
+      code: "ai_experts_default_invalid",
+      title: "AI 专家默认项无效",
+      detail: defaultUnknown
+        ? `defaultExpertId="${def}" 不是有效专家，将重置为「通用」。`
+        : `defaultExpertId="${def}" 未在 enabledIds 中，将重置为「通用」。`,
+      severity: "warning",
+      repairable: true,
+      ref: def,
+    });
+  }
+
+  const aiExpertsModule = featureModules.get("ai-experts");
+  if (aiExpertsModule?.enabled === 1 && validEnabled.length === 0) {
+    issues.push({
+      code: "ai_experts_enabled_empty",
+      title: "AI 专家模块已启用但未开放任何专家",
+      detail: "feature_modules.ai-experts 为启用状态，但 enabledIds 为空；翻译页不会出现专家选择。请在 AI 专家页勾选要开放的专家。",
+      severity: "warning",
+      repairable: false,
+      ref: "ai-experts",
+    });
+  }
+}
+
+/** 归一化 ai_experts_config：剔除未知 id、修正 defaultExpertId。 */
+function normalizeAiExpertsConfig(config: AiExpertsConfig): AiExpertsConfig {
+  const bundled = validExpertIds();
+  const enabledIds = config.enabledIds.filter((id) => bundled.has(id));
+  let defaultExpertId = config.defaultExpertId ?? GENERAL_EXPERT_ID;
+  if (
+    defaultExpertId !== GENERAL_EXPERT_ID &&
+    (!bundled.has(defaultExpertId) || !enabledIds.includes(defaultExpertId))
+  ) {
+    defaultExpertId = GENERAL_EXPERT_ID;
+  }
+  return { enabledIds, defaultExpertId };
+}
+
 /** GET /api/admin/db/audit 的纯读扫描。 */
 export async function auditDatabase(db: D1Database): Promise<DbAuditIssue[]> {
-  const [rows, settings] = await Promise.all([
+  const [rows, settings, featureModules] = await Promise.all([
     listProviderRows(db),
     getSiteSettingsMap(db),
+    getFeatureModules(db),
   ]);
   const index = buildProviderIndex(rows);
   const issues: DbAuditIssue[] = [];
@@ -235,6 +372,8 @@ export async function auditDatabase(db: D1Database): Promise<DbAuditIssue[]> {
     });
   }
 
+  auditAiExpertsAndLegacy(settings, featureModules, issues);
+
   return issues;
 }
 
@@ -293,6 +432,24 @@ export async function repairDatabase(
       const keeper = flagged.find((r) => r.enabled === 1);
       if (keeper) {
         await updateProvider(env.DB, keeper.id, { is_public_default: 1 });
+      }
+    }
+
+    if (target.has("glossary_setting_stale")) {
+      await deleteSiteSetting(env.DB, "glossary");
+    }
+
+    if (target.has("glossary_module_stale")) {
+      await deleteFeatureModule(env.DB, "glossary");
+    }
+
+    if (target.has("ai_experts_unknown_ids") || target.has("ai_experts_default_invalid")) {
+      const settings = await getSiteSettingsMap(env.DB);
+      const parsed = parseAiExpertsConfigForAudit(settings[AI_EXPERTS_SETTING_KEY]);
+      if (parsed.ok) {
+        const next = normalizeAiExpertsConfig(parsed.config);
+        await setSiteSetting(env.DB, AI_EXPERTS_SETTING_KEY, JSON.stringify(next));
+        await env.SETTINGS_KV.delete(AI_EXPERTS_KV_CACHE_KEY);
       }
     }
   }

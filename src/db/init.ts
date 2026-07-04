@@ -54,7 +54,8 @@ async function v0_1_0({ env }: InitContext): Promise<void> {
       email TEXT UNIQUE,
       password_hash TEXT,
       role TEXT DEFAULT 'admin',
-      created_at INTEGER
+      created_at INTEGER,
+      avatar_updated_at INTEGER
     )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS usage_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,7 +86,7 @@ async function v0_1_0({ env }: InitContext): Promise<void> {
     db.prepare(
       `INSERT OR IGNORE INTO feature_modules (key, name, enabled, config_json, created_at) VALUES
         ('public-access', '公开访问', 1, NULL, ${now}),
-        ('glossary', '术语库', 1, NULL, ${now})`,
+        ('ai-experts', 'AI 专家', 0, NULL, ${now})`,
     ),
   ]);
 }
@@ -125,6 +126,30 @@ async function v0_4_0({ env }: InitContext): Promise<void> {
   await addColumn(env.DB, "providers", "models", "TEXT");
 }
 
+/** v0.5.0：admin_users 新增 avatar_updated_at，配合 KV 存自定义头像。 */
+async function v0_5_0({ env }: InitContext): Promise<void> {
+  await addColumn(env.DB, "admin_users", "avatar_updated_at", "INTEGER");
+}
+
+/** v0.6.0：术语库模块替换为 AI 专家（沉浸式翻译 prompts）。 */
+async function v0_6_0({ env }: InitContext): Promise<void> {
+  const db = env.DB;
+  const now = Math.floor(Date.now() / 1000);
+  await db.batch([
+    db.prepare(`DELETE FROM feature_modules WHERE key = 'glossary'`),
+    db.prepare(
+      `INSERT OR IGNORE INTO feature_modules (key, name, enabled, config_json, created_at) VALUES
+        ('ai-experts', 'AI 专家', 0, NULL, ${now})`,
+    ),
+    db.prepare(`DELETE FROM site_settings WHERE key = 'glossary'`),
+  ]);
+}
+
+/** v0.7.0：AI 写作改为核心功能，移除 feature_modules 中的 ai-write 记录。 */
+async function v0_7_0({ env }: InitContext): Promise<void> {
+  await env.DB.prepare(`DELETE FROM feature_modules WHERE key = 'ai-write'`).run();
+}
+
 /** 迁移记录表，记录已执行的版本，避免重复跑。 */
 async function ensureMigrationTable(db: D1Database): Promise<void> {
   await db
@@ -145,6 +170,9 @@ const migrations: Migration[] = [
   { version: "0.2.0", run: v0_2_0 },
   { version: "0.3.0", run: v0_3_0 },
   { version: "0.4.0", run: v0_4_0 },
+  { version: "0.5.0", run: v0_5_0 },
+  { version: "0.6.0", run: v0_6_0 },
+  { version: "0.7.0", run: v0_7_0 },
 ];
 
 export async function initDatabase(ctx: InitContext): Promise<{

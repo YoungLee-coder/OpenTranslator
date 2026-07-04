@@ -13,7 +13,7 @@ interface AuthContextValue {
   loading: boolean;
   setupCompleted: boolean;
   sitePublic: boolean;
-  refresh: () => Promise<void>;
+  refresh: (opts?: { silent?: boolean }) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -25,8 +25,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [setupCompleted, setSetupCompleted] = useState(true);
   const [sitePublic, setSitePublic] = useState(true);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refresh = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
       const res = await apiGet<AuthMeResponse>("/api/auth/me");
       setUser(res.user ?? null);
@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       setUser(null);
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, []);
 

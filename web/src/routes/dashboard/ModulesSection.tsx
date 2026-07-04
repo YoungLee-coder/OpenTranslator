@@ -1,5 +1,6 @@
 import type { FeatureManifest } from "@opentranslator/shared-types";
 import { apiPut, ApiError } from "@/lib/api-client";
+import { useTranslation } from "@/lib/i18n";
 import {
   Card,
   CardContent,
@@ -25,12 +26,18 @@ interface Props {
 
 /** Modules (system) tab: enable/disable feature modules — drives the dynamic nav. */
 export function ModulesSection({ features, onChanged }: Props) {
+  const { t } = useTranslation();
+
   async function toggle(key: string, enabled: boolean, name: string) {
     try {
       await apiPut(`/api/admin/features/${key}`, { enabled: !enabled });
-      toast.success(`已${enabled ? "停用" : "启用"}「${name}」`);
+      toast.success(
+        enabled
+          ? t("modules.disabledToast", { name })
+          : t("modules.enabledToast", { name }),
+      );
     } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : "操作失败");
+      toast.error(e instanceof ApiError ? e.message : t("common.operationFailed"));
     }
     await onChanged();
   }
@@ -38,20 +45,17 @@ export function ModulesSection({ features, onChanged }: Props) {
   return (
     <Card className="animate-rise">
       <CardHeader>
-        <CardTitle>功能模块</CardTitle>
-        <CardDescription>
-          启用的模块会出现在控制台导航中。新增模块只需在后端注册 manifest +
-          前端注册组件。
-        </CardDescription>
+        <CardTitle>{t("modules.title")}</CardTitle>
+        <CardDescription>{t("modules.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="overflow-hidden rounded-md border border-rule">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>模块</TableHead>
-                <TableHead>说明</TableHead>
-                <TableHead>状态</TableHead>
+                <TableHead>{t("modules.module")}</TableHead>
+                <TableHead>{t("modules.descriptionCol")}</TableHead>
+                <TableHead>{t("modules.status")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -70,7 +74,7 @@ export function ModulesSection({ features, onChanged }: Props) {
                         }
                       />
                       <span className="text-xs text-muted-foreground">
-                        {f.enabled ? "已启用" : "已停用"}
+                        {f.enabled ? t("common.enabled") : t("common.disabled")}
                       </span>
                     </div>
                   </TableCell>

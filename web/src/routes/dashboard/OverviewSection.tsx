@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Activity, FileText, AlertCircle } from "lucide-react";
 import type { UsageSummary } from "@opentranslator/shared-types";
 import { apiGet, ApiError } from "@/lib/api-client";
+import { useTranslation } from "@/lib/i18n";
 import {
   Card,
   CardContent,
@@ -20,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function OverviewSection() {
+  const { t } = useTranslation();
   const [usage, setUsage] = useState<UsageSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +42,7 @@ export function OverviewSection() {
   return (
     <Card className="animate-rise">
       <CardHeader>
-        <CardTitle>用量概览</CardTitle>
+        <CardTitle>{t("overview.title")}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         {error && (
@@ -56,12 +58,12 @@ export function OverviewSection() {
               <StatTile
                 icon={<Activity className="size-4" />}
                 value={usage.totalRequests}
-                label="总请求数"
+                label={t("overview.totalRequests")}
               />
               <StatTile
                 icon={<FileText className="size-4" />}
                 value={usage.totalChars.toLocaleString()}
-                label="总字符数"
+                label={t("overview.totalChars")}
               />
             </div>
 
@@ -70,9 +72,9 @@ export function OverviewSection() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>供应商</TableHead>
-                      <TableHead className="text-right">请求数</TableHead>
-                      <TableHead className="text-right">字符数</TableHead>
+                      <TableHead>{t("overview.provider")}</TableHead>
+                      <TableHead className="text-right">{t("overview.requests")}</TableHead>
+                      <TableHead className="text-right">{t("overview.chars")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

@@ -2,6 +2,8 @@ export interface AuthUser {
   id: string;
   email: string;
   role: string;
+  /** 自定义头像 URL（含 cache-bust 参数）；无头像时省略。 */
+  avatarUrl?: string;
 }
 
 export interface LoginRequest {
@@ -22,3 +24,18 @@ export interface AuthMeResponse {
 
 /** Stored in D1 as `pbkdf2$iterations$saltB64$hashB64`. */
 export type PasswordHash = string;
+
+export interface UpdateProfileRequest {
+  email?: string;
+  currentPassword: string;
+  newPassword?: string;
+}
+
+export interface UpdateProfileResponse {
+  user: AuthUser;
+  changed: boolean;
+}
+
+export interface UpdateAvatarResponse {
+  user: AuthUser;
+}

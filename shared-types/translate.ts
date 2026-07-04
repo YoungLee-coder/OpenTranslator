@@ -2,11 +2,17 @@ export interface TranslateRequest {
   text: string;
   sourceLang: string; // "auto" for detection
   targetLang: string;
-  glossary?: Record<string, string>;
+  /** AI expert id from Immersive Translate prompts; "general" or omitted = default prompt. */
+  expertId?: string;
   stream?: boolean;
   providerId?: string; // optional explicit provider; public mode ignores this
   /** 显式指定的模型名；需属于该 provider 声明的 models 集合，否则被拒。 */
   model?: string;
+  /**
+   * Server-side only — bypasses default translation prompt building.
+   * Ignored on the public translate API when sent by clients.
+   */
+  promptOverride?: { system: string; user: string };
 }
 
 /** 首页模型选择下拉里的一项。 */

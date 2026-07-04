@@ -4,13 +4,15 @@ import { cors } from "hono/cors";
 import type { AppBindings, AppVariables } from "./types";
 import { authMiddleware } from "./middleware/auth";
 import translateRoute from "./routes/translate";
+import writeRoute from "./routes/write";
 import authRoute from "./routes/auth";
 import adminProvidersRoute from "./routes/admin-providers";
 import adminSettingsRoute from "./routes/admin-settings";
 import adminFeaturesRoute from "./routes/admin-features";
-import adminGlossaryRoute from "./routes/admin-glossary";
+import adminExpertsRoute from "./routes/admin-experts";
 import adminUsageRoute from "./routes/admin-usage";
 import adminDbRoute from "./routes/admin-db";
+import adminProfileRoute from "./routes/admin-profile";
 import { initDatabase } from "./db/init";
 import { RateLimiter } from "./durable-objects/rate-limiter";
 
@@ -61,6 +63,7 @@ app.get("/api/init/:secret", async (c) => {
 });
 
 app.route("/api/translate", translateRoute);
+app.route("/api/write", writeRoute);
 app.route("/api/auth", authRoute);
 
 // Admin endpoints sit behind JWT auth.
@@ -68,9 +71,10 @@ app.use("/api/admin/*", authMiddleware);
 app.route("/api/admin/providers", adminProvidersRoute);
 app.route("/api/admin/settings", adminSettingsRoute);
 app.route("/api/admin/features", adminFeaturesRoute);
-app.route("/api/admin/glossary", adminGlossaryRoute);
+app.route("/api/admin/experts", adminExpertsRoute);
 app.route("/api/admin/usage", adminUsageRoute);
 app.route("/api/admin/db", adminDbRoute);
+app.route("/api/admin/profile", adminProfileRoute);
 
 // Catch-all: anything that isn't an /api route is served as a static asset
 // from the bundled frontend (SPA). With run_worker_first = true, the Worker

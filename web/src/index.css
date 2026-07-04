@@ -183,6 +183,12 @@
     scrollbar-gutter: stable;
   }
 
+  /* Radix 弹层 scroll-lock 会再补偿滚动条宽度；html 已 stable 预留槽位，避免整页横向跳动 */
+  body[data-scroll-locked] {
+    margin-right: 0 !important;
+    padding-right: 0 !important;
+  }
+
   body {
     margin: 0;
     background-color: var(--background);

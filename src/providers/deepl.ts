@@ -13,8 +13,8 @@ import { safeText } from "./sse";
  * 与 LLM 供应商的差异：
  *  - 鉴权用 `DeepL-Auth-Key <api-key>`（非 Bearer）。
  *  - 不支持流式：省略 translateStream，路由层自动回落到非流式 JSON。
- *  - 不支持内联 glossary（需预建 glossary_id 且 source_lang 必须固定），
- *    req.glossary 在此被忽略。
+ *  - 不支持自定义提示词 / AI 专家模式（DeepL API 固定格式），
+ *    req.expertId 在此被忽略。
  *  - 语言码大写（EN/ZH/DE…），项目内部小写，需映射；auto → 省略 source_lang
  *    触发 DeepL 自动检测。
  *

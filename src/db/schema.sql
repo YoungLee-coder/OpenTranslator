@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS admin_users (
   email TEXT UNIQUE,
   password_hash TEXT,
   role TEXT DEFAULT 'admin',           -- reserved for multi-role permissions
-  created_at INTEGER
+  created_at INTEGER,
+  avatar_updated_at INTEGER            -- 非空表示有自定义头像（二进制存 KV）
 );
 
 -- Usage logs: power stats and future billing (migrate to Analytics Engine at scale).
@@ -42,7 +43,7 @@ CREATE TABLE IF NOT EXISTS usage_logs (
 
 -- Feature module registry: grey release and future feature expansion.
 CREATE TABLE IF NOT EXISTS feature_modules (
-  key TEXT PRIMARY KEY,                -- translate | glossary | doc_translate ...
+  key TEXT PRIMARY KEY,                -- translate | ai-experts | public-access ...
   name TEXT NOT NULL,
   enabled BOOLEAN DEFAULT 1,
   config_json TEXT,
@@ -60,4 +61,4 @@ INSERT OR IGNORE INTO site_settings (key, value, updated_at) VALUES
 -- Seed feature module registry: grey release + dynamic dashboard nav.
 INSERT OR IGNORE INTO feature_modules (key, name, enabled, config_json, created_at) VALUES
   ('public-access', '公开访问', 1, NULL, CAST(strftime('%s','now') AS INTEGER)),
-  ('glossary', '术语库', 1, NULL, CAST(strftime('%s','now') AS INTEGER));
+        ('ai-experts', 'AI 专家', 0, NULL, CAST(strftime('%s','now') AS INTEGER));

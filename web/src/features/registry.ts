@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import { PublicAccessSettings } from "./PublicAccessSettings";
-import { GlossaryManager } from "./GlossaryManager";
+import { AiExpertsManager } from "./AiExpertsManager";
 
 /**
  * Frontend feature registry. The Dashboard fetches feature manifests from
@@ -9,5 +9,5 @@ import { GlossaryManager } from "./GlossaryManager";
  */
 export const featureComponents: Record<string, ComponentType> = {
   "public-access": PublicAccessSettings,
-  glossary: GlossaryManager,
+  "ai-experts": AiExpertsManager,
 };

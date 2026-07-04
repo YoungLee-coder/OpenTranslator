@@ -23,6 +23,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Check } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
+import { useTranslation } from "@/lib/i18n";
 
 interface ModelOption {
   providerId: string;
@@ -42,6 +43,7 @@ function decodeKey(key: string): { providerId: string; model: string } {
  * 模块本身的启停（= site_public 总开关）在「设置 → 模块」里切换。
  */
 export function PublicAccessSettings() {
+  const { t } = useTranslation();
   const [providers, setProviders] = useState<ProviderRecord[]>([]);
   const [rateLimit, setRateLimit] = useState<number>(20);
   // 开放集合与默认项均用「providerId|model」编码键
@@ -93,7 +95,7 @@ export function PublicAccessSettings() {
     } catch (e) {
       setOpenKeys(prevOpen);
       setDefaultKey(prevDefault);
-      toast.error(e instanceof ApiError ? e.message : "保存失败");
+      toast.error(e instanceof ApiError ? e.message : t("publicAccess.saveFailed"));
     }
   }
 
@@ -123,7 +125,7 @@ export function PublicAccessSettings() {
       );
       setRateLimit(res.settings.publicRateLimitPerMinute);
       setError(null);
-      toast.success("限流设置已保存");
+      toast.success(t("publicAccess.rateLimitSaved"));
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : String(e);
       setError(msg);
@@ -136,10 +138,8 @@ export function PublicAccessSettings() {
   return (
     <Card className="animate-rise">
       <CardHeader>
-        <CardTitle>公开访问</CardTitle>
-        <CardDescription>
-          勾选对匿名访客开放的模型，并指定一个公开默认模型。匿名访客可在首页在这些模型间切换。
-        </CardDescription>
+        <CardTitle>{t("publicAccess.title")}</CardTitle>
+        <CardDescription>{t("publicAccess.description")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         {error && (
@@ -150,10 +150,10 @@ export function PublicAccessSettings() {
         )}
 
         <div className="space-y-2">
-          <div className="text-sm font-medium">公开模型</div>
+          <div className="text-sm font-medium">{t("publicAccess.publicModels")}</div>
           {allOptions.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              暂无已启用供应商的模型，请先在「供应商」中配置模型。
+              {t("publicAccess.noModels")}
             </p>
           ) : (
             <>
@@ -161,10 +161,10 @@ export function PublicAccessSettings() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>供应商</TableHead>
-                      <TableHead>模型</TableHead>
-                      <TableHead>开放</TableHead>
-                      <TableHead className="text-right">公开默认</TableHead>
+                      <TableHead>{t("publicAccess.provider")}</TableHead>
+                      <TableHead>{t("publicAccess.model")}</TableHead>
+                      <TableHead>{t("publicAccess.open")}</TableHead>
+                      <TableHead className="text-right">{t("publicAccess.publicDefault")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -184,12 +184,12 @@ export function PublicAccessSettings() {
                             <Switch
                               checked={isOpen}
                               onCheckedChange={() => toggleOpen(key)}
-                              aria-label={`开放 ${o.model}`}
+                              aria-label={t("publicAccess.openModel", { model: o.model })}
                             />
                           </TableCell>
                           <TableCell className="text-right">
                             {isDefault ? (
-                              <Badge variant="accent">默认</Badge>
+                              <Badge variant="accent">{t("common.default")}</Badge>
                             ) : (
                               <Button
                                 variant="outline"
@@ -198,7 +198,7 @@ export function PublicAccessSettings() {
                                 type="button"
                                 onClick={() => setDefault(key)}
                               >
-                                设为默认
+                                {t("providers.setDefault")}
                               </Button>
                             )}
                           </TableCell>
@@ -209,14 +209,14 @@ export function PublicAccessSettings() {
                 </Table>
               </div>
               <p className="pt-1 text-xs text-muted-foreground">
-                勾选与设默认即时保存。未开放任何模型时，匿名访客将无法翻译。
+                {t("publicAccess.hint")}
               </p>
             </>
           )}
         </div>
 
         <div className="space-y-2">
-          <div className="text-sm font-medium">匿名访客限流（次/分钟）</div>
+          <div className="text-sm font-medium">{t("publicAccess.anonRateLimit")}</div>
           <div className="flex items-center gap-2">
             <Input
               type="number"
@@ -233,17 +233,17 @@ export function PublicAccessSettings() {
               className="gap-1.5"
             >
               {savingLimit ? (
-                "保存中…"
+                t("common.saving")
               ) : (
                 <>
                   <Check className="size-4" />
-                  保存
+                  {t("common.save")}
                 </>
               )}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            匿名访客每分钟最大请求数；超出会触发限流。
+            {t("publicAccess.anonRateLimitDesc")}
           </p>
         </div>
       </CardContent>

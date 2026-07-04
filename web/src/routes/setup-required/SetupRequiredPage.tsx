@@ -9,6 +9,7 @@ import {
   KeyRound,
   RefreshCw,
 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 interface BindingState {
   db: boolean;
@@ -16,6 +17,7 @@ interface BindingState {
 }
 
 export function SetupRequiredPage() {
+  const { t } = useTranslation();
   const [bindings, setBindings] = useState<BindingState | null>(null);
   const [checking, setChecking] = useState(true);
 
@@ -51,23 +53,22 @@ export function SetupRequiredPage() {
             <AlertTriangle className="size-4.5" />
           </span>
           <h1 className="font-display text-xl font-semibold tracking-tight">
-            服务未就绪
+            {t("setup.title")}
           </h1>
         </div>
 
         <p className="mb-4 text-sm text-muted-foreground leading-relaxed">
-          Worker 尚未绑定运行所需的存储资源，翻译与控制台均无法使用。请在
-          Cloudflare Dashboard 完成绑定后重新检测。
+          {t("setup.description")}
         </p>
 
         <Alert variant="warning" className="mb-5">
           <AlertTriangle />
-          <AlertTitle>缺失的绑定</AlertTitle>
+          <AlertTitle>{t("setup.missingBindings")}</AlertTitle>
           <AlertDescription>
             <ul className="mt-1 flex flex-col gap-1.5">
               <li className="flex items-center gap-2">
                 <Database className="size-3.5" />
-                <span>D1 数据库（binding 名 <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem]">DB</code>）</span>
+                <span>{t("setup.dbBinding")}</span>
                 <span
                   className={
                     dbMissing
@@ -75,12 +76,12 @@ export function SetupRequiredPage() {
                       : "text-muted-foreground"
                   }
                 >
-                  {dbMissing ? "未连接" : "已连接"}
+                  {dbMissing ? t("setup.notConnected") : t("setup.connected")}
                 </span>
               </li>
               <li className="flex items-center gap-2">
                 <KeyRound className="size-3.5" />
-                <span>KV 命名空间（binding 名 <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem]">SETTINGS_KV</code>）</span>
+                <span>{t("setup.kvBinding")}</span>
                 <span
                   className={
                     kvMissing
@@ -88,7 +89,7 @@ export function SetupRequiredPage() {
                       : "text-muted-foreground"
                   }
                 >
-                  {kvMissing ? "未连接" : "已连接"}
+                  {kvMissing ? t("setup.notConnected") : t("setup.connected")}
                 </span>
               </li>
             </ul>
@@ -96,19 +97,19 @@ export function SetupRequiredPage() {
         </Alert>
 
         <div className="mb-5 rounded-lg border border-rule bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
-          <p className="mb-2 font-medium text-foreground">配置步骤</p>
+          <p className="mb-2 font-medium text-foreground">{t("setup.stepsTitle")}</p>
           <ol className="flex flex-col gap-1.5 [counter-reset:step]">
             <li className="[counter-increment:step] before:mr-1.5 before:font-medium before:text-foreground before:content-[counter(step)_'.']">
-              Cloudflare Dashboard → Workers &amp; Pages → 选择本 Worker → Settings → Bindings
+              {t("setup.step1")}
             </li>
             <li className="[counter-increment:step] before:mr-1.5 before:font-medium before:text-foreground before:content-[counter(step)_'.']">
-              添加 D1 数据库，binding 名填 <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem]">DB</code>
+              {t("setup.step2")}
             </li>
             <li className="[counter-increment:step] before:mr-1.5 before:font-medium before:text-foreground before:content-[counter(step)_'.']">
-              添加 KV 命名空间，binding 名填 <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem]">SETTINGS_KV</code>
+              {t("setup.step3")}
             </li>
             <li className="[counter-increment:step] before:mr-1.5 before:font-medium before:text-foreground before:content-[counter(step)_'.']">
-              重新部署后访问 <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem]">/api/init/&lt;JWT_SECRET&gt;</code> 幂等建表
+              {t("setup.step4")}
             </li>
           </ol>
         </div>
@@ -122,12 +123,12 @@ export function SetupRequiredPage() {
           {checking ? (
             <>
               <span className="size-4 animate-spin rounded-full border-2 border-rule border-t-transparent" />
-              检测中…
+              {t("setup.checking")}
             </>
           ) : (
             <>
               <RefreshCw className="size-4" />
-              重新检测
+              {t("setup.recheck")}
             </>
           )}
         </Button>

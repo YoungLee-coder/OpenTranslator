@@ -5,7 +5,8 @@ import type {
 } from "@opentranslator/shared-types";
 import type { AppBindings, AppVariables } from "../types";
 import { populateUser } from "../middleware/auth";
-import { getAdminByEmail, getAdminCount, createAdmin } from "../db/queries";
+import { getAdminByEmail, getAdminCount, createAdmin, getAdminById } from "../db/queries";
+import { adminToAuthUser } from "../lib/avatar";
 import { getSiteSettings } from "../settings/cache";
 import { hashPassword, verifyPassword } from "../lib/password";
 import {
@@ -24,9 +25,14 @@ authRoute.get("/me", async (c) => {
   const user = c.get("user");
   const setupCompleted = (await getAdminCount(c.env.DB)) > 0;
   const settings = await getSiteSettings(c.env.SETTINGS_KV, c.env.DB);
+  let authUser: AuthUser | undefined;
+  if (user) {
+    const admin = await getAdminById(c.env.DB, user.id);
+    authUser = admin ? adminToAuthUser(admin) : user;
+  }
   return c.json({
     authenticated: !!user,
-    user: user ?? undefined,
+    user: authUser,
     setupCompleted,
     sitePublic: settings.sitePublic,
   });
@@ -73,7 +79,7 @@ authRoute.post("/login", async (c) => {
   c.header("Set-Cookie", sessionCookie(token));
   return c.json({
     authenticated: true,
-    user: { id: admin.id, email: admin.email, role: admin.role },
+    user: adminToAuthUser(admin),
   });
 });
 

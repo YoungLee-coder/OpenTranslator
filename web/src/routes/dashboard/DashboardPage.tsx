@@ -4,8 +4,10 @@ import { Loader2 } from "lucide-react";
 import type { FeatureManifest } from "@opentranslator/shared-types";
 import { useAuth } from "@/lib/auth";
 import { apiGet } from "@/lib/api-client";
+import { useTranslation } from "@/lib/i18n";
 import { featureComponents } from "@/features/registry";
 import { OverviewSection } from "./OverviewSection";
+import { ProfileSection } from "./ProfileSection";
 import { ProvidersSection } from "./ProvidersSection";
 import { SettingsSection } from "./SettingsSection";
 import { ModulesSection } from "./ModulesSection";
@@ -23,16 +25,24 @@ interface SystemTab {
   name: string;
 }
 
-const SYSTEM_TABS: SystemTab[] = [
-  { key: "overview", name: "概览" },
-  { key: "providers", name: "供应商" },
-  { key: "settings", name: "设置" },
-];
+function keepMounted(visited: boolean) {
+  return visited ? ({ forceMount: true } as const) : {};
+}
 
 export function DashboardPage() {
+  const { t } = useTranslation();
   const { user, loading } = useAuth();
+
+  const systemTabs: SystemTab[] = [
+    { key: "overview", name: t("dashboard.tabOverview") },
+    { key: "providers", name: t("dashboard.tabProviders") },
+    { key: "settings", name: t("dashboard.tabSettings") },
+  ];
   const [features, setFeatures] = useState<FeatureManifest[]>([]);
   const [tab, setTab] = useState<string>("overview");
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(
+    () => new Set(["overview"]),
+  );
 
   async function refreshFeatures() {
     try {
@@ -49,46 +59,56 @@ export function DashboardPage() {
     void refreshFeatures();
   }, []);
 
+  function handleTabChange(value: string) {
+    setTab(value);
+    setVisitedTabs((prev) => {
+      if (prev.has(value)) return prev;
+      return new Set(prev).add(value);
+    });
+  }
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin" />
-        加载中…
+        {t("common.loading")}
       </div>
     );
   }
   if (!user) return <Navigate to="/login" replace />;
 
   const enabledFeatures = features.filter((f) => f.enabled);
+  const featureTabs = enabledFeatures.filter((f) => featureComponents[f.key]);
   const tabs: SystemTab[] = [
-    ...SYSTEM_TABS,
-    ...enabledFeatures.map((f) => ({ key: f.key, name: f.name })),
+    ...systemTabs,
+    ...featureTabs.map((f) => ({ key: f.key, name: f.name })),
   ];
-  const activeFeature = featureComponents[tab];
-  const isSystemTab = SYSTEM_TABS.some((t) => t.key === tab);
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-        控制台
+        {t("dashboard.title")}
       </h1>
 
-      <Tabs value={tab} onValueChange={setTab}>
+      <Tabs value={tab} onValueChange={handleTabChange}>
         <TabsList>
-          {tabs.map((t) => (
-            <TabsTrigger key={t.key} value={t.key}>
-              {t.name}
+          {tabs.map((tab) => (
+            <TabsTrigger key={tab.key} value={tab.key}>
+              {tab.name}
             </TabsTrigger>
           ))}
         </TabsList>
 
-        <TabsContent value="overview">
-          <OverviewSection />
+        <TabsContent value="overview" {...keepMounted(visitedTabs.has("overview"))}>
+          <div className="flex flex-col gap-6">
+            <OverviewSection />
+            <ProfileSection />
+          </div>
         </TabsContent>
-        <TabsContent value="providers">
+        <TabsContent value="providers" {...keepMounted(visitedTabs.has("providers"))}>
           <ProvidersSection />
         </TabsContent>
-        <TabsContent value="settings">
+        <TabsContent value="settings" {...keepMounted(visitedTabs.has("settings"))}>
           <div className="flex flex-col gap-6">
             <SettingsSection />
             <ModulesSection features={features} onChanged={refreshFeatures} />
@@ -96,16 +116,19 @@ export function DashboardPage() {
             <DbAuditSection />
           </div>
         </TabsContent>
-        {!isSystemTab && activeFeature
-          ? (() => {
-              const FeaturePage = activeFeature;
-              return (
-                <TabsContent value={tab}>
-                  <FeaturePage />
-                </TabsContent>
-              );
-            })()
-          : null}
+        {enabledFeatures.map((f) => {
+          const FeaturePage = featureComponents[f.key];
+          if (!FeaturePage) return null;
+          return (
+            <TabsContent
+              key={f.key}
+              value={f.key}
+              {...keepMounted(visitedTabs.has(f.key))}
+            >
+              <FeaturePage />
+            </TabsContent>
+          );
+        })}
       </Tabs>
     </div>
   );

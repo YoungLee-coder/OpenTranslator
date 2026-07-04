@@ -3,8 +3,7 @@ import { utf8Encode } from "./bytes";
 
 /**
  * Translation result cache backed by the SETTINGS_KV namespace. Keyed by
- * provider + language pair + text hash (+ glossary hash when a glossary is
- * supplied), so identical requests are served instantly without re-calling
+ * provider + language pair + expert + text hash,
  * the upstream model.
  */
 
@@ -24,10 +23,10 @@ export async function translationCacheKey(
   req: TranslateRequest,
   providerId: string,
 ): Promise<string> {
-  const glossary = req.glossary ? await sha256Hex(JSON.stringify(req.glossary)) : "none";
+  const expert = req.expertId ?? "general";
   const text = await sha256Hex(req.text);
   const model = req.model ?? "";
-  return `${PREFIX}${providerId}:${model}:${req.sourceLang}:${req.targetLang}:${glossary}:${text}`;
+  return `${PREFIX}${providerId}:${model}:${req.sourceLang}:${req.targetLang}:${expert}:${text}`;
 }
 
 export async function getTranslationCache(

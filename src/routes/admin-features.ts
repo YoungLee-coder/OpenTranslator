@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { FeatureManifest } from "@opentranslator/shared-types";
 import type { AppBindings, AppVariables } from "../types";
 import { publicAccessManifest } from "../features/public-access/manifest";
-import { glossaryManifest } from "../features/glossary/manifest";
+import { aiExpertsManifest } from "../features/ai-experts/manifest";
 import { getFeatureModules, upsertFeatureModule, setSiteSetting } from "../db/queries";
 import { invalidateSiteSettings } from "../settings/cache";
 
@@ -12,7 +12,7 @@ const adminFeaturesRoute = new Hono<{
 }>();
 
 /** Static manifests declared by each feature's manifest.ts. */
-const manifests: FeatureManifest[] = [publicAccessManifest, glossaryManifest];
+const manifests: FeatureManifest[] = [publicAccessManifest, aiExpertsManifest];
 
 /**
  * GET /api/admin/features — manifests merged with the feature_modules table.
