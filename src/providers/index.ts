@@ -7,6 +7,7 @@ import {
 import { claudeProvider } from "./claude";
 import { geminiProvider } from "./gemini";
 import { cloudflareProvider } from "./cloudflare";
+import { deeplProvider } from "./deepl";
 
 /**
  * Provider registration side-effects. Importing this module wires every
@@ -18,3 +19,4 @@ providerRegistry.register("claude", claudeProvider);
 providerRegistry.register("gemini", geminiProvider);
 providerRegistry.register("custom", customProvider);
 providerRegistry.register("cloudflare", cloudflareProvider);
+providerRegistry.register("deepl", deeplProvider);

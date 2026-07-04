@@ -78,6 +78,7 @@ const PROVIDER_LABELS: Record<ProviderType, string> = {
   aihubmix: "AIHubMix",
   custom: "自定义",
   cloudflare: "Cloudflare",
+  deepl: "DeepL",
 };
 
 function providerLabel(t: ProviderType): string {
@@ -95,6 +96,7 @@ export function ProvidersSection() {
       aihubmix: [],
       custom: [],
       cloudflare: [],
+      deepl: [],
     },
   );
   const [loading, setLoading] = useState(true);

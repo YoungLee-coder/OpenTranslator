@@ -6,7 +6,8 @@ export type ProviderType =
   | "gemini"
   | "aihubmix"
   | "custom"
-  | "cloudflare";
+  | "cloudflare"
+  | "deepl";
 
 /**
  * Resolved per-provider configuration passed into an adapter.

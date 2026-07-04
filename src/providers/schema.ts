@@ -33,4 +33,9 @@ export const providerSchemas: Record<ProviderType, ProviderField[]> = {
     { key: "baseUrl", label: "Base URL", type: "text", required: true, placeholder: "https://your-endpoint/v1/chat/completions" },
     { key: "models", label: "模型", type: "models" },
   ],
+  deepl: [
+    { key: "plan", label: "套餐", type: "text", placeholder: "pro 或 free（默认 pro；Free 套餐填 free）" },
+    { key: "formality", label: "Formality", type: "text", placeholder: "default / prefer_more / prefer_less（可留空）" },
+    { key: "models", label: "模型 (model_type)", type: "models", placeholder: "prefer_quality_optimized\nquality_optimized\nlatency_optimized" },
+  ],
 };
