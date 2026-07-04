@@ -230,7 +230,11 @@ export async function handleTranslate(c: C): Promise<Response> {
     return c.json({ error: `provider type "${providerType}" not registered` }, 501);
   }
 
-  const wantStream = req.stream === true && adapter.translateStream !== undefined;
+  // 解耦"客户端要 SSE"与"适配器能流式"：客户端请求 stream 时始终返回 SSE，
+  // 适配器不支持流式（如 DeepL）则一次性翻译后包成单帧 delta + done。
+  // 否则前端 streamTranslate 按 SSE 协议解析普通 JSON 响应，零事件 → 结果不显示。
+  const clientWantsStream = req.stream === true;
+  const wantStream = clientWantsStream && adapter.translateStream !== undefined;
 
   // Translation cache: serve identical repeats without hitting the upstream.
   const cacheKey = settings.translationCacheEnabled
@@ -240,7 +244,7 @@ export async function handleTranslate(c: C): Promise<Response> {
   if (cacheKey) {
     const cached = await getTranslationCache(c.env.SETTINGS_KV, cacheKey);
     if (cached) {
-      if (wantStream) {
+      if (clientWantsStream) {
         return streamSSE(c, async (stream) => {
           await stream.writeSSE({
             data: JSON.stringify({
@@ -307,7 +311,38 @@ export async function handleTranslate(c: C): Promise<Response> {
     });
   }
 
-  // Non-streaming path.
+  // 适配器不支持流式但客户端请求了 SSE：一次性翻译，包成单帧 delta + done。
+  // DeepL 等非流式供应商走此分支；前端 streamTranslate 无感接收。
+  if (clientWantsStream) {
+    try {
+      const result = await adapter.translate(req, ctx);
+      if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, result, cacheTtlSeconds);
+      c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
+      return streamSSE(c, async (stream) => {
+        await stream.writeSSE({
+          data: JSON.stringify({
+            type: "delta",
+            text: result.translatedText,
+          } satisfies TranslateStreamEvent),
+        });
+        await stream.writeSSE({
+          data: JSON.stringify({
+            type: "done",
+            ...result,
+          } satisfies TranslateStreamEvent),
+        });
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return streamSSE(c, async (stream) => {
+        await stream.writeSSE({
+          data: JSON.stringify({ type: "error", error: msg } satisfies TranslateStreamEvent),
+        });
+      });
+    }
+  }
+
+  // 非流式 JSON 路径（客户端未请求 SSE）。
   try {
     const result = await adapter.translate(req, ctx);
     if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, result, cacheTtlSeconds);
