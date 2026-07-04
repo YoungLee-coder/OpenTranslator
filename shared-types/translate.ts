@@ -12,7 +12,10 @@ export interface TranslateRequest {
 /** 首页模型选择下拉里的一项。 */
 export interface TranslateModelOption {
   providerId: string;
+  /** API 请求用的模型值（如 DeepL 的 prefer_quality_optimized）。 */
   model: string;
+  /** 界面展示名；select 型 schema 有 label 时与 model 不同。 */
+  modelLabel: string;
   providerName: string;
 }
 

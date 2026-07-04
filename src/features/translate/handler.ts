@@ -27,6 +27,7 @@ import {
 } from "../../lib/cache";
 import { getGlossaryForTarget } from "../glossary/store";
 import { providerRegistry } from "../../providers/registry";
+import { resolveModelLabel } from "../../providers/schema";
 import { getClientIp, enforceRateLimit } from "../../middleware/rate-limit";
 
 // Side-effect: register every adapter into the registry.
@@ -71,7 +72,12 @@ export async function handleListModels(c: C): Promise<Response> {
       .filter((p) => p.enabled)
       .flatMap((p) =>
         (p.models?.length ? p.models : p.defaultModel ? [p.defaultModel] : []).map(
-          (m) => ({ providerId: p.id, model: m, providerName: p.displayName }),
+          (m) => ({
+            providerId: p.id,
+            model: m,
+            modelLabel: resolveModelLabel(p.type, m),
+            providerName: p.displayName,
+          }),
         ),
       );
     return c.json({ models, default: null } satisfies TranslateModelsResponse);
@@ -95,6 +101,7 @@ export async function handleListModels(c: C): Promise<Response> {
     models.push({
       providerId: m.providerId,
       model: m.model,
+      modelLabel: resolveModelLabel(p.type, m.model),
       providerName: p.displayName,
     });
     validRefs.push(m);

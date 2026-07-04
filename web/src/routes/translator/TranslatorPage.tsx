@@ -335,7 +335,7 @@ function ModelSelect({
   const selected = value
     ? options.find((o) => `${o.providerId}|${o.model}` === value)
     : undefined;
-  const label = selected?.model ?? "默认";
+  const label = selected?.modelLabel ?? "默认";
   return (
     <div className="hidden sm:block">
       <Select
@@ -352,7 +352,7 @@ function ModelSelect({
             const key = `${o.providerId}|${o.model}`;
             return (
               <SelectItem key={key} value={key}>
-                {o.providerName} · {o.model}
+                {o.providerName} · {o.modelLabel}
               </SelectItem>
             );
           })}

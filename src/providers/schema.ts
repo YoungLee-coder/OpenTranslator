@@ -68,3 +68,19 @@ export const providerSchemas: Record<ProviderType, ProviderField[]> = {
     { key: "models", label: "模型", type: "models" },
   ],
 };
+
+/** select 型 models 字段的 value → 展示 label；无映射时回落到原始 model 值。 */
+export function resolveModelLabel(type: ProviderType, model: string): string {
+  const modelsField = providerSchemas[type]?.find((f) => f.key === "models");
+  if (modelsField?.type !== "select" || !modelsField.options) {
+    return model;
+  }
+  for (const opt of modelsField.options) {
+    if (typeof opt === "string") {
+      if (opt === model) return opt;
+    } else if (opt.value === model) {
+      return opt.label ?? opt.value;
+    }
+  }
+  return model;
+}
