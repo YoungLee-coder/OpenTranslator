@@ -29,13 +29,42 @@ export const providerSchemas: Record<ProviderType, ProviderField[]> = {
     { key: "accountId", label: "Account ID", type: "text", required: true, placeholder: "Cloudflare 账户 ID（Dashboard 右侧栏可见）" },
     { key: "models", label: "模型", type: "models", placeholder: "@cf/google/gemma-4-26b-a4b-it\n@cf/meta/llama-3.1-8b-instruct" },
   ],
+  deepl: [
+    {
+      key: "plan",
+      label: "套餐",
+      type: "select",
+      defaultValue: "pro",
+      options: [
+        { value: "pro", label: "Pro（专业版）" },
+        { value: "free", label: "Free（免费版）" },
+      ],
+    },
+    {
+      key: "models",
+      label: "模型",
+      type: "select",
+      defaultValue: "prefer_quality_optimized",
+      options: [
+        { value: "prefer_quality_optimized", label: "偏好质量优化（推荐）" },
+        { value: "quality_optimized", label: "质量优化" },
+        { value: "latency_optimized", label: "延迟优化" },
+      ],
+    },
+    {
+      key: "formality",
+      label: "正式度",
+      type: "select",
+      defaultValue: "default",
+      options: [
+        { value: "default", label: "默认" },
+        { value: "prefer_more", label: "偏正式" },
+        { value: "prefer_less", label: "偏非正式" },
+      ],
+    },
+  ],
   custom: [
     { key: "baseUrl", label: "Base URL", type: "text", required: true, placeholder: "https://your-endpoint/v1/chat/completions" },
     { key: "models", label: "模型", type: "models" },
-  ],
-  deepl: [
-    { key: "plan", label: "套餐", type: "text", placeholder: "pro 或 free（默认 pro；Free 套餐填 free）" },
-    { key: "formality", label: "Formality", type: "text", placeholder: "default / prefer_more / prefer_less（可留空）" },
-    { key: "models", label: "模型 (model_type)", type: "models", placeholder: "prefer_quality_optimized\nquality_optimized\nlatency_optimized" },
   ],
 };

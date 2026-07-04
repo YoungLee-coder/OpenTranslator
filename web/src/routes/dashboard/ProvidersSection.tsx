@@ -169,17 +169,17 @@ export function ProvidersSection() {
     setForm(EMPTY_FORM);
   }
 
-  // 取字段有效值：preset 优先，其次用户输入
+  // 取字段有效值：preset 优先，其次用户输入，最后 defaultValue（select 初始选中项）
   function eff(key: string): string {
     const f = (schemas[form.type] ?? []).find((x) => x.key === key);
-    return f ? (f.preset ?? form.fields[key] ?? "") : "";
+    return f ? (f.preset ?? form.fields[key] ?? f.defaultValue ?? "") : "";
   }
 
   function buildRequest(): CreateProviderRequest | null {
     const schemaFields = schemas[form.type] ?? [];
-    // 必填校验（preset 字段恒有值，跳过）
+    // 必填校验（preset / defaultValue 恒有值，跳过）
     for (const f of schemaFields) {
-      if (f.required && !f.preset && !form.fields[f.key]?.trim()) {
+      if (f.required && !f.preset && !eff(f.key).trim()) {
         setError(`「${f.label}」为必填项`);
         return null;
       }
@@ -202,7 +202,7 @@ export function ProvidersSection() {
     const configJson: Record<string, string> = {};
     for (const f of schemaFields) {
       if (f.key === "baseUrl" || f.key === "models") continue;
-      const v = (f.preset ?? form.fields[f.key] ?? "").trim();
+      const v = (f.preset ?? form.fields[f.key] ?? f.defaultValue ?? "").trim();
       if (v) configJson[f.key] = v;
     }
     return {
@@ -540,6 +540,36 @@ export function ProvidersSection() {
                     }
                     className="font-mono text-xs"
                   />
+                ) : f.type === "select" ? (
+                  <Select
+                    value={f.preset ?? form.fields[f.key] ?? f.defaultValue ?? ""}
+                    onValueChange={(v) =>
+                      setForm({
+                        ...form,
+                        fields: { ...form.fields, [f.key]: v },
+                      })
+                    }
+                    disabled={!!f.preset}
+                  >
+                    <SelectTrigger id={`field-${f.key}`}>
+                      <SelectValue placeholder={f.placeholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {f.options?.map((opt) => {
+                        const value =
+                          typeof opt === "string" ? opt : opt.value;
+                        const label =
+                          typeof opt === "string"
+                            ? opt
+                            : (opt.label ?? opt.value);
+                        return (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
                 ) : (
                   <Input
                     id={`field-${f.key}`}
