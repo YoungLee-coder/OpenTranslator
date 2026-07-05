@@ -12,7 +12,7 @@
 
 [中文](./README.md) · [Features](#-features) · [Screenshots](#-screenshots) · [Quick Start](#-quick-start) · [Deploy](#-deploy) · [Extensibility](#-extensibility) · [Roadmap](#-roadmap)
 
-<img src="./docs/images/OpenTranslator-HomePage.png" alt="OpenTranslator translation page" width="800" />
+<img src="./docs/images/OpenTranslator-homepage.png" alt="OpenTranslator translation page" width="800" style="border-radius: 12px;" />
 
 </div>
 
@@ -37,25 +37,31 @@
 
 Side-by-side bilingual view, auto language detection, model switching, and keyboard shortcuts — ready out of the box.
 
-<img src="./docs/images/OpenTranslator-HomePage.png" alt="Translation page" width="800" />
+<img src="./docs/images/OpenTranslator-homepage.png" alt="Translation page" width="800" style="border-radius: 12px;" />
+
+### AI writing
+
+Polish, style, formality, and conciseness tools with side-by-side input and output.
+
+<img src="./docs/images/OpenTranslator-write.png" alt="AI writing" width="800" style="border-radius: 12px;" />
 
 ### Admin dashboard
 
-**Usage overview** — Total requests, character counts, and per-provider usage at a glance.
+**Usage overview** — Total requests, character counts, and per-provider usage at a glance, plus user profile management.
 
-<img src="./docs/images/OpenTranslator-Dashboard1.png" alt="Dashboard usage overview" width="800" />
+<img src="./docs/images/OpenTranslator-dashboard.png" alt="Dashboard usage overview" width="800" style="border-radius: 12px;" />
 
-**Public access** — Choose which models anonymous visitors can use, set a public default, and configure anonymous rate limits.
+**Providers** — Add and edit multiple AI providers, switch models, and set the public default.
 
-<img src="./docs/images/OpenTranslator-Dashboard2.png" alt="Dashboard public access" width="800" />
+<img src="./docs/images/OpenTranslator-供应商.png" alt="Dashboard providers" width="800" style="border-radius: 12px;" />
 
 **Site settings** — Signed-in user rate limits, KV translation cache, feature module toggles, and database maintenance.
 
-<img src="./docs/images/OpenTranslator-Dashboard3.png" alt="Dashboard site settings" width="800" />
+<img src="./docs/images/OpenTranslator-设置.png" alt="Dashboard site settings" width="800" style="border-radius: 12px;" />
 
-**Glossary** — Maintain term pairs per target language; they are injected into prompts to enforce consistent wording.
+**AI experts** — Scene-specific translation strategies inspired by Immersive Translate — enable experts for tech, finance, GitHub, and more.
 
-<img src="./docs/images/OpenTranslator-Dashboard4.png" alt="Dashboard glossary" width="800" />
+<img src="./docs/images/OpenTranslator-AI专家.png" alt="Dashboard AI experts" width="800" style="border-radius: 12px;" />
 
 ---
 

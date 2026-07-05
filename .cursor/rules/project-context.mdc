@@ -1,0 +1,17 @@
+---
+description: OpenTranslator project context — read .ai/ before non-trivial work
+alwaysApply: true
+---
+
+# OpenTranslator — project context
+
+Project knowledge lives in `.ai/`. **Read the relevant `.ai/` files before non-trivial work** — do not guess commands, conventions, or architecture.
+
+**`.ai/` file index** — listed in `CLAUDE.md` at the repo root (do not duplicate the list here).
+
+Cursor-specific notes:
+- 改已有文件用 StrReplace/Edit，别用 Write 整文件覆盖；改后端前先读 `src/index.ts` 确认路由与中间件分层。
+- 扩展供应商 / 功能模块走注册表（见 `.ai/architecture.md`）；共享类型放 `shared-types/`。
+- Personal overrides: create `AGENTS.local.md` or `CLAUDE.local.md` at the repo root (gitignored).
+
+Do not duplicate `.ai/` content here — update `.ai/` files when project knowledge changes.

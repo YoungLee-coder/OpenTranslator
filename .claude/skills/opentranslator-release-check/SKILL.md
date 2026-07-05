@@ -1,5 +1,5 @@
 ---
-name: release-check
+name: opentranslator-release-check
 description: Verify deploy readiness for OpenTranslator — run typecheck, confirm no secrets in diff, validate DB migration safety. Use before deploy / 发布前检查 / 部署前检查.
 ---
 

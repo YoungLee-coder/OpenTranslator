@@ -1,4 +1,4 @@
-<!-- ai-init-version: 2 -->
+<!-- ai-init-version: 3 -->
 # OpenTranslator — Claude Code Instructions
 
 Project knowledge is distributed across `.ai/` (shared with opencode). Read these files before non-trivial work:

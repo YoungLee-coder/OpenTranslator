@@ -1,13 +1,8 @@
-<!-- ai-init-version: 2 -->
+<!-- ai-init-version: 3 -->
 # OpenTranslator — opencode Instructions
 
-Project knowledge is in `.ai/` (shared with Claude Code). The `instructions` field in `opencode.jsonc` loads these files automatically. If you're reading this outside opencode, read the `.ai/` files manually:
+Project knowledge is in `.ai/` (shared with Claude Code and Cursor). The `instructions` field in `opencode.jsonc` loads these files automatically in opencode.
 
-- `.ai/project.md` — project background, response language
-- `.ai/architecture.md` — tech stack, repository map, entry points
-- `.ai/coding-style.md` — conventions, helpers, gotchas
-- `.ai/workflow.md` — commands, verification, release flow
-- `.ai/testing.md` — test strategy, per-change verification
-- `.ai/security.md` — safety rules, destructive-op guardrails
+**`.ai/` file index** — listed in `CLAUDE.md` at the repo root (read before non-trivial work).
 
 Put personal overrides in `AGENTS.local.md` (gitignored).

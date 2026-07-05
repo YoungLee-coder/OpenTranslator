@@ -1,5 +1,5 @@
 ---
-name: review-pr
+name: opentranslator-review-pr
 description: Review a pull request for OpenTranslator using code-reviewer and security-auditor agents. Use before merging / when asked to review a PR / 看看PR.
 ---
 

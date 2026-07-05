@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Activity, FileText, AlertCircle } from "lucide-react";
-import type { UsageSummary } from "@opentranslator/shared-types";
+import type { ProviderRecord, UsageSummary } from "@opentranslator/shared-types";
 import { apiGet, ApiError } from "@/lib/api-client";
 import { useTranslation } from "@/lib/i18n";
 import {
@@ -23,12 +23,22 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export function OverviewSection() {
   const { t } = useTranslation();
   const [usage, setUsage] = useState<UsageSummary | null>(null);
+  const [providers, setProviders] = useState<ProviderRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const providerNames = useMemo(
+    () => new Map(providers.map((p) => [p.id, p.displayName])),
+    [providers],
+  );
 
   async function load() {
     try {
-      const res = await apiGet<{ usage: UsageSummary }>("/api/admin/usage");
-      setUsage(res.usage);
+      const [usageRes, providersRes] = await Promise.all([
+        apiGet<{ usage: UsageSummary }>("/api/admin/usage"),
+        apiGet<{ providers: ProviderRecord[] }>("/api/admin/providers"),
+      ]);
+      setUsage(usageRes.usage);
+      setProviders(providersRes.providers);
       setError(null);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : String(e));
@@ -80,8 +90,8 @@ export function OverviewSection() {
                   <TableBody>
                     {usage.byProvider.map((p) => (
                       <TableRow key={p.providerId}>
-                        <TableCell className="font-mono text-xs text-muted-foreground">
-                          {p.providerId.slice(0, 8)}
+                        <TableCell>
+                          {providerNames.get(p.providerId) ?? p.providerId}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           {p.requests}

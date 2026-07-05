@@ -12,7 +12,7 @@
 
 [English](./README.en.md) · [特性](#-特性) · [截图](#-截图) · [快速开始](#-快速开始) · [部署](#-部署) · [扩展](#-扩展点) · [路线图](#-路线图)
 
-<img src="./docs/images/OpenTranslator-HomePage.png" alt="OpenTranslator 翻译页" width="800" />
+<img src="./docs/images/OpenTranslator-homepage.png" alt="OpenTranslator 翻译页" width="800" style="border-radius: 12px;" />
 
 </div>
 
@@ -37,25 +37,31 @@
 
 双语对照、语言自动检测、模型切换与快捷键翻译，开箱即用。
 
-<img src="./docs/images/OpenTranslator-HomePage.png" alt="翻译页" width="800" />
+<img src="./docs/images/OpenTranslator-homepage.png" alt="翻译页" width="800" style="border-radius: 12px;" />
+
+### AI 写作
+
+润色、风格、正式度与精简等写作辅助，双栏对照即时输出。
+
+<img src="./docs/images/OpenTranslator-write.png" alt="AI 写作" width="800" style="border-radius: 12px;" />
 
 ### 管理后台
 
-**用量概览** — 总请求数、总字符数与各供应商用量一目了然。
+**用量概览** — 总请求数、总字符数与各供应商用量一目了然，并可管理用户资料。
 
-<img src="./docs/images/OpenTranslator-Dashboard1.png" alt="Dashboard 用量概览" width="800" />
+<img src="./docs/images/OpenTranslator-dashboard.png" alt="Dashboard 用量概览" width="800" style="border-radius: 12px;" />
 
-**公开访问** — 勾选匿名访客可用的模型、指定公开默认，并设置匿名限流。
+**供应商** — 新增、编辑多家 AI 供应商，切换模型并设置公开默认。
 
-<img src="./docs/images/OpenTranslator-Dashboard2.png" alt="Dashboard 公开访问" width="800" />
+<img src="./docs/images/OpenTranslator-供应商.png" alt="Dashboard 供应商" width="800" style="border-radius: 12px;" />
 
 **站点设置** — 登录用户限流、KV 翻译缓存、功能模块开关与数据库维护。
 
-<img src="./docs/images/OpenTranslator-Dashboard3.png" alt="Dashboard 站点设置" width="800" />
+<img src="./docs/images/OpenTranslator-设置.png" alt="Dashboard 站点设置" width="800" style="border-radius: 12px;" />
 
-**术语库** — 按目标语言维护术语对，翻译时自动注入提示词强制替换。
+**AI 专家** — 基于沉浸式翻译的专业策略，按场景启用科技、金融、GitHub 等领域专家。
 
-<img src="./docs/images/OpenTranslator-Dashboard4.png" alt="Dashboard 术语库" width="800" />
+<img src="./docs/images/OpenTranslator-AI专家.png" alt="Dashboard AI 专家" width="800" style="border-radius: 12px;" />
 
 ---
 
