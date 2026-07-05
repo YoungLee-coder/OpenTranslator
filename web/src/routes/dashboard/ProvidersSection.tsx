@@ -315,9 +315,9 @@ export function ProvidersSection() {
   return (
     <Card className="animate-rise">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>{t("providers.title")}</CardTitle>
-          <Button type="button" size="sm" onClick={startCreate} className="gap-1.5">
+          <Button type="button" size="sm" onClick={startCreate} className="w-full gap-1.5 sm:w-auto">
             <Plus className="size-4" />
             {t("common.add")}
           </Button>

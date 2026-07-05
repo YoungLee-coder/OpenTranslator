@@ -91,13 +91,15 @@ export function DashboardPage() {
       </h1>
 
       <Tabs value={tab} onValueChange={handleTabChange}>
-        <TabsList>
-          {tabs.map((tab) => (
-            <TabsTrigger key={tab.key} value={tab.key}>
-              {tab.name}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="-mx-4 overflow-x-auto overscroll-x-contain px-4 sm:mx-0 sm:px-0">
+          <TabsList className="min-w-max">
+            {tabs.map((tab) => (
+              <TabsTrigger key={tab.key} value={tab.key}>
+                {tab.name}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
         <TabsContent value="overview" {...keepMounted(visitedTabs.has("overview"))}>
           <div className="flex flex-col gap-6">

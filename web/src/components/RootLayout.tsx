@@ -35,7 +35,7 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
         <Languages className="size-3.5" />
       </span>
       {!compact && (
-        <span className="font-display text-[0.95rem] font-semibold tracking-tight">
+        <span className="hidden font-display text-[0.95rem] font-semibold tracking-tight md:inline">
           OpenTranslator
         </span>
       )}
@@ -134,12 +134,12 @@ export function RootLayout() {
   return (
     <div className="flex min-h-svh flex-col">
       {/* 胶囊悬浮 header：居中、圆角描边、轻玻璃，叠在内容上方 */}
-      <header className="sticky top-3 z-40 flex justify-center px-4">
-        <div className="flex h-12 w-fit max-w-[calc(100vw-2rem)] items-center gap-1.5 rounded-full border border-rule bg-card/80 px-2 shadow-md backdrop-blur-md">
+      <header className="sticky top-0 z-40 flex justify-center px-4 pt-[max(0.5rem,env(safe-area-inset-top))]">
+        <div className="flex h-11 w-fit max-w-[calc(100vw-2rem)] items-center gap-1 rounded-full border border-rule bg-card/80 px-1.5 shadow-md backdrop-blur-md sm:h-12 sm:gap-1.5 sm:px-2">
           <BrandMark />
 
           {/* 分隔发丝 */}
-          <span className="mx-1 h-6 w-px bg-rule" />
+          <span className="mx-1 hidden h-6 w-px bg-rule md:block" />
 
           {/* 桌面导航：药丸式 active */}
           <nav className="hidden items-center gap-1 md:flex">
@@ -187,7 +187,7 @@ export function RootLayout() {
                   <Menu className="size-4" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-72">
+              <SheetContent side="right" className="flex w-72 flex-col pb-[max(1rem,env(safe-area-inset-bottom))]">
                 <SheetHeader>
                   <SheetTitle className="flex items-center gap-2.5">
                     <span className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
@@ -199,13 +199,35 @@ export function RootLayout() {
                 <nav className="flex flex-col gap-1 px-4">
                   {navLinks}
                 </nav>
+                {user ? (
+                  <div className="mt-auto border-t border-rule px-4 pt-4">
+                    <div className="mb-3 flex items-center gap-3">
+                      <UserAvatar user={user} className="size-9 ring-1 ring-rule" />
+                      <span className="min-w-0 truncate text-sm text-muted-foreground">
+                        {user.email}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        void logout();
+                      }}
+                    >
+                      <LogOut className="size-4" />
+                      {t("user.logout")}
+                    </Button>
+                  </div>
+                ) : null}
               </SheetContent>
             </Sheet>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 pt-8 pb-14 sm:px-6 sm:pt-10">
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 pt-5 pb-[max(3.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-8 md:pt-10">
         <Outlet />
       </main>
     </div>

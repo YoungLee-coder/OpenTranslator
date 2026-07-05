@@ -168,8 +168,8 @@ export function TranslatorPage() {
         <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
 
         {/* 语言栏 */}
-        <div className="flex items-center justify-between gap-3 border-b border-rule px-3 py-3 sm:px-4">
-          <div className="flex items-center gap-2 sm:gap-2.5">
+        <div className="flex flex-col gap-3 border-b border-rule px-3 py-3 sm:px-4">
+          <div className="flex items-center gap-2">
             <LangSelect
               value={sourceLang}
               onChange={setSourceLang}
@@ -198,7 +198,7 @@ export function TranslatorPage() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {showExpertSelect && (
               <ExpertSelect
                 value={expertId}
@@ -216,27 +216,29 @@ export function TranslatorPage() {
                 disabled={streaming}
               />
             )}
-            {streaming ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleAbort}
-                className="gap-1.5"
-              >
-                <Square className="size-3 fill-current" />
-                {t("common.stop")}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                onClick={handleTranslate}
-                disabled={!canTranslate}
-                title={noModel ? t("translator.noModel") : undefined}
-                className="gap-1.5"
-              >
-                {t("translator.translate")}
-              </Button>
-            )}
+            <div className="ml-auto flex shrink-0">
+              {streaming ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAbort}
+                  className="gap-1.5"
+                >
+                  <Square className="size-3 fill-current" />
+                  {t("common.stop")}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleTranslate}
+                  disabled={!canTranslate}
+                  title={noModel ? t("translator.noModel") : undefined}
+                  className="gap-1.5"
+                >
+                  {t("translator.translate")}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -252,17 +254,17 @@ export function TranslatorPage() {
               }}
               disabled={streaming}
               className={cn(
-                "min-h-[300px] flex-1 w-full resize-none border-0 bg-transparent px-5 py-5 text-base leading-relaxed shadow-none outline-none placeholder:text-muted-foreground/50 disabled:opacity-60 sm:px-6",
+                "min-h-[220px] flex-1 w-full resize-none border-0 bg-transparent px-4 py-4 text-base leading-relaxed shadow-none outline-none placeholder:text-muted-foreground/50 disabled:opacity-60 sm:min-h-[300px] sm:px-6 sm:py-5",
                 "focus:ring-0",
               )}
             />
-            <div className="flex h-9 items-center justify-between border-t border-rule px-5 text-xs text-muted-foreground sm:px-6">
+            <div className="flex h-9 items-center justify-between border-t border-rule px-4 text-xs text-muted-foreground sm:px-6">
               {sourceText.length > 0 ? (
                 <span className="tabular-nums">{t("common.chars", { count: sourceText.length })}</span>
               ) : (
                 <span />
               )}
-              <kbd className="rounded border border-rule bg-muted/40 px-1.5 py-0.5 font-sans text-[10px] text-muted-foreground/70">
+              <kbd className="hidden rounded border border-rule bg-muted/40 px-1.5 py-0.5 font-sans text-[10px] text-muted-foreground/70 sm:inline">
                 ⌘/Ctrl + Enter
               </kbd>
             </div>
@@ -270,7 +272,7 @@ export function TranslatorPage() {
 
           {/* 译文栏：用衬线字，呈现「编辑级」阅读感 */}
           <div className="flex flex-col">
-            <div className="min-h-[300px] flex-1 overflow-auto whitespace-pre-wrap break-words px-5 py-5 font-serif text-base leading-relaxed sm:px-6">
+            <div className="min-h-[220px] flex-1 overflow-auto whitespace-pre-wrap break-words px-4 py-4 font-serif text-base leading-relaxed sm:min-h-[300px] sm:px-6 sm:py-5">
               {targetText ? (
                 <span className="animate-fade-in">{targetText}</span>
               ) : streaming ? (
@@ -288,7 +290,7 @@ export function TranslatorPage() {
                 </span>
               )}
             </div>
-            <div className="flex h-9 items-center justify-between border-t border-rule px-5 text-xs sm:px-6">
+            <div className="flex h-9 items-center justify-between border-t border-rule px-4 text-xs sm:px-6">
               {error ? (
                 <span className="text-destructive">{error}</span>
               ) : targetText.length > 0 ? (
@@ -311,12 +313,12 @@ export function TranslatorPage() {
                       {copied ? (
                         <>
                           <Check className="size-3 text-success" />
-                          {t("common.copied")}
+                          <span className="hidden sm:inline">{t("common.copied")}</span>
                         </>
                       ) : (
                         <>
                           <Copy className="size-3" />
-                          {t("common.copy")}
+                          <span className="hidden sm:inline">{t("common.copy")}</span>
                         </>
                       )}
                     </Button>
@@ -346,7 +348,7 @@ function LangSelect({
   const { t } = useTranslation();
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className="h-9 w-[130px] sm:w-[160px]">
+      <SelectTrigger className="h-9 min-w-0 flex-1 sm:w-[160px] sm:flex-none">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -380,12 +382,11 @@ function ExpertSelect({
       ? t("translator.general")
       : expertLabel(expert, locale) || t("translator.expert");
   return (
-    <div className="hidden md:block">
-      <Select value={value} onValueChange={onChange} disabled={disabled}>
-        <SelectTrigger className="h-9 w-[160px]">
-          <span className="truncate">{label}</span>
-        </SelectTrigger>
-        <SelectContent>
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
+      <SelectTrigger className="h-9 min-w-[7.5rem] flex-1 sm:w-[160px] sm:flex-none">
+        <span className="truncate">{label}</span>
+      </SelectTrigger>
+      <SelectContent>
           <SelectItem value="general">{t("translator.general")}</SelectItem>
           {options.map((o) => (
             <SelectItem key={o.id} value={o.id}>
@@ -393,9 +394,8 @@ function ExpertSelect({
               {o.id === defaultExpertId ? t("common.defaultSuffix") : ""}
             </SelectItem>
           ))}
-        </SelectContent>
+      </SelectContent>
       </Select>
-    </div>
   );
 }
 
@@ -417,16 +417,15 @@ function ModelSelect({
     : undefined;
   const label = selected?.modelLabel ?? t("common.default");
   return (
-    <div className="hidden sm:block">
-      <Select
-        value={value ?? "default"}
-        onValueChange={(v) => onChange(v === "default" ? null : v)}
-        disabled={disabled}
-      >
-        <SelectTrigger className="h-9 w-[180px]">
-          <span className="truncate">{label}</span>
-        </SelectTrigger>
-        <SelectContent>
+    <Select
+      value={value ?? "default"}
+      onValueChange={(v) => onChange(v === "default" ? null : v)}
+      disabled={disabled}
+    >
+      <SelectTrigger className="h-9 min-w-[7.5rem] flex-1 sm:w-[180px] sm:flex-none">
+        <span className="truncate">{label}</span>
+      </SelectTrigger>
+      <SelectContent>
           <SelectItem value="default">{t("common.default")}</SelectItem>
           {options.map((o) => {
             const key = `${o.providerId}|${o.model}`;
@@ -436,8 +435,7 @@ function ModelSelect({
               </SelectItem>
             );
           })}
-        </SelectContent>
+      </SelectContent>
       </Select>
-    </div>
   );
 }

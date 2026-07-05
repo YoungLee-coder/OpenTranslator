@@ -205,7 +205,7 @@ export function WritePage() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <LangSelect value={lang} onChange={setLang} disabled={streaming} />
             {modelOptions.length > 0 && (
               <ModelSelect
@@ -215,22 +215,24 @@ export function WritePage() {
                 disabled={streaming}
               />
             )}
-            {streaming ? (
-              <Button type="button" variant="outline" onClick={handleAbort} className="gap-1.5">
-                <Square className="size-3 fill-current" />
-                {t("common.stop")}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                onClick={handleWrite}
-                disabled={!canWrite}
-                title={noModel ? t("translator.noModel") : undefined}
-                className="gap-1.5"
-              >
-                {t("write.improve")}
-              </Button>
-            )}
+            <div className="ml-auto flex shrink-0">
+              {streaming ? (
+                <Button type="button" variant="outline" onClick={handleAbort} className="gap-1.5">
+                  <Square className="size-3 fill-current" />
+                  {t("common.stop")}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleWrite}
+                  disabled={!canWrite}
+                  title={noModel ? t("translator.noModel") : undefined}
+                  className="gap-1.5"
+                >
+                  {t("write.improve")}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -246,24 +248,24 @@ export function WritePage() {
               }}
               disabled={streaming}
               className={cn(
-                "min-h-[300px] flex-1 w-full resize-none border-0 bg-transparent px-5 py-5 text-base leading-relaxed shadow-none outline-none placeholder:text-muted-foreground/50 disabled:opacity-60 sm:px-6",
+                "min-h-[220px] flex-1 w-full resize-none border-0 bg-transparent px-4 py-4 text-base leading-relaxed shadow-none outline-none placeholder:text-muted-foreground/50 disabled:opacity-60 sm:min-h-[300px] sm:px-6 sm:py-5",
                 "focus:ring-0",
               )}
             />
-            <div className="flex h-9 items-center justify-between border-t border-rule px-5 text-xs text-muted-foreground sm:px-6">
+            <div className="flex h-9 items-center justify-between border-t border-rule px-4 text-xs text-muted-foreground sm:px-6">
               {sourceText.length > 0 ? (
                 <span className="tabular-nums">{t("common.chars", { count: sourceText.length })}</span>
               ) : (
                 <span />
               )}
-              <kbd className="rounded border border-rule bg-muted/40 px-1.5 py-0.5 font-sans text-[10px] text-muted-foreground/70">
+              <kbd className="hidden rounded border border-rule bg-muted/40 px-1.5 py-0.5 font-sans text-[10px] text-muted-foreground/70 sm:inline">
                 ⌘/Ctrl + Enter
               </kbd>
             </div>
           </div>
 
           <div className="flex flex-col">
-            <div className="min-h-[300px] flex-1 overflow-auto whitespace-pre-wrap break-words px-5 py-5 font-serif text-base leading-relaxed sm:px-6">
+            <div className="min-h-[220px] flex-1 overflow-auto whitespace-pre-wrap break-words px-4 py-4 font-serif text-base leading-relaxed sm:min-h-[300px] sm:px-6 sm:py-5">
               {revisedText ? (
                 <span className="animate-fade-in">{revisedText}</span>
               ) : streaming ? (
@@ -275,7 +277,7 @@ export function WritePage() {
                 <span className="ml-0.5 inline-block animate-blink text-primary">▍</span>
               )}
             </div>
-            <div className="flex h-9 items-center justify-between border-t border-rule px-5 text-xs sm:px-6">
+            <div className="flex h-9 items-center justify-between border-t border-rule px-4 text-xs sm:px-6">
               {error ? (
                 <span className="text-destructive">{error}</span>
               ) : revisedText.length > 0 ? (
@@ -297,7 +299,7 @@ export function WritePage() {
                         onClick={handleReplace}
                       >
                         <Replace className="size-3" />
-                        {t("write.replaceSource")}
+                        <span className="hidden sm:inline">{t("write.replaceSource")}</span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>{t("write.replaceSourceTip")}</TooltipContent>
@@ -314,12 +316,12 @@ export function WritePage() {
                         {copied ? (
                           <>
                             <Check className="size-3 text-success" />
-                            {t("common.copied")}
+                            <span className="hidden sm:inline">{t("common.copied")}</span>
                           </>
                         ) : (
                           <>
                             <Copy className="size-3" />
-                            {t("common.copy")}
+                            <span className="hidden sm:inline">{t("common.copy")}</span>
                           </>
                         )}
                       </Button>
@@ -441,7 +443,7 @@ function LangSelect({
   const { t } = useTranslation();
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className="h-9 w-[130px] sm:w-[160px]">
+      <SelectTrigger className="h-9 min-w-0 flex-1 sm:w-[160px] sm:flex-none">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -472,15 +474,14 @@ function ModelSelect({
     : undefined;
   const label = selected?.modelLabel ?? t("common.default");
   return (
-    <div className="hidden sm:block">
-      <Select
-        value={value ?? "default"}
-        onValueChange={(v) => onChange(v === "default" ? null : v)}
-        disabled={disabled}
-      >
-        <SelectTrigger className="h-9 w-[180px]">
-          <span className="truncate">{label}</span>
-        </SelectTrigger>
+    <Select
+      value={value ?? "default"}
+      onValueChange={(v) => onChange(v === "default" ? null : v)}
+      disabled={disabled}
+    >
+      <SelectTrigger className="h-9 min-w-[7.5rem] flex-1 sm:w-[180px] sm:flex-none">
+        <span className="truncate">{label}</span>
+      </SelectTrigger>
         <SelectContent>
           <SelectItem value="default">{t("common.default")}</SelectItem>
           {options.map((o) => {
@@ -493,6 +494,5 @@ function ModelSelect({
           })}
         </SelectContent>
       </Select>
-    </div>
   );
 }
