@@ -1,4 +1,4 @@
-<!-- ai-init-version: 3 -->
+<!-- ai-init-version: 6 -->
 # OpenTranslator — opencode Instructions
 
 Project knowledge is in `.ai/` (shared with Claude Code and Cursor). The `instructions` field in `opencode.jsonc` loads these files automatically in opencode.

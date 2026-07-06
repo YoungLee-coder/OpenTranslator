@@ -12,6 +12,7 @@ Implement a new feature following the conventions defined in `.ai/`:
 3. **实现**：按 `.ai/coding-style.md` 写代码。用文档里的 helper 与模式，别用原始替代。
 4. **验证**：跑 `.ai/workflow.md` Verification 表里对应改动类型的命令。后端 → `pnpm typecheck:api`；前端 → `pnpm typecheck:web`；shared-types → `pnpm typecheck`。
 5. **Review**：非平凡改动，调用 code-reviewer 和/或 architect 子代理后再算完成。
+6. **Memory**：若发现 `.ai/` 里缺失的稳定约定或 gotcha，提议保存（写入前确认——见 `/opentranslator-remember`）。
 
 ## 项目特定约束
 

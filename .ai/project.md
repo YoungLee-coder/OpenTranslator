@@ -26,3 +26,7 @@ OpenTranslator 是 DeepL 风格的在线 AI 翻译器：以大模型为底座，
 ## 语言
 
 AI agent 用**中文（zh-CN）**回复。涵盖对话回复、提交信息、agent 建议的代码注释与子代理输出。代码、标识符、命令保持英文。
+
+## Persistent memory
+
+共享事实应写在 `.ai/`（不要写进 `AGENTS.md` 或 `CLAUDE.md`）。用 `/opentranslator-remember` 或说「记住这个」添加/更新。Agent 发现稳定约定时会提议保存——写入前需你确认。
