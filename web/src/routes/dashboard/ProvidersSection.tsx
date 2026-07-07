@@ -312,6 +312,10 @@ export function ProvidersSection() {
     setForm({ ...form, type, fields: {} });
   }
 
+  function modelsText(p: ProviderRecord): string {
+    return p.models?.length ? p.models.join("、") : (p.defaultModel ?? "—");
+  }
+
   return (
     <Card className="animate-rise">
       <CardHeader>
@@ -371,28 +375,35 @@ export function ProvidersSection() {
             </Button>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-md border border-rule">
-            <Table className="table-fixed">
+          <div className="rounded-md border border-rule">
+            <Table className="min-w-[640px] lg:table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-40">{t("providers.name")}</TableHead>
-                  <TableHead className="w-28">{t("providers.type")}</TableHead>
-                  <TableHead>{t("providers.models")}</TableHead>
-                  <TableHead className="w-44">{t("providers.status")}</TableHead>
-                  <TableHead className="w-44 text-right">{t("providers.actions")}</TableHead>
+                  <TableHead className="lg:w-40">{t("providers.name")}</TableHead>
+                  <TableHead className="lg:w-28">{t("providers.type")}</TableHead>
+                  <TableHead className="lg:w-48">{t("providers.models")}</TableHead>
+                  <TableHead className="lg:w-44">{t("providers.status")}</TableHead>
+                  <TableHead className="lg:w-44 text-right">{t("providers.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {providers.map((p) => (
                   <TableRow key={p.id}>
-                    <TableCell className="font-medium">
-                      {p.displayName}
+                    <TableCell className="max-w-0 font-medium">
+                      <span className="block truncate" title={p.displayName}>
+                        {p.displayName}
+                      </span>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {providerLabel(p.type, t)}
                     </TableCell>
-                    <TableCell className="break-words font-mono text-xs text-muted-foreground">
-                      {p.models?.length ? p.models.join("、") : (p.defaultModel ?? "—")}
+                    <TableCell className="max-w-0">
+                      <span
+                        className="block truncate font-mono text-xs text-muted-foreground"
+                        title={modelsText(p)}
+                      >
+                        {modelsText(p)}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -414,7 +425,7 @@ export function ProvidersSection() {
                             onClick={() => void setDefault(p)}
                           >
                             <Star className="size-3" />
-                            {t("providers.setDefault")}
+                            <span className="hidden sm:inline">{t("providers.setDefault")}</span>
                           </Button>
                         )}
                       </div>
@@ -438,7 +449,7 @@ export function ProvidersSection() {
                           onClick={() => setDeleteTarget(p)}
                         >
                           <Trash2 className="size-3" />
-                          {t("common.delete")}
+                          <span className="hidden sm:inline">{t("common.delete")}</span>
                         </Button>
                       </div>
                     </TableCell>

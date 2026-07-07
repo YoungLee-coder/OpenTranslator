@@ -28,6 +28,7 @@ export const zhCN = {
   "nav.dashboard": "控制台",
   "nav.login": "登录",
   "nav.menu": "菜单",
+  "nav.more": "更多",
 
   "theme.toggle": "切换主题",
   "theme.light": "浅色",

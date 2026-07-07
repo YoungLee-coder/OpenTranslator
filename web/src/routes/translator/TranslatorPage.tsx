@@ -168,8 +168,8 @@ export function TranslatorPage() {
         <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
 
         {/* 语言栏 */}
-        <div className="flex flex-col gap-3 border-b border-rule px-3 py-3 sm:px-4">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3 border-b border-rule px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             <LangSelect
               value={sourceLang}
               onChange={setSourceLang}

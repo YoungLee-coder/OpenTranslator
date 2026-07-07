@@ -30,6 +30,7 @@ export const en: Messages = {
   "nav.dashboard": "Dashboard",
   "nav.login": "Sign in",
   "nav.menu": "Menu",
+  "nav.more": "More",
 
   "theme.toggle": "Toggle theme",
   "theme.light": "Light",

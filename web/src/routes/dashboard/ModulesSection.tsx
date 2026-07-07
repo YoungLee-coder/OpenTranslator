@@ -49,8 +49,8 @@ export function ModulesSection({ features, onChanged }: Props) {
         <CardDescription>{t("modules.description")}</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="overflow-hidden rounded-md border border-rule">
-          <Table>
+        <div className="rounded-md border border-rule">
+          <Table className="min-w-[480px]">
             <TableHeader>
               <TableRow>
                 <TableHead>{t("modules.module")}</TableHead>
@@ -62,8 +62,10 @@ export function ModulesSection({ features, onChanged }: Props) {
               {features.map((f) => (
                 <TableRow key={f.key}>
                   <TableCell className="font-medium">{f.name}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {f.description ?? "—"}
+                  <TableCell className="max-w-0 text-muted-foreground">
+                    <span className="block truncate" title={f.description ?? undefined}>
+                      {f.description ?? "—"}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">

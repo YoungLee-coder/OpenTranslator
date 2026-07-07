@@ -78,8 +78,8 @@ export function OverviewSection() {
             </div>
 
             {usage.byProvider.length > 0 && (
-              <div className="overflow-hidden rounded-md border border-rule">
-                <Table>
+              <div className="rounded-md border border-rule">
+                <Table className="min-w-[360px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("overview.provider")}</TableHead>
