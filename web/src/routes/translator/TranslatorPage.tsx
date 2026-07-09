@@ -23,7 +23,7 @@ export function TranslatorPage() {
   const [sourceText, setSourceText] = useState("");
   const [targetText, setTargetText] = useState("");
   const [sourceLang, setSourceLang] = useState("auto");
-  const [targetLang, setTargetLang] = useState("zh");
+  const [targetLang, setTargetLang] = useState("zh-CN");
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);

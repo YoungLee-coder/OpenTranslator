@@ -2,7 +2,9 @@ import type { WriteFormality, WriteRequest, WriteStyle } from "@opentranslator/s
 import type { BuiltPrompt } from "../../experts/prompt";
 
 const LANG_LABELS: Record<string, string> = {
-  zh: "Chinese",
+  "zh-CN": "Simplified Chinese",
+  "zh-TW": "Traditional Chinese (Taiwan)",
+  "zh-HK": "Traditional Chinese (Hong Kong)",
   en: "English",
   ja: "Japanese",
   ko: "Korean",

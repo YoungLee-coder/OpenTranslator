@@ -56,7 +56,7 @@ export function WritePage() {
   );
   const [sourceText, setSourceText] = useState("");
   const [revisedText, setRevisedText] = useState("");
-  const [lang, setLang] = useState("zh");
+  const [lang, setLang] = useState("zh-CN");
   const [mode, setMode] = useState<WriteMode>("improve");
   const [style, setStyle] = useState<WriteStyle>("simple");
   const [formality, setFormality] = useState<WriteFormality>("formal");

@@ -1,7 +1,9 @@
 /** Map OpenTranslator lang codes to display names used in IT expert templates. */
 const LANG_NAMES: Record<string, string> = {
   auto: "the detected source language",
-  zh: "Simplified Chinese",
+  "zh-CN": "Simplified Chinese",
+  "zh-TW": "Traditional Chinese (Taiwan)",
+  "zh-HK": "Traditional Chinese (Hong Kong)",
   en: "English",
   ja: "Japanese",
   ko: "Korean",

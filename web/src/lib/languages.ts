@@ -8,7 +8,9 @@ export interface Language {
 /** "auto" is only valid as a source language (lets the model detect). */
 export const LANGUAGES: Language[] = [
   { code: "auto", name: "auto" },
-  { code: "zh", name: "zh" },
+  { code: "zh-CN", name: "zh-CN" },
+  { code: "zh-TW", name: "zh-TW" },
+  { code: "zh-HK", name: "zh-HK" },
   { code: "en", name: "English" },
   { code: "ja", name: "日本語" },
   { code: "ko", name: "한국어" },
@@ -25,7 +27,9 @@ export const LANGUAGES: Language[] = [
 
 const UI_NAME_KEYS: Partial<Record<string, MessageKey>> = {
   auto: "languages.auto",
-  zh: "languages.zh",
+  "zh-CN": "languages.zhCN",
+  "zh-TW": "languages.zhTW",
+  "zh-HK": "languages.zhHK",
 };
 
 export function languageName(

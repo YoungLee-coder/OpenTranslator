@@ -85,7 +85,9 @@ export const zhCN = {
   "write.copyResult": "复制改进结果",
 
   "languages.auto": "自动检测",
-  "languages.zh": "中文",
+  "languages.zhCN": "简体中文",
+  "languages.zhTW": "繁體中文（台灣）",
+  "languages.zhHK": "繁體中文（香港）",
 
   "setup.title": "服务未就绪",
   "setup.description":

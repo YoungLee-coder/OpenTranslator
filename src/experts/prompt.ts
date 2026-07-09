@@ -1,4 +1,5 @@
 import type { TranslateRequest } from "@opentranslator/shared-types";
+import { langDisplayName } from "./lang";
 import { extractExpertTranslation } from "./parse-response";
 import { getExpert, isGeneralExpert } from "./registry";
 import { resolveExpertPrompts } from "./resolve";
@@ -41,11 +42,12 @@ export function buildTranslationPrompt(req: TranslateRequest): BuiltPrompt {
 function buildDefaultPrompt(req: TranslateRequest): BuiltPrompt {
   const sourceDesc =
     req.sourceLang === "auto" || !req.sourceLang
-      ? "the detected source language"
-      : req.sourceLang;
+      ? langDisplayName("auto")
+      : langDisplayName(req.sourceLang);
+  const targetDesc = langDisplayName(req.targetLang);
 
   const system = [
-    `You are a professional translator. Translate the user's text from ${sourceDesc} to ${req.targetLang}.`,
+    `You are a professional translator. Translate the user's text from ${sourceDesc} to ${targetDesc}.`,
     "Output ONLY the translated text — no explanations, no quotes, no preamble.",
     "Preserve the original formatting, line breaks, and document structure exactly.",
   ].join("\n");

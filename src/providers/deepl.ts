@@ -43,7 +43,18 @@ const DEFAULT_MODEL_TYPE = "prefer_quality_optimized";
 function deeplLang(code: string | undefined): string | undefined {
   if (!code) return undefined;
   if (code === "auto") return undefined;
+  if (code === "zh-CN") return "ZH-HANS";
+  if (code === "zh-TW" || code === "zh-HK") return "ZH-HANT";
   return code.toUpperCase();
+}
+
+/** DeepL 返回的 detected_source_language → 项目内部语言码。 */
+function fromDeepLDetected(code: string | undefined): string | undefined {
+  if (!code) return undefined;
+  const lower = code.toLowerCase();
+  if (lower === "zh" || lower === "zh-hans") return "zh-CN";
+  if (lower === "zh-hant") return "zh-TW";
+  return lower;
 }
 
 function baseOf(ctx: ProviderContext): string {
@@ -99,8 +110,8 @@ export const deeplProvider: TranslationProvider = {
     const text = t?.text ?? "";
     return {
       translatedText: text,
-      // DeepL 返回大写码（如 "EN"），转小写与项目内部语言码一致
-      detectedSourceLang: t?.detected_source_language?.toLowerCase(),
+      // DeepL 返回大写码（如 "EN" / "ZH-HANS"），归一到项目内部语言码
+      detectedSourceLang: fromDeepLDetected(t?.detected_source_language),
       provider: "deepl",
       // DeepL 按字符计费，没有 token 概念；用 billed_characters 近似 inputTokens
       usage:

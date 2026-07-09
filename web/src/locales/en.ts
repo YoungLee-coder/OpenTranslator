@@ -87,7 +87,9 @@ export const en: Messages = {
   "write.copyResult": "Copy improved text",
 
   "languages.auto": "Auto-detect",
-  "languages.zh": "Chinese",
+  "languages.zhCN": "Simplified Chinese",
+  "languages.zhTW": "Traditional Chinese (Taiwan)",
+  "languages.zhHK": "Traditional Chinese (Hong Kong)",
 
   "setup.title": "Service not ready",
   "setup.description":
