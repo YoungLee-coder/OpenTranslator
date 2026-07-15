@@ -80,7 +80,11 @@ export async function handleWrite(c: C): Promise<Response> {
     return c.json({ error: validationError }, 400);
   }
 
-  const user = await getSessionUser(c.req.header("cookie"), c.env.JWT_SECRET);
+  const user = await getSessionUser(
+    c.req.header("cookie"),
+    c.env.JWT_SECRET,
+    c.req.header("authorization"),
+  );
   const isPublic = !user;
   const settings = await getSiteSettings(c.env.SETTINGS_KV, c.env.DB);
 

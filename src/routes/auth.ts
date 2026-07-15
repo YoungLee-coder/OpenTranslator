@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type {
+  AuthSessionResponse,
   AuthUser,
   LoginRequest,
 } from "@opentranslator/shared-types";
@@ -59,7 +60,10 @@ authRoute.post("/setup", async (c) => {
   const token = await signJwt({ sub: id, email: body.email, role: "admin" }, c.env.JWT_SECRET);
   c.header("Set-Cookie", sessionCookie(token));
   const user: AuthUser = { id, email: body.email, role: "admin" };
-  return c.json({ authenticated: true, user }, 201);
+  return c.json(
+    { authenticated: true, user, token } satisfies AuthSessionResponse,
+    201,
+  );
 });
 
 /** POST /api/auth/login — exchange credentials for a session cookie. */
@@ -80,7 +84,8 @@ authRoute.post("/login", async (c) => {
   return c.json({
     authenticated: true,
     user: adminToAuthUser(admin),
-  });
+    token,
+  } satisfies AuthSessionResponse);
 });
 
 /** POST /api/auth/logout — clear the session cookie. */

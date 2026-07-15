@@ -13,6 +13,14 @@ export interface LoginRequest {
 
 export interface SetupRequest extends LoginRequest {}
 
+/** POST /api/auth/login and /api/auth/setup — includes token for Bearer clients (e.g. extension). */
+export interface AuthSessionResponse {
+  authenticated: boolean;
+  user: AuthUser;
+  /** JWT for non-cookie clients. Same value as the `ot_session` cookie. */
+  token: string;
+}
+
 export interface AuthMeResponse {
   authenticated: boolean;
   user?: AuthUser;

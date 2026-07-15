@@ -58,7 +58,11 @@ function parseAllowedModels(row: ProviderRow): string[] {
 
 /** GET /api/translate/models — 返回当前用户可选的模型与默认项。 */
 export async function handleListModels(c: C): Promise<Response> {
-  const user = await getSessionUser(c.req.header("cookie"), c.env.JWT_SECRET);
+  const user = await getSessionUser(
+    c.req.header("cookie"),
+    c.env.JWT_SECRET,
+    c.req.header("authorization"),
+  );
   const settings = await getSiteSettings(c.env.SETTINGS_KV, c.env.DB);
 
   // 私站且未登录：不暴露任何模型
@@ -120,7 +124,11 @@ export async function handleListModels(c: C): Promise<Response> {
 
 /** GET /api/translate/experts — enabled AI experts for the translator UI. */
 export async function handleListExperts(c: C): Promise<Response> {
-  const user = await getSessionUser(c.req.header("cookie"), c.env.JWT_SECRET);
+  const user = await getSessionUser(
+    c.req.header("cookie"),
+    c.env.JWT_SECRET,
+    c.req.header("authorization"),
+  );
   const settings = await getSiteSettings(c.env.SETTINGS_KV, c.env.DB);
 
   if (!user && !settings.sitePublic) {
@@ -157,7 +165,11 @@ export async function handleTranslate(c: C): Promise<Response> {
     return c.json({ error: "text and targetLang are required" }, 400);
   }
 
-  const user = await getSessionUser(c.req.header("cookie"), c.env.JWT_SECRET);
+  const user = await getSessionUser(
+    c.req.header("cookie"),
+    c.env.JWT_SECRET,
+    c.req.header("authorization"),
+  );
   const isPublic = !user;
   const settings = await getSiteSettings(c.env.SETTINGS_KV, c.env.DB);
 

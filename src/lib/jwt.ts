@@ -92,4 +92,11 @@ export function readSessionCookie(cookieHeader: string | undefined): string | nu
   return null;
 }
 
+/** Parse `Authorization: Bearer <jwt>` for extension and other non-cookie clients. */
+export function readBearerToken(authorizationHeader: string | undefined): string | null {
+  if (!authorizationHeader) return null;
+  const match = /^Bearer\s+(\S+)$/i.exec(authorizationHeader.trim());
+  return match?.[1] ?? null;
+}
+
 export const SESSION_COOKIE_NAME = COOKIE_NAME;
