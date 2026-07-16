@@ -20,6 +20,7 @@ import { decryptSecret } from "../../lib/crypto";
 import { buildWritePrompt } from "./prompt";
 import { providerRegistry } from "../../providers/registry";
 import { getClientIp, enforceRateLimit } from "../../middleware/rate-limit";
+import { publicProviderError } from "../../lib/errors";
 
 import "../../providers";
 
@@ -223,9 +224,11 @@ export async function handleWrite(c: C): Promise<Response> {
           logUsage(c.env.DB, providerRowId, req.text.length, isPublic, getClientIp(c)),
         );
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
         await stream.writeSSE({
-          data: JSON.stringify({ type: "error", error: msg } satisfies WriteStreamEvent),
+          data: JSON.stringify({
+            type: "error",
+            error: publicProviderError(e),
+          } satisfies WriteStreamEvent),
         });
       } finally {
         reader.releaseLock();
@@ -256,10 +259,12 @@ export async function handleWrite(c: C): Promise<Response> {
         });
       });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
       return streamSSE(c, async (stream) => {
         await stream.writeSSE({
-          data: JSON.stringify({ type: "error", error: msg } satisfies WriteStreamEvent),
+          data: JSON.stringify({
+            type: "error",
+            error: publicProviderError(e),
+          } satisfies WriteStreamEvent),
         });
       });
     }
@@ -276,7 +281,6 @@ export async function handleWrite(c: C): Promise<Response> {
       usage: result.usage,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return c.json({ error: msg }, 502);
+    return c.json({ error: publicProviderError(e) }, 502);
   }
 }

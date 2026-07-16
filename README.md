@@ -93,7 +93,7 @@ pnpm dev            # 并行启动 web(5173) + api(8787)
 ## ☁️ 部署
 
 > [!NOTE]
-> 前端打包进同一个 Worker，`wrangler deploy` 一次发布前后端，同源无需 CORS、无需 `VITE_API_BASE_URL`。部署后访问 `/api/init/<JWT_SECRET>` 即可建表，幂等可重复执行。
+> 前端打包进同一个 Worker，`wrangler deploy` 一次发布前后端，同源无需 CORS、无需 `VITE_API_BASE_URL`。部署后用 `POST /api/init`（头 `X-Init-Secret: <JWT_SECRET>`）即可建表，幂等可重复执行。
 
 <details>
 <summary><strong>方式一：Cloudflare Git 连接（推荐，全程网页操作）</strong></summary>
@@ -112,7 +112,7 @@ Dashboard → Workers & Pages → Create → Workers → Import a repository →
 创建后进 Worker → Settings：
 
 - **Variables and Secrets** 加两个 secret（32 位以上随机字符串）：
-  - `JWT_SECRET`：JWT 签名密钥，同时作为 `/api/init` 凭证
+  - `JWT_SECRET`：JWT 签名密钥，同时作为 `POST /api/init` 的 `X-Init-Secret` 凭证
   - `ENCRYPTION_KEY`：供应商 API Key 加密密钥，**务必备份，丢了等于所有密钥作废**
 - **Bindings** → Add binding：
   - D1 binding，名字填 `DB` → 选 `opentranslator` 数据库
@@ -120,7 +120,14 @@ Dashboard → Workers & Pages → Create → Workers → Import a repository →
 
 **3. 初始化数据库（只做一次）**
 
-部署成功后，浏览器访问 `https://<你的-worker-域名>/api/init/<你的-JWT_SECRET>`，看到 `{"ok":true,...}` 即完成建表。
+部署成功后执行：
+
+```bash
+curl -X POST "https://<你的-worker-域名>/api/init" \
+  -H "X-Init-Secret: <你的-JWT_SECRET>"
+```
+
+看到 `{"ok":true,...}` 即完成建表。也可打开站点后的「初始化」页，在表单中粘贴 `JWT_SECRET` 完成建表（密钥不会进入 URL）。
 
 **4. 初始化数据**
 
@@ -128,7 +135,7 @@ Dashboard → Workers & Pages → Create → Workers → Import a repository →
 
 **5. 后续更新**
 
-改完代码 push 到 `main`，Cloudflare 自动重新构建部署。增量迁移再访问一次 `/api/init/<JWT_SECRET>` 即可。
+改完代码 push 到 `main`，Cloudflare 自动重新构建部署。增量迁移再执行一次上面的 `POST /api/init` 即可。
 
 </details>
 
@@ -143,7 +150,8 @@ wrangler secret put JWT_SECRET
 wrangler secret put ENCRYPTION_KEY
 pnpm build                                    # 构建前端到 ./dist
 wrangler deploy                               # 一次部署前端 + API
-curl https://api.yourdomain.com/api/init/$(grep JWT_SECRET .dev.vars | cut -d= -f2)   # 自动建表
+curl -X POST https://api.yourdomain.com/api/init \
+  -H "X-Init-Secret: $(grep JWT_SECRET .dev.vars | cut -d= -f2)"   # 自动建表
 ```
 
 </details>
@@ -153,7 +161,7 @@ curl https://api.yourdomain.com/api/init/$(grep JWT_SECRET .dev.vars | cut -d= -
 
 | 类型 | 名称 | 说明 |
 |---|---|---|
-| Secret | `JWT_SECRET` | JWT 签名密钥，32 位以上随机字符串，同时作为 `/api/init` 凭证 |
+| Secret | `JWT_SECRET` | JWT 签名密钥，32 位以上随机字符串，同时作为 `POST /api/init` 的 `X-Init-Secret` 凭证 |
 | Secret | `ENCRYPTION_KEY` | 供应商 API Key 加密密钥，**务必备份** |
 | Variable | `ENV` | 环境标识，默认 `development` |
 | Variable | `ORIGINS` | 跨域来源白名单（逗号分隔）；同源部署无需填写 |

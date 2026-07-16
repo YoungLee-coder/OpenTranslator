@@ -26,3 +26,9 @@ export type SiteSettingsUpdate = Partial<SiteSettings>;
 export const TRANSLATION_CACHE_TTL_HOURS_MIN = 1;
 export const TRANSLATION_CACHE_TTL_HOURS_MAX = 720;
 export const TRANSLATION_CACHE_TTL_HOURS_DEFAULT = 720;
+
+/** 每 IP 每分钟限流配额的合法区间与默认值。 */
+export const RATE_LIMIT_PER_MINUTE_MIN = 1;
+export const RATE_LIMIT_PER_MINUTE_MAX = 1000;
+export const PUBLIC_RATE_LIMIT_PER_MINUTE_DEFAULT = 20;
+export const AUTHED_RATE_LIMIT_PER_MINUTE_DEFAULT = 60;

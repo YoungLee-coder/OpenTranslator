@@ -31,6 +31,7 @@ import { buildTranslationPrompt } from "../../experts/prompt";
 import { providerRegistry } from "../../providers/registry";
 import { resolveModelLabel } from "../../providers/schema";
 import { getClientIp, enforceRateLimit } from "../../middleware/rate-limit";
+import { publicProviderError } from "../../lib/errors";
 
 // Side-effect: register every adapter into the registry.
 import "../../providers";
@@ -352,9 +353,11 @@ export async function handleTranslate(c: C): Promise<Response> {
         if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, result, cacheTtlSeconds);
         c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
         await stream.writeSSE({
-          data: JSON.stringify({ type: "error", error: msg } satisfies TranslateStreamEvent),
+          data: JSON.stringify({
+            type: "error",
+            error: publicProviderError(e),
+          } satisfies TranslateStreamEvent),
         });
       } finally {
         reader.releaseLock();
@@ -380,10 +383,12 @@ export async function handleTranslate(c: C): Promise<Response> {
         });
       });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
       return streamSSE(c, async (stream) => {
         await stream.writeSSE({
-          data: JSON.stringify({ type: "error", error: msg } satisfies TranslateStreamEvent),
+          data: JSON.stringify({
+            type: "error",
+            error: publicProviderError(e),
+          } satisfies TranslateStreamEvent),
         });
       });
     }
@@ -399,7 +404,6 @@ export async function handleTranslate(c: C): Promise<Response> {
     c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
     return c.json(final);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return c.json({ error: msg }, 502);
+    return c.json({ error: publicProviderError(e) }, 502);
   }
 }

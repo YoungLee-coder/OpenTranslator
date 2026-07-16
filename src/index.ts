@@ -20,6 +20,7 @@ import {
 } from "./db/init";
 import { getAdminCount } from "./db/queries";
 import { RateLimiter } from "./durable-objects/rate-limiter";
+import { constantTimeEqual } from "./lib/bytes";
 
 // Side-effect: register every provider adapter into the registry at startup.
 import "./providers";
@@ -44,14 +45,12 @@ app.use(
   }),
 );
 
-// Health check — minimum closed loop. Reports binding presence; when both
-// are attached, also reads D1 (no writes) for schema/admin readiness.
+// Health check — binding presence + schema/admin readiness (no env/deploy details).
 app.get("/api/ping", async (c) => {
   const bindings = { db: !!c.env.DB, kv: !!c.env.SETTINGS_KV };
   const base = {
     ok: true,
     service: "opentranslator-api",
-    env: c.env.ENV,
     bindings,
     dbReady: false,
     needsMigration: false,
@@ -75,11 +74,12 @@ app.get("/api/ping", async (c) => {
   }
 });
 
-// Database initializer — guarded by JWT_SECRET. Idempotent, safe to call
-// repeatedly. Call it manually once after first deploy to create tables.
-app.get("/api/init/:secret", async (c) => {
-  const secret = c.req.param("secret");
-  if (!c.env.JWT_SECRET || secret !== c.env.JWT_SECRET) {
+// Database initializer — JWT_SECRET via X-Init-Secret header (never in URL/path).
+// Idempotent; safe to call repeatedly after deploy.
+app.post("/api/init", async (c) => {
+  const secret = c.req.header("X-Init-Secret") ?? "";
+  const expected = c.env.JWT_SECRET ?? "";
+  if (!expected || !constantTimeEqual(secret, expected)) {
     return c.text("Unauthorized", 401);
   }
   const result = await initDatabase({ env: c.env });

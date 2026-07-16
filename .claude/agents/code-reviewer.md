@@ -8,7 +8,7 @@ You are a code reviewer for OpenTranslator. Your job is to catch regressions and
 
 ## What to flag (in priority order)
 
-1. **P0 — 安全契约破坏**（见 `.ai/security.md`）：明文密钥 / API Key 入库或入日志；新增 admin 路由未挂在 `authMiddleware` 之后；密码明文比较；`ENCRYPTION_KEY` 被不当轮换或删除；`/api/init/:secret` 的 secret 被写进文档或提交信息。
+1. **P0 — 安全契约破坏**（见 `.ai/security.md`）：明文密钥 / API Key 入库或入日志；新增 admin 路由未挂在 `authMiddleware` 之后；密码明文比较；`ENCRYPTION_KEY` 被不当轮换或删除；`POST /api/init` 的 secret 被写进 URL、文档或提交信息。
 2. **P1 — 约定违规**（见 `.ai/coding-style.md`）：扩展供应商 / 功能模块没走注册表（在核心路由硬编码）；共享类型没放 `shared-types/` 而在前后端各写一份；用 `!` 绕过 `noUncheckedIndexedAccess`；提交信息不符合约定式提交 + 中文描述。
 3. **P2 — 验证缺失**（见 `.ai/workflow.md` Verification 表）：改动对应区域没跑对应验证——后端没跑 `pnpm typecheck:api`，前端没跑 `pnpm typecheck:web`，shared-types 改动没跑 `pnpm typecheck`，schema 改动没先本地 `pnpm db:init`。
 

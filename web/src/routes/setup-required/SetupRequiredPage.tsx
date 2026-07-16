@@ -25,8 +25,10 @@ import { cn } from "@/lib/utils";
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
 async function runDbInit(secret: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/init/${encodeURIComponent(secret)}`, {
+  const res = await fetch(`${API_BASE}/api/init`, {
+    method: "POST",
     credentials: "include",
+    headers: { "X-Init-Secret": secret },
   });
   if (!res.ok) {
     let msg = `init -> ${res.status}`;

@@ -67,18 +67,37 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
   }
 }
 
-export function sessionCookie(token: string): string {
-  return [
+export function sessionCookie(token: string, opts?: { secure?: boolean }): string {
+  const parts = [
     `${COOKIE_NAME}=${token}`,
     "Path=/",
     "HttpOnly",
     "SameSite=Lax",
     "Max-Age=" + SEVEN_DAYS_SECONDS,
-  ].join("; ");
+  ];
+  if (opts?.secure) parts.push("Secure");
+  return parts.join("; ");
 }
 
-export function clearSessionCookie(): string {
-  return `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+export function clearSessionCookie(opts?: { secure?: boolean }): string {
+  const parts = [
+    `${COOKIE_NAME}=`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    "Max-Age=0",
+  ];
+  if (opts?.secure) parts.push("Secure");
+  return parts.join("; ");
+}
+
+/** HTTPS 请求才加 Secure；本地 http://localhost 开发不加。 */
+export function cookieSecureFromUrl(url: string): boolean {
+  try {
+    return new URL(url).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export function readSessionCookie(cookieHeader: string | undefined): string | null {

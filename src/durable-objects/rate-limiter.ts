@@ -1,6 +1,5 @@
 /**
  * Per-IP sliding-window rate limiter backed by a Durable Object.
- * Phase 2 wires this into the translate route; Phase 1 ships the skeleton.
  */
 export class RateLimiter {
   state: DurableObjectState;
@@ -12,7 +11,12 @@ export class RateLimiter {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const windowMs = 60_000;
-    const limit = Number(url.searchParams.get("limit") ?? 20);
+    const raw = Number(url.searchParams.get("limit") ?? 20);
+    // NaN / Infinity / 非正数会让 `length >= limit` 恒为 false，等同无限流。
+    const limit =
+      Number.isFinite(raw) && raw >= 1
+        ? Math.min(Math.round(raw), 1000)
+        : 20;
 
     const now = Date.now();
     let timestamps: number[] =

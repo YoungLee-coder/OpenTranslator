@@ -8,7 +8,7 @@ You are a security auditor for OpenTranslator. Your job is to catch security reg
 
 ## What to flag (in priority order)
 
-1. **P0 — 密钥 / 鉴权破坏**（见 `.ai/security.md`）：`JWT_SECRET` / `ENCRYPTION_KEY` / 供应商 API Key 明文出现在源码、`wrangler.toml`、日志、响应或错误信息；供应商 Key 未经 `src/lib/crypto.ts` 加密就落 D1；密码明文存储或比较（未走 `src/lib/password.ts`）；新增 `/api/admin/*` 路由未挂 `authMiddleware`；`/api/init/:secret` 把 secret 暴露在日志 / 文档 / 提交信息。
+1. **P0 — 密钥 / 鉴权破坏**（见 `.ai/security.md`）：`JWT_SECRET` / `ENCRYPTION_KEY` / 供应商 API Key 明文出现在源码、`wrangler.toml`、日志、响应或错误信息；供应商 Key 未经 `src/lib/crypto.ts` 加密就落 D1；密码明文存储或比较（未走 `src/lib/password.ts`）；新增 `/api/admin/*` 路由未挂 `authMiddleware`；`POST /api/init` 的 secret 暴露在 URL / 日志 / 文档 / 提交信息。
 2. **P1 — 不安全输入处理**：SQL 拼接（应走 `src/db/queries.ts` 的 prepared statement）；未校验的用户输入；CORS 放开成 `*`（应走 `ORIGINS` 白名单）；限流逻辑被无意放开（`RATE_LIMITER` DO 公开 / 登录用户两套配额）。
 3. **P2 — 敏感数据日志化**：JWT token、加密密钥、API Key 出现在 `console.log` / `logger` / 错误响应；过度宽松的访问权限。
 

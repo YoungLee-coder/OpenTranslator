@@ -1,7 +1,16 @@
 import { Hono } from "hono";
 import type { PublicModelRef, SiteSettingsUpdate } from "@opentranslator/shared-types";
+import {
+  AUTHED_RATE_LIMIT_PER_MINUTE_DEFAULT,
+  PUBLIC_RATE_LIMIT_PER_MINUTE_DEFAULT,
+} from "@opentranslator/shared-types";
 import type { AppBindings, AppVariables } from "../types";
-import { getSiteSettings, updateSetting, clampCacheTtlHours } from "../settings/cache";
+import {
+  getSiteSettings,
+  updateSetting,
+  clampCacheTtlHours,
+  clampRateLimitPerMinute,
+} from "../settings/cache";
 
 function isPublicModelRef(m: unknown): m is PublicModelRef {
   if (typeof m !== "object" || m === null) return false;
@@ -30,7 +39,10 @@ adminSettingsRoute.put("/", async (c) => {
       c.env.SETTINGS_KV,
       c.env.DB,
       "public_rate_limit_per_minute",
-      body.publicRateLimitPerMinute,
+      clampRateLimitPerMinute(
+        body.publicRateLimitPerMinute,
+        PUBLIC_RATE_LIMIT_PER_MINUTE_DEFAULT,
+      ),
     );
   }
   if (body.authedRateLimitPerMinute !== undefined) {
@@ -38,7 +50,10 @@ adminSettingsRoute.put("/", async (c) => {
       c.env.SETTINGS_KV,
       c.env.DB,
       "authed_rate_limit_per_minute",
-      body.authedRateLimitPerMinute,
+      clampRateLimitPerMinute(
+        body.authedRateLimitPerMinute,
+        AUTHED_RATE_LIMIT_PER_MINUTE_DEFAULT,
+      ),
     );
   }
   if (body.translationCacheEnabled !== undefined) {

@@ -6,15 +6,25 @@ import type {
 } from "@opentranslator/shared-types";
 import type { AppBindings, AppVariables } from "../types";
 import { populateUser } from "../middleware/auth";
-import { getAdminByEmail, getAdminCount, createAdmin, getAdminById } from "../db/queries";
+import {
+  getAdminByEmail,
+  getAdminCount,
+  createFirstAdmin,
+  getAdminById,
+} from "../db/queries";
 import { adminToAuthUser } from "../lib/avatar";
 import { getSiteSettings } from "../settings/cache";
 import { hashPassword, verifyPassword } from "../lib/password";
 import {
   clearSessionCookie,
+  cookieSecureFromUrl,
   sessionCookie,
   signJwt,
 } from "../lib/jwt";
+import { enforceRateLimit } from "../middleware/rate-limit";
+
+/** 登录 / 首启比公开翻译更严，固定配额防凭据喷洒。 */
+const AUTH_RATE_LIMIT_PER_MINUTE = 10;
 
 const authRoute = new Hono<{
   Bindings: AppBindings;
@@ -41,6 +51,9 @@ authRoute.get("/me", async (c) => {
 
 /** POST /api/auth/setup — create the first admin. 409 once one exists. */
 authRoute.post("/setup", async (c) => {
+  const blocked = await enforceRateLimit(c, AUTH_RATE_LIMIT_PER_MINUTE);
+  if (blocked) return blocked;
+
   if ((await getAdminCount(c.env.DB)) > 0) {
     return c.json({ error: "setup already completed" }, 409);
   }
@@ -56,9 +69,13 @@ authRoute.post("/setup", async (c) => {
   }
   const id = crypto.randomUUID();
   const hash = await hashPassword(body.password);
-  await createAdmin(c.env.DB, id, body.email, hash);
+  const created = await createFirstAdmin(c.env.DB, id, body.email, hash);
+  if (!created) {
+    return c.json({ error: "setup already completed" }, 409);
+  }
+  const secure = cookieSecureFromUrl(c.req.url);
   const token = await signJwt({ sub: id, email: body.email, role: "admin" }, c.env.JWT_SECRET);
-  c.header("Set-Cookie", sessionCookie(token));
+  c.header("Set-Cookie", sessionCookie(token, { secure }));
   const user: AuthUser = { id, email: body.email, role: "admin" };
   return c.json(
     { authenticated: true, user, token } satisfies AuthSessionResponse,
@@ -68,6 +85,9 @@ authRoute.post("/setup", async (c) => {
 
 /** POST /api/auth/login — exchange credentials for a session cookie. */
 authRoute.post("/login", async (c) => {
+  const blocked = await enforceRateLimit(c, AUTH_RATE_LIMIT_PER_MINUTE);
+  if (blocked) return blocked;
+
   const body = (await c.req.json().catch(() => null)) as LoginRequest | null;
   if (!body?.email || !body?.password) {
     return c.json({ error: "email and password are required" }, 400);
@@ -76,11 +96,12 @@ authRoute.post("/login", async (c) => {
   if (!admin || !(await verifyPassword(body.password, admin.password_hash))) {
     return c.json({ error: "invalid credentials" }, 401);
   }
+  const secure = cookieSecureFromUrl(c.req.url);
   const token = await signJwt(
     { sub: admin.id, email: admin.email, role: admin.role },
     c.env.JWT_SECRET,
   );
-  c.header("Set-Cookie", sessionCookie(token));
+  c.header("Set-Cookie", sessionCookie(token, { secure }));
   return c.json({
     authenticated: true,
     user: adminToAuthUser(admin),
@@ -90,7 +111,8 @@ authRoute.post("/login", async (c) => {
 
 /** POST /api/auth/logout — clear the session cookie. */
 authRoute.post("/logout", (c) => {
-  c.header("Set-Cookie", clearSessionCookie());
+  const secure = cookieSecureFromUrl(c.req.url);
+  c.header("Set-Cookie", clearSessionCookie({ secure }));
   return c.json({ ok: true });
 });
 

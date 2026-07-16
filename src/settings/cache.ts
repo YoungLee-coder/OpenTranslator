@@ -1,5 +1,9 @@
 import type { PublicModelRef, SiteSettings } from "@opentranslator/shared-types";
 import {
+  AUTHED_RATE_LIMIT_PER_MINUTE_DEFAULT,
+  PUBLIC_RATE_LIMIT_PER_MINUTE_DEFAULT,
+  RATE_LIMIT_PER_MINUTE_MAX,
+  RATE_LIMIT_PER_MINUTE_MIN,
   TRANSLATION_CACHE_TTL_HOURS_DEFAULT,
   TRANSLATION_CACHE_TTL_HOURS_MAX,
   TRANSLATION_CACHE_TTL_HOURS_MIN,
@@ -21,6 +25,19 @@ export function clampCacheTtlHours(raw: string | number | undefined): number {
   const clamped = Math.round(n);
   if (clamped < TRANSLATION_CACHE_TTL_HOURS_MIN) return TRANSLATION_CACHE_TTL_HOURS_MIN;
   if (clamped > TRANSLATION_CACHE_TTL_HOURS_MAX) return TRANSLATION_CACHE_TTL_HOURS_MAX;
+  return clamped;
+}
+
+/** 把限流配额夹到有限正整数，非法值回落默认（避免 NaN 放开限额）。 */
+export function clampRateLimitPerMinute(
+  raw: string | number | undefined,
+  fallback: number = PUBLIC_RATE_LIMIT_PER_MINUTE_DEFAULT,
+): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return fallback;
+  const clamped = Math.round(n);
+  if (clamped < RATE_LIMIT_PER_MINUTE_MIN) return RATE_LIMIT_PER_MINUTE_MIN;
+  if (clamped > RATE_LIMIT_PER_MINUTE_MAX) return RATE_LIMIT_PER_MINUTE_MAX;
   return clamped;
 }
 
@@ -75,8 +92,14 @@ export async function getSiteSettings(
     publicDefaultProviderId: map.public_default_provider_id || undefined,
     publicModels: parsePublicModels(map.public_models),
     publicDefaultModel: parsePublicModelRef(map.public_default_model),
-    publicRateLimitPerMinute: Number(map.public_rate_limit_per_minute ?? 20),
-    authedRateLimitPerMinute: Number(map.authed_rate_limit_per_minute ?? 60),
+    publicRateLimitPerMinute: clampRateLimitPerMinute(
+      map.public_rate_limit_per_minute,
+      PUBLIC_RATE_LIMIT_PER_MINUTE_DEFAULT,
+    ),
+    authedRateLimitPerMinute: clampRateLimitPerMinute(
+      map.authed_rate_limit_per_minute,
+      AUTHED_RATE_LIMIT_PER_MINUTE_DEFAULT,
+    ),
     translationCacheEnabled: map.translation_cache_enabled !== "false",
     translationCacheTtlHours: clampCacheTtlHours(map.translation_cache_ttl_hours),
   };

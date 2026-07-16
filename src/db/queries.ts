@@ -257,6 +257,28 @@ export async function getAdminCount(db: D1Database): Promise<number> {
   return row?.n ?? 0;
 }
 
+/**
+ * 仅在尚无管理员时插入首名管理员（原子条件 INSERT），避免 setup 竞态创建多名。
+ * @returns true 表示插入成功；false 表示已有管理员（setup 已完成）。
+ */
+export async function createFirstAdmin(
+  db: D1Database,
+  id: string,
+  email: string,
+  passwordHash: string,
+): Promise<boolean> {
+  const now = Math.floor(Date.now() / 1000);
+  const result = await db
+    .prepare(
+      `INSERT INTO admin_users (id, email, password_hash, role, created_at)
+       SELECT ?, ?, ?, 'admin', ?
+       WHERE (SELECT COUNT(*) FROM admin_users) = 0`,
+    )
+    .bind(id, email, passwordHash, now)
+    .run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
 export async function createAdmin(
   db: D1Database,
   id: string,

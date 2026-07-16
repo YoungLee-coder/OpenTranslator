@@ -93,7 +93,7 @@ Open http://localhost:5173 — the home page calls `/api/ping` to verify the ful
 ## ☁️ Deploy
 
 > [!NOTE]
-> The frontend is bundled into the same Worker. A single `wrangler deploy` ships both frontend and API on the same origin — no CORS, no `VITE_API_BASE_URL`. After deploy, visit `/api/init/<JWT_SECRET>` to create tables (idempotent, safe to run again).
+> The frontend is bundled into the same Worker. A single `wrangler deploy` ships both frontend and API on the same origin — no CORS, no `VITE_API_BASE_URL`. After deploy, call `POST /api/init` with header `X-Init-Secret: <JWT_SECRET>` to create tables (idempotent, safe to run again).
 
 <details>
 <summary><strong>Option 1: Cloudflare Git integration (recommended — all in the dashboard)</strong></summary>
@@ -112,7 +112,7 @@ Dashboard → Workers & Pages → Create → Workers → Import a repository →
 After creation, open the Worker → Settings:
 
 - **Variables and Secrets** — add two secrets (32+ random characters each):
-  - `JWT_SECRET` — JWT signing key; also used as the `/api/init` credential
+  - `JWT_SECRET` — JWT signing key; also used as the `X-Init-Secret` credential for `POST /api/init`
   - `ENCRYPTION_KEY` — encrypts provider API keys; **back this up — losing it invalidates all stored keys**
 - **Bindings** → Add binding:
   - D1 binding, name `DB` → select the `opentranslator` database
@@ -120,7 +120,14 @@ After creation, open the Worker → Settings:
 
 **3. Initialize the database (once)**
 
-After a successful deploy, visit `https://<your-worker-domain>/api/init/<your-JWT_SECRET>`. You should see `{"ok":true,...}` when tables are ready.
+After a successful deploy, run:
+
+```bash
+curl -X POST "https://<your-worker-domain>/api/init" \
+  -H "X-Init-Secret: <your-JWT_SECRET>"
+```
+
+You should see `{"ok":true,...}` when tables are ready. You can also use the on-site setup page and paste `JWT_SECRET` into the form (the secret never goes in the URL).
 
 **4. Initial data**
 
@@ -128,7 +135,7 @@ Open your Worker URL → `/login` → **First time? Initialize admin** → Dashb
 
 **5. Updates**
 
-Push to `main` and Cloudflare rebuilds and redeploys. For incremental schema migrations, visit `/api/init/<JWT_SECRET>` again.
+Push to `main` and Cloudflare rebuilds and redeploys. For incremental schema migrations, run the same `POST /api/init` again.
 
 </details>
 
@@ -143,7 +150,8 @@ wrangler secret put JWT_SECRET
 wrangler secret put ENCRYPTION_KEY
 pnpm build                                    # Build frontend to ./dist
 wrangler deploy                               # Deploy frontend + API together
-curl https://api.yourdomain.com/api/init/$(grep JWT_SECRET .dev.vars | cut -d= -f2)   # Create tables
+curl -X POST https://api.yourdomain.com/api/init \
+  -H "X-Init-Secret: $(grep JWT_SECRET .dev.vars | cut -d= -f2)"   # Create tables
 ```
 
 </details>
@@ -153,7 +161,7 @@ curl https://api.yourdomain.com/api/init/$(grep JWT_SECRET .dev.vars | cut -d= -
 
 | Type | Name | Description |
 |---|---|---|
-| Secret | `JWT_SECRET` | JWT signing key (32+ random chars); also `/api/init` credential |
+| Secret | `JWT_SECRET` | JWT signing key (32+ random chars); also `X-Init-Secret` for `POST /api/init` |
 | Secret | `ENCRYPTION_KEY` | Encrypts provider API keys — **back up** |
 | Variable | `ENV` | Environment label, default `development` |
 | Variable | `ORIGINS` | CORS allowlist (comma-separated); omit for same-origin deploy |

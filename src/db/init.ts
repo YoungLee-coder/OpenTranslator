@@ -1,14 +1,14 @@
 /**
  * Idempotent database initializer.
  *
- * 模式参照 cloud-mail：暴露一个 `/api/init/:secret` 接口，用 JWT_SECRET 做访问凭证，
- * 被调用就在 Worker 里跑建表 + 种子数据 + 增量迁移，全部幂等，可重复执行。
+ * 模式参照 cloud-mail：暴露一个 `POST /api/init` 接口，用 `X-Init-Secret`
+ * 头携带 JWT_SECRET 做访问凭证（密钥不进 URL），被调用就在 Worker 里跑
+ * 建表 + 种子数据 + 增量迁移，全部幂等，可重复执行。
  *
  * - 建表用 `CREATE TABLE IF NOT EXISTS`
  * - 种子数据用 `INSERT OR IGNORE`
  * - 增量改表（ALTER TABLE）用 try/catch 跳过已存在字段
- * - 版本化迁移方法逐个执行，失败的不中断后续
- */
+ * - 版本化迁移方法逐个执行；仅成功后才写入 `_migrations`，失败可重试 */
 
 interface InitContext {
   env: { DB: D1Database; SETTINGS_KV: KVNamespace };
@@ -189,9 +189,13 @@ export async function initDatabase(ctx: InitContext): Promise<{
       .first<{ version: string }>();
     if (done) continue;
 
-    await m.run(ctx).catch((e) =>
-      console.warn(`[init] 迁移 ${m.version} 失败：${(e as Error).message}`),
-    );
+    try {
+      await m.run(ctx);
+    } catch (e) {
+      console.warn(`[init] 迁移 ${m.version} 失败：${(e as Error).message}`);
+      // 失败不写入 _migrations，后续 init 可重试；不中断后续迁移。
+      continue;
+    }
 
     await db
       .prepare("INSERT OR IGNORE INTO _migrations (version, applied_at) VALUES (?, ?)")

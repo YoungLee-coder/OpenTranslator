@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import type { AppBindings, AppVariables } from "../types";
+import { clampRateLimitPerMinute } from "../settings/cache";
 
 type C = Context<{ Bindings: AppBindings; Variables: AppVariables }>;
 
@@ -22,10 +23,11 @@ export async function enforceRateLimit(
   c: C,
   limitPerMinute: number,
 ): Promise<Response | null> {
+  const limit = clampRateLimitPerMinute(limitPerMinute);
   const ip = getClientIp(c);
   const id = c.env.RATE_LIMITER.idFromName(ip);
   const stub = c.env.RATE_LIMITER.get(id);
-  const res = await stub.fetch(`http://rate-limit/?limit=${limitPerMinute}`);
+  const res = await stub.fetch(`http://rate-limit/?limit=${limit}`);
   if (res.status === 429) {
     return c.json({ error: "rate limited", retryAfterSeconds: 60 }, 429);
   }

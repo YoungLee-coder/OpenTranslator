@@ -18,7 +18,7 @@ import {
   validateAvatarFile,
 } from "../lib/avatar";
 import { hashPassword, verifyPassword } from "../lib/password";
-import { sessionCookie, signJwt } from "../lib/jwt";
+import { cookieSecureFromUrl, sessionCookie, signJwt } from "../lib/jwt";
 
 const adminProfileRoute = new Hono<{
   Bindings: AppBindings;
@@ -143,7 +143,10 @@ adminProfileRoute.put("/", async (c) => {
       { sub: user.id, email: nextEmail, role: user.role },
       c.env.JWT_SECRET,
     );
-    c.header("Set-Cookie", sessionCookie(token));
+    c.header(
+      "Set-Cookie",
+      sessionCookie(token, { secure: cookieSecureFromUrl(c.req.url) }),
+    );
   }
   return c.json({ user: adminToAuthUser(updatedAdmin), changed: true });
 });
