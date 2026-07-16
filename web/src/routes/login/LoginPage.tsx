@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import type { AuthUser } from "@opentranslator/shared-types";
 import { ApiError, apiPost } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
@@ -7,20 +7,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 
 export function LoginPage() {
   const { user, loading, setupCompleted, refresh } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "setup">("login");
+  const [searchParams] = useSearchParams();
+  const [mode, setMode] = useState<"login" | "setup">(
+    searchParams.get("setup") === "1" ? "setup" : "login",
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          {t("common.loading")}
+        </div>
+      </div>
+    );
+  }
   if (user) return <Navigate to="/dashboard" replace />;
 
   async function submit(e: React.FormEvent) {

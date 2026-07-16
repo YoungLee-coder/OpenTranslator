@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
-import type { AuthUser, PingResponse } from "@opentranslator/shared-types";
+import type { AuthUser } from "@opentranslator/shared-types";
 import { Ellipsis, Languages, LayoutDashboard, LogOut, Moon, PenLine, Sun, X } from "lucide-react";
-import { apiGet } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,6 +16,7 @@ import { LanguageMenuButton, LanguageMenuItems } from "@/components/LanguageMenu
 import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/lib/auth";
 import { useTranslation } from "@/lib/i18n";
+import { useWorkerReadiness } from "@/lib/useWorkerReadiness";
 import { UserAvatar } from "@/components/UserAvatar";
 import { cn } from "@/lib/utils";
 
@@ -65,22 +65,7 @@ export function RootLayout() {
   const { t } = useTranslation();
   const location = useLocation();
   const [mobileExpanded, setMobileExpanded] = useState(false);
-
-  // 绑定检测：DB / KV 未绑定时强制跳转初始化错误页。ping 不触碰 DB/KV，
-  // 可在 auth 流程之前安全执行；与 auth 并行，两者任一未就绪都显示加载态。
-  const [bindingCheck, setBindingCheck] = useState<
-    "loading" | "ok" | "missing"
-  >("loading");
-
-  useEffect(() => {
-    apiGet<PingResponse>("/api/ping")
-      .then((res) => {
-        setBindingCheck(
-          res.bindings?.db && res.bindings?.kv ? "ok" : "missing",
-        );
-      })
-      .catch(() => setBindingCheck("missing"));
-  }, []);
+  const { status: readinessStatus, siteReady } = useWorkerReadiness();
 
   useEffect(() => {
     setMobileExpanded(false);
@@ -95,7 +80,7 @@ export function RootLayout() {
     return () => window.removeEventListener("keydown", onKey);
   }, [mobileExpanded]);
 
-  if (authLoading || bindingCheck === "loading") {
+  if (authLoading || readinessStatus === "loading") {
     return (
       <div className="flex min-h-svh items-center justify-center">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -105,7 +90,7 @@ export function RootLayout() {
       </div>
     );
   }
-  if (bindingCheck === "missing") {
+  if (!siteReady) {
     return <Navigate to="/setup-required" replace />;
   }
   if (!sitePublic && !user && location.pathname !== "/login") {

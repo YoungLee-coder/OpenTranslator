@@ -7,4 +7,10 @@ export interface PingResponse {
     db: boolean;
     kv: boolean;
   };
+  /** bindings 齐全且 _migrations 已存在时为 true；绑定缺失时恒为 false。 */
+  dbReady: boolean;
+  /** dbReady 且仍有未执行迁移时为 true。 */
+  needsMigration: boolean;
+  /** dbReady 且至少有一名管理员时为 true。 */
+  adminReady: boolean;
 }

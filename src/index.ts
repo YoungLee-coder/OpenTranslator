@@ -13,7 +13,12 @@ import adminExpertsRoute from "./routes/admin-experts";
 import adminUsageRoute from "./routes/admin-usage";
 import adminDbRoute from "./routes/admin-db";
 import adminProfileRoute from "./routes/admin-profile";
-import { initDatabase } from "./db/init";
+import {
+  getCurrentDbVersion,
+  getPendingMigrations,
+  initDatabase,
+} from "./db/init";
+import { getAdminCount } from "./db/queries";
 import { RateLimiter } from "./durable-objects/rate-limiter";
 
 // Side-effect: register every provider adapter into the registry at startup.
@@ -39,17 +44,36 @@ app.use(
   }),
 );
 
-// Health check — minimum closed loop. Also reports whether the D1 / KV
-// bindings are attached so the frontend can redirect to a setup-required
-// page when the Worker is deployed without them.
-app.get("/api/ping", (c) =>
-  c.json({
+// Health check — minimum closed loop. Reports binding presence; when both
+// are attached, also reads D1 (no writes) for schema/admin readiness.
+app.get("/api/ping", async (c) => {
+  const bindings = { db: !!c.env.DB, kv: !!c.env.SETTINGS_KV };
+  const base = {
     ok: true,
     service: "opentranslator-api",
     env: c.env.ENV,
-    bindings: { db: !!c.env.DB, kv: !!c.env.SETTINGS_KV },
-  }),
-);
+    bindings,
+    dbReady: false,
+    needsMigration: false,
+    adminReady: false,
+  };
+
+  if (!bindings.db || !bindings.kv) {
+    return c.json(base);
+  }
+
+  try {
+    const current = await getCurrentDbVersion(c.env.DB);
+    const dbReady = current !== null;
+    const needsMigration =
+      dbReady && getPendingMigrations(current).length > 0;
+    const adminReady =
+      dbReady && (await getAdminCount(c.env.DB)) > 0;
+    return c.json({ ...base, dbReady, needsMigration, adminReady });
+  } catch {
+    return c.json(base);
+  }
+});
 
 // Database initializer — guarded by JWT_SECRET. Idempotent, safe to call
 // repeatedly. Call it manually once after first deploy to create tables.

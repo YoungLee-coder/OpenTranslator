@@ -93,19 +93,32 @@ export const en: Messages = {
 
   "setup.title": "Service not ready",
   "setup.description":
-    "This Worker is missing required storage bindings, so translation and the dashboard are unavailable. Complete the bindings in the Cloudflare Dashboard, then check again.",
-  "setup.missingBindings": "Missing bindings",
+    "Complete the steps below to bring OpenTranslator online. Bindings and schema setup happen on this page; create an admin account, then return to the app.",
+  "setup.stepBindingsTitle": "1. Storage bindings",
+  "setup.stepDbTitle": "2. Database initialization",
+  "setup.stepAdminTitle": "3. Admin account",
   "setup.dbBinding": "D1 database (binding name DB)",
   "setup.kvBinding": "KV namespace (binding name SETTINGS_KV)",
   "setup.notConnected": "Not connected",
   "setup.connected": "Connected",
-  "setup.stepsTitle": "Setup steps",
   "setup.step1":
     "Cloudflare Dashboard → Workers & Pages → select this Worker → Settings → Bindings",
   "setup.step2": "Add a D1 database with binding name DB",
   "setup.step3": "Add a KV namespace with binding name SETTINGS_KV",
-  "setup.step4":
-    "After redeploying, visit /api/init/<JWT_SECRET> once to initialize the schema",
+  "setup.initHint":
+    "Find JWT_SECRET under Worker → Variables and Secrets. Enter it below and run initialization (nothing is written to the address bar).",
+  "setup.initSecret": "Initialization secret (JWT_SECRET)",
+  "setup.initAction": "Initialize database",
+  "setup.initRunning": "Initializing…",
+  "setup.dbReady": "Database is initialized.",
+  "setup.migrationPending": "Pending database migrations detected.",
+  "setup.migrationHint": "Sign in → Dashboard → Settings → Database version",
+  "setup.adminHint": "Create the first admin account to open the dashboard and configure providers.",
+  "setup.adminReady": "Admin account exists.",
+  "setup.goToAdminSetup": "Create admin account",
+  "setup.networkError": "Cannot reach Worker",
+  "setup.networkErrorHint": "Check your network or deployment, then check again.",
+  "setup.allReady": "All set — redirecting…",
   "setup.checking": "Checking…",
   "setup.recheck": "Check again",
 
