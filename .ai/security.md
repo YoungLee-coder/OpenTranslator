@@ -27,3 +27,4 @@
 ## 限流
 
 - 每 IP 滑动窗口由 `RATE_LIMITER` Durable Object 实现（`src/durable-objects/rate-limiter.ts`）。改限流逻辑要同时考虑公开用户与登录用户两套配额，别无意中放开。
+- 登录 / setup 限流必须用独立桶（`enforceRateLimit(..., "auth")`），**不要**与翻译/write 共用同一 DO key，否则翻译几次就会把登录打成 429，扩展拿不到模型。

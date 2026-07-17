@@ -51,7 +51,7 @@ authRoute.get("/me", async (c) => {
 
 /** POST /api/auth/setup — create the first admin. 409 once one exists. */
 authRoute.post("/setup", async (c) => {
-  const blocked = await enforceRateLimit(c, AUTH_RATE_LIMIT_PER_MINUTE);
+  const blocked = await enforceRateLimit(c, AUTH_RATE_LIMIT_PER_MINUTE, "auth");
   if (blocked) return blocked;
 
   if ((await getAdminCount(c.env.DB)) > 0) {
@@ -85,7 +85,7 @@ authRoute.post("/setup", async (c) => {
 
 /** POST /api/auth/login — exchange credentials for a session cookie. */
 authRoute.post("/login", async (c) => {
-  const blocked = await enforceRateLimit(c, AUTH_RATE_LIMIT_PER_MINUTE);
+  const blocked = await enforceRateLimit(c, AUTH_RATE_LIMIT_PER_MINUTE, "auth");
   if (blocked) return blocked;
 
   const body = (await c.req.json().catch(() => null)) as LoginRequest | null;
