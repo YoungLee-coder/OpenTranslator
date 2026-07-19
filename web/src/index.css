@@ -53,6 +53,31 @@
 
   /* 发丝线：比 border 更细更冷，用于编辑级分隔 */
   --rule: oklch(0.86 0.004 80);
+
+  /* 液态玻璃（导航）：极薄底色 + 光泽渐变 + 边缘折射高光，全部从现有 token 派生 */
+  --glass-bg: color-mix(in oklch, var(--card) 18%, transparent);
+  --glass-bg-fallback: color-mix(in oklch, var(--card) 95%, transparent);
+  --glass-sheen: linear-gradient(to bottom, oklch(1 0 0 / 0.3), oklch(1 0 0 / 0) 55%);
+  --glass-edge: color-mix(in oklch, var(--rule) 40%, transparent);
+  --glass-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.7),
+    inset 0 -1px 0 oklch(1 0 0 / 0.2),
+    0 8px 24px oklch(0.3 0.04 260 / 0.08);
+
+  /* 嵌套玻璃芯片（选中指示器）：比外壳略密，才能在玻璃里再读出一层 */
+  --glass-chip-bg: color-mix(in oklch, var(--card) 52%, transparent);
+  --glass-chip-bg-fallback: color-mix(in oklch, var(--card) 92%, transparent);
+  --glass-chip-sheen: linear-gradient(
+    to bottom,
+    oklch(1 0 0 / 0.58),
+    oklch(1 0 0 / 0.1) 42%,
+    oklch(1 0 0 / 0) 72%
+  );
+  --glass-chip-edge: color-mix(in oklch, oklch(1 0 0) 55%, var(--rule));
+  --glass-chip-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.95),
+    inset 0 -1px 0 oklch(1 0 0 / 0.18),
+    0 2px 6px oklch(0.3 0.04 260 / 0.07);
 }
 
 .dark {
@@ -93,6 +118,30 @@
   --sidebar-border: oklch(0.28 0.006 260);
 
   --rule: oklch(0.32 0.006 260);
+
+  /* 液态玻璃（暗色）：同样极薄，靠饱和与边缘光撑住质感 */
+  --glass-bg: color-mix(in oklch, var(--card) 20%, transparent);
+  --glass-bg-fallback: color-mix(in oklch, var(--card) 95%, transparent);
+  --glass-sheen: linear-gradient(to bottom, oklch(1 0 0 / 0.08), oklch(1 0 0 / 0.02) 55%);
+  --glass-edge: color-mix(in oklch, var(--rule) 30%, transparent);
+  --glass-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.18),
+    inset 0 -1px 0 oklch(1 0 0 / 0.07),
+    0 8px 24px oklch(0 0 0 / 0.4);
+
+  --glass-chip-bg: color-mix(in oklch, oklch(1 0 0) 14%, transparent);
+  --glass-chip-bg-fallback: color-mix(in oklch, var(--card) 88%, transparent);
+  --glass-chip-sheen: linear-gradient(
+    to bottom,
+    oklch(1 0 0 / 0.28),
+    oklch(1 0 0 / 0.06) 45%,
+    transparent 75%
+  );
+  --glass-chip-edge: color-mix(in oklch, oklch(1 0 0) 28%, transparent);
+  --glass-chip-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.4),
+    inset 0 -1px 0 oklch(1 0 0 / 0.08),
+    0 2px 8px oklch(0 0 0 / 0.35);
 }
 
 @theme inline {
@@ -267,5 +316,37 @@
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--muted-foreground);
+  }
+
+  /* 液态玻璃：轻模糊 + 高饱和 + 顶部光泽 + 边缘折射高光（导航专用） */
+  .liquid-glass {
+    border: 1px solid var(--glass-edge);
+    background-color: var(--glass-bg);
+    background-image: var(--glass-sheen);
+    box-shadow: var(--glass-shadow);
+    -webkit-backdrop-filter: blur(0px) saturate(200%);
+    backdrop-filter: blur(0.85px) saturate(200%);
+  }
+
+  /* 嵌套玻璃芯片：选中滑块 / 岛内选中项 */
+  .liquid-glass-chip {
+    border: 1px solid var(--glass-chip-edge);
+    background-color: var(--glass-chip-bg);
+    background-image: var(--glass-chip-sheen);
+    box-shadow: var(--glass-chip-shadow);
+    -webkit-backdrop-filter: blur(14px) saturate(170%);
+    backdrop-filter: blur(14px) saturate(170%);
+  }
+
+  /* 不支持 backdrop-filter 时回落为近不透明，保证可读性 */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .liquid-glass {
+      background-color: var(--glass-bg-fallback);
+      background-image: none;
+    }
+    .liquid-glass-chip {
+      background-color: var(--glass-chip-bg-fallback);
+      background-image: none;
+    }
   }
 }

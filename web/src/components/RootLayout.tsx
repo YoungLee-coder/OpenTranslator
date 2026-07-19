@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import type { AuthUser } from "@opentranslator/shared-types";
 import { Ellipsis, Languages, LayoutDashboard, LogOut, Moon, PenLine, Sun, X } from "lucide-react";
@@ -19,6 +19,12 @@ import { useTranslation } from "@/lib/i18n";
 import { useWorkerReadiness } from "@/lib/useWorkerReadiness";
 import { UserAvatar } from "@/components/UserAvatar";
 import { cn } from "@/lib/utils";
+
+type NavItem = {
+  to: string;
+  label: string;
+  active: boolean;
+};
 
 function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
@@ -99,25 +105,21 @@ export function RootLayout() {
 
   const closeMobile = () => setMobileExpanded(false);
 
-  const desktopNav = (
-    <>
-      <PillLink to="/" label={t("nav.translate")} active={location.pathname === "/"} />
-      <PillLink to="/write" label={t("nav.write")} active={location.pathname === "/write"} />
-      {user ? (
-        <PillLink
-          to="/dashboard"
-          label={t("nav.dashboard")}
-          active={location.pathname.startsWith("/dashboard")}
-        />
-      ) : (
-        <PillLink to="/login" label={t("nav.login")} active={location.pathname === "/login"} />
-      )}
-    </>
-  );
+  const navItems: NavItem[] = [
+    { to: "/", label: t("nav.translate"), active: location.pathname === "/" },
+    { to: "/write", label: t("nav.write"), active: location.pathname === "/write" },
+    user
+      ? {
+          to: "/dashboard",
+          label: t("nav.dashboard"),
+          active: location.pathname.startsWith("/dashboard"),
+        }
+      : { to: "/login", label: t("nav.login"), active: location.pathname === "/login" },
+  ];
 
   return (
     <div className="flex min-h-svh flex-col">
-      {/* 胶囊悬浮 header：居中、圆角描边、轻玻璃，叠在内容上方 */}
+      {/* 胶囊悬浮 header：居中、圆角描边、液态玻璃，叠在内容上方 */}
       <header className="sticky top-0 z-40 flex justify-center px-4 pt-[max(0.5rem,env(safe-area-inset-top))]">
         {/* 移动端：灵动岛式胶囊展开 */}
         <MobileIslandCapsule
@@ -132,14 +134,12 @@ export function RootLayout() {
         />
 
         {/* 桌面端：单行药丸导航 */}
-        <div className="hidden h-12 w-fit max-w-[calc(100vw-2rem)] items-center gap-1.5 rounded-full border border-rule bg-card/80 px-2 shadow-md backdrop-blur-md md:flex">
+        <div className="liquid-glass hidden h-12 w-fit max-w-[calc(100vw-2rem)] items-center gap-1.5 rounded-full px-2 md:flex">
           <BrandMark />
 
           <span className="mx-1 h-6 w-px bg-rule" />
 
-          <nav className="flex items-center gap-1">
-            {desktopNav}
-          </nav>
+          <GlassNav items={navItems} />
 
           <span className="mx-1 h-6 w-px bg-rule" />
 
@@ -215,13 +215,13 @@ function MobileIslandCapsule({
 
       <div
         className={cn(
-          "relative z-40 inline-flex flex-col overflow-hidden rounded-[1.75rem] border border-rule bg-card/95 shadow-md [contain:layout] transition-[width,box-shadow] duration-250 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
+          "liquid-glass relative z-40 inline-flex flex-col overflow-hidden rounded-[1.75rem] [contain:layout] transition-[width,box-shadow] duration-250 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
           // 固定两态宽度而非 w-max：容器是收缩自适应（shrink-to-fit），
           // % 单位相对它的百分比会因循环依赖被浏览器忽略退化为内容宽度，
           // 且面板即便折叠为 0fr 行高，其内容仍会撑大 max-content 的宽度计算，
           // 导致收起态出现右侧留白、展开态宽度也不会真正过渡。改用 vw 计算避开循环依赖。
           // 圆角用固定值而非 rounded-full：50% 在宽高接近时会变成正圆中间态。
-          expanded ? "w-[min(calc(100vw-2rem),18.5rem)] shadow-xl ring-1 ring-rule/40" : "w-36",
+          expanded ? "w-[min(calc(100vw-2rem),18.5rem)]" : "w-36",
         )}
       >
         <div className="flex h-11 shrink-0 items-center gap-0.5 px-2">
@@ -318,27 +318,80 @@ function MobileIslandCapsule({
   );
 }
 
-function PillLink({
-  to,
-  label,
-  active,
-}: {
-  to: string;
-  label: string;
-  active: boolean;
-}) {
+/** 桌面导航：液态玻璃滑块在选中项之间滑动 */
+function GlassNav({ items }: { items: NavItem[] }) {
+  const navRef = useRef<HTMLElement>(null);
+  const itemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const [indicator, setIndicator] = useState({ left: 0, width: 0, ready: false });
+  // 用路径 + 标签序列作依赖，避免每帧新建 items 数组触发重测
+  const layoutKey = items.map((item) => `${item.to}:${item.label}:${item.active ? "1" : "0"}`).join("|");
+
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+
+    const currentItems = itemsRef.current;
+    itemRefs.current.length = currentItems.length;
+
+    const measure = () => {
+      const activeIndex = currentItems.findIndex((item) => item.active);
+      const el = activeIndex >= 0 ? itemRefs.current[activeIndex] : null;
+      if (!el) {
+        setIndicator((prev) => ({ ...prev, ready: false }));
+        return;
+      }
+      setIndicator({
+        left: el.offsetLeft,
+        width: el.offsetWidth,
+        ready: true,
+      });
+    };
+
+    measure();
+
+    const ro = new ResizeObserver(measure);
+    ro.observe(nav);
+    for (const el of itemRefs.current) {
+      if (el) ro.observe(el);
+    }
+
+    return () => ro.disconnect();
+  }, [layoutKey]);
+
   return (
-    <Link
-      to={to}
-      className={cn(
-        "flex h-8 items-center rounded-full px-3.5 text-[0.825rem] font-medium transition-colors",
-        active
-          ? "bg-accent text-accent-foreground"
-          : "text-foreground/80 hover:bg-accent/60 hover:text-foreground",
-      )}
-    >
-      {label}
-    </Link>
+    <nav ref={navRef} className="relative flex items-center gap-1" aria-label="Primary">
+      <span
+        aria-hidden
+        className={cn(
+          "liquid-glass-chip pointer-events-none absolute top-1/2 h-8 -translate-y-1/2 rounded-full",
+          "transition-[left,width,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+          "motion-reduce:transition-none",
+          indicator.ready ? "opacity-100" : "opacity-0",
+        )}
+        style={{ left: indicator.left, width: indicator.width }}
+      />
+      {items.map((item, index) => (
+        <Link
+          key={item.to}
+          ref={(el) => {
+            itemRefs.current[index] = el;
+          }}
+          to={item.to}
+          aria-current={item.active ? "page" : undefined}
+          className={cn(
+            "relative z-10 flex h-8 items-center rounded-full px-3.5 text-[0.825rem] font-medium",
+            "transition-colors duration-200 motion-reduce:transition-none",
+            item.active
+              ? "text-foreground"
+              : "text-foreground/70 hover:text-foreground",
+          )}
+        >
+          {item.label}
+        </Link>
+      ))}
+    </nav>
   );
 }
 
@@ -351,7 +404,7 @@ function IslandNavLink({
 }: {
   to: string;
   label: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   active: boolean;
   onGo: () => void;
 }) {
@@ -359,11 +412,12 @@ function IslandNavLink({
     <Link
       to={to}
       onClick={onGo}
+      aria-current={active ? "page" : undefined}
       className={cn(
-        "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+        "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-[color,background-color,box-shadow] duration-200 motion-reduce:transition-none",
         active
-          ? "bg-accent text-accent-foreground"
-          : "text-foreground/80 hover:bg-accent/60 hover:text-foreground",
+          ? "liquid-glass-chip text-foreground"
+          : "text-foreground/80 hover:bg-foreground/[0.04] hover:text-foreground",
       )}
     >
       {icon}

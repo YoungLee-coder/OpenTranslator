@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, Replace, Square } from "lucide-react";
 import type {
   TranslateModelOption,
@@ -351,27 +351,82 @@ function ModeSegment<T extends string>({
   disabled?: boolean;
   ariaLabel: string;
 }) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+  const [indicator, setIndicator] = useState({ left: 0, width: 0, ready: false });
+
+  const layoutKey = options.map((opt) => `${opt.value}:${opt.label}`).join("|") + `|${value}`;
+
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+
+    const currentOptions = optionsRef.current;
+    itemRefs.current.length = currentOptions.length;
+
+    const measure = () => {
+      const activeIndex = currentOptions.findIndex((opt) => opt.value === value);
+      const el = activeIndex >= 0 ? itemRefs.current[activeIndex] : null;
+      if (!el) {
+        setIndicator((prev) => ({ ...prev, ready: false }));
+        return;
+      }
+      setIndicator({
+        left: el.offsetLeft,
+        width: el.offsetWidth,
+        ready: true,
+      });
+    };
+
+    measure();
+
+    const ro = new ResizeObserver(measure);
+    ro.observe(list);
+    for (const el of itemRefs.current) {
+      if (el) ro.observe(el);
+    }
+
+    return () => ro.disconnect();
+  }, [layoutKey, value]);
+
   return (
     <div
+      ref={listRef}
       role="tablist"
       aria-label={ariaLabel}
-      className="inline-flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full border border-rule bg-background/80 p-0.5 shadow-sm"
+      className="liquid-glass relative inline-flex w-fit max-w-full items-center gap-0.5 overflow-x-auto rounded-full p-0.5"
     >
-      {options.map((opt) => {
+      <span
+        aria-hidden
+        className={cn(
+          "liquid-glass-chip pointer-events-none absolute top-1/2 h-8 -translate-y-1/2 rounded-full",
+          "transition-[left,width,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+          "motion-reduce:transition-none",
+          indicator.ready ? "opacity-100" : "opacity-0",
+        )}
+        style={{ left: indicator.left, width: indicator.width }}
+      />
+      {options.map((opt, index) => {
         const active = value === opt.value;
         return (
           <button
             key={opt.value}
+            ref={(el) => {
+              itemRefs.current[index] = el;
+            }}
             type="button"
             role="tab"
             aria-selected={active}
             disabled={disabled}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "h-8 shrink-0 rounded-full px-3.5 text-xs font-medium transition-all sm:px-4 sm:text-sm",
+              "relative z-10 h-8 shrink-0 rounded-full px-3.5 text-xs font-medium sm:px-4 sm:text-sm",
+              "transition-colors duration-200 motion-reduce:transition-none",
               active
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground",
               disabled && "pointer-events-none opacity-50",
             )}
           >
@@ -396,29 +451,85 @@ function SubSegment<T extends string>({
   disabled?: boolean;
   label: string;
 }) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+  const [indicator, setIndicator] = useState({ left: 0, width: 0, ready: false });
+
+  const layoutKey = options.map((opt) => `${opt.value}:${opt.label}`).join("|") + `|${value}`;
+
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+
+    const currentOptions = optionsRef.current;
+    itemRefs.current.length = currentOptions.length;
+
+    const measure = () => {
+      const activeIndex = currentOptions.findIndex((opt) => opt.value === value);
+      const el = activeIndex >= 0 ? itemRefs.current[activeIndex] : null;
+      if (!el) {
+        setIndicator((prev) => ({ ...prev, ready: false }));
+        return;
+      }
+      setIndicator({
+        left: el.offsetLeft,
+        width: el.offsetWidth,
+        ready: true,
+      });
+    };
+
+    measure();
+
+    const ro = new ResizeObserver(measure);
+    ro.observe(list);
+    for (const el of itemRefs.current) {
+      if (el) ro.observe(el);
+    }
+
+    return () => ro.disconnect();
+  }, [layoutKey, value]);
+
   return (
-    <div className="flex flex-wrap items-center gap-2 pl-0.5">
+    <div className="flex min-w-0 flex-wrap items-center gap-2 pl-0.5">
       <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
         {label}
       </span>
       <div
+        ref={listRef}
         role="group"
         aria-label={label}
-        className="inline-flex flex-wrap items-center gap-1 rounded-full border border-rule/70 bg-background/60 p-0.5"
+        className="liquid-glass relative inline-flex w-fit max-w-full items-center gap-0.5 overflow-x-auto rounded-full p-0.5"
       >
-        {options.map((opt) => {
+        <span
+          aria-hidden
+          className={cn(
+            "liquid-glass-chip pointer-events-none absolute top-1/2 h-7 -translate-y-1/2 rounded-full",
+            "transition-[left,width,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+            "motion-reduce:transition-none",
+            indicator.ready ? "opacity-100" : "opacity-0",
+          )}
+          style={{ left: indicator.left, width: indicator.width }}
+        />
+        {options.map((opt, index) => {
           const active = value === opt.value;
           return (
             <button
               key={opt.value}
+              ref={(el) => {
+                itemRefs.current[index] = el;
+              }}
               type="button"
+              aria-pressed={active}
               disabled={disabled}
               onClick={() => onChange(opt.value)}
               className={cn(
-                "h-7 rounded-full px-3 text-xs font-medium transition-colors",
+                "relative z-10 h-7 shrink-0 rounded-full px-3 text-xs font-medium",
+                "transition-colors duration-200 motion-reduce:transition-none",
                 active
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
                 disabled && "pointer-events-none opacity-50",
               )}
             >
