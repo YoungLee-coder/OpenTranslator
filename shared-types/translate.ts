@@ -1,3 +1,14 @@
+/** Max source characters accepted by POST /api/translate. */
+export const MAX_TRANSLATE_CHARS = 80_000;
+/** Above this length, server splits into chunks (LLM providers). */
+export const TRANSLATE_CHUNK_THRESHOLD = 3_500;
+/** DeepL tolerates longer single requests — higher threshold. */
+export const DEEPL_CHUNK_THRESHOLD = 20_000;
+/** Target size per chunk when splitting. */
+export const TRANSLATE_TARGET_CHUNK_CHARS = 2_000;
+/** Characters of previous chunk kept for terminology continuity. */
+export const TRANSLATE_CONTEXT_TAIL_CHARS = 300;
+
 export interface TranslateRequest {
   text: string;
   sourceLang: string; // "auto" for detection
@@ -13,6 +24,11 @@ export interface TranslateRequest {
    * Ignored on the public translate API when sent by clients.
    */
   promptOverride?: { system: string; user: string };
+  /**
+   * Server-side only — previous chunk tails for long-text continuity.
+   * Stripped when sent by clients.
+   */
+  previousContext?: { sourceTail: string; translationTail: string };
 }
 
 /** 首页模型选择下拉里的一项。 */
@@ -49,5 +65,10 @@ export interface TranslateResponse {
  */
 export type TranslateStreamEvent =
   | { type: "delta"; text: string }
+  | {
+      type: "progress";
+      chunkIndex: number;
+      chunkTotal: number;
+    }
   | { type: "done"; translatedText: string; provider: string; usage?: TranslateUsage; detectedSourceLang?: string }
   | { type: "error"; error: string };

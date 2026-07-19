@@ -95,7 +95,14 @@ export async function* streamTranslate(
     signal,
   });
   if (!res.ok || !res.body) {
-    throw new ApiError(res.status, `translate stream -> ${res.status}`);
+    let msg = `translate stream -> ${res.status}`;
+    try {
+      const data = (await res.json()) as { error?: string };
+      if (data?.error) msg = data.error;
+    } catch {
+      // ignore
+    }
+    throw new ApiError(res.status, msg);
   }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();

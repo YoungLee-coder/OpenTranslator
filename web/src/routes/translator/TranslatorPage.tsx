@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeftRight, Check, Copy, Square } from "lucide-react";
-import type { TranslateModelOption, TranslateModelsResponse, TranslateStreamEvent, AiExpertMeta, AiExpertsPublicResponse } from "@opentranslator/shared-types";
+import type { TranslateModelOption, TranslateModelsResponse, AiExpertMeta, AiExpertsPublicResponse } from "@opentranslator/shared-types";
+import { MAX_TRANSLATE_CHARS } from "@opentranslator/shared-types";
 import { ApiError, apiGet, streamTranslate } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
 import { LANGUAGES, languageName } from "@/lib/languages";
@@ -35,6 +36,10 @@ export function TranslatorPage() {
   const [expertOptions, setExpertOptions] = useState<AiExpertMeta[]>([]);
   const [expertId, setExpertId] = useState<string>("general");
   const [defaultExpertId, setDefaultExpertId] = useState<string>("general");
+  const [chunkProgress, setChunkProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
 
   // 拉取当前用户可选的模型列表（登录返全部、匿名返公开白名单）
   useEffect(() => {
@@ -76,18 +81,21 @@ export function TranslatorPage() {
 
   const streaming = status === "streaming";
   const noModel = modelOptions.length === 0;
+  const overLimit = sourceText.length > MAX_TRANSLATE_CHARS;
   const canTranslate =
     sourceText.trim().length > 0 &&
     targetLang !== "" &&
     sourceLang !== targetLang &&
     !streaming &&
-    !noModel;
+    !noModel &&
+    !overLimit;
 
   async function handleTranslate() {
     if (!canTranslate) return;
     setStatus("streaming");
     setError(null);
     setTargetText("");
+    setChunkProgress(null);
     const controller = new AbortController();
     abortRef.current = controller;
     try {
@@ -113,13 +121,20 @@ export function TranslatorPage() {
         },
         controller.signal,
       )) {
-        if (ev.type === "delta") {
+        if (ev.type === "progress") {
+          setChunkProgress({
+            current: ev.chunkIndex + 1,
+            total: ev.chunkTotal,
+          });
+        } else if (ev.type === "delta") {
           setTargetText((prev) => prev + ev.text);
         } else if (ev.type === "done") {
           setTargetText(ev.translatedText);
+          setChunkProgress(null);
           setStatus("done");
         } else if (ev.type === "error") {
           setError(ev.error);
+          setChunkProgress(null);
           setStatus("error");
         }
       }
@@ -133,6 +148,7 @@ export function TranslatorPage() {
       }
     } finally {
       abortRef.current = null;
+      setChunkProgress(null);
     }
   }
 
@@ -232,7 +248,13 @@ export function TranslatorPage() {
                   type="button"
                   onClick={handleTranslate}
                   disabled={!canTranslate}
-                  title={noModel ? t("translator.noModel") : undefined}
+                  title={
+                    noModel
+                      ? t("translator.noModel")
+                      : overLimit
+                        ? t("translator.tooLong", { max: MAX_TRANSLATE_CHARS })
+                        : undefined
+                  }
                   className="gap-1.5"
                 >
                   {t("translator.translate")}
@@ -260,7 +282,11 @@ export function TranslatorPage() {
             />
             <div className="flex h-9 items-center justify-between border-t border-rule px-4 text-xs text-muted-foreground sm:px-6">
               {sourceText.length > 0 ? (
-                <span className="tabular-nums">{t("common.chars", { count: sourceText.length })}</span>
+                <span className={cn("tabular-nums", overLimit && "text-destructive")}>
+                  {overLimit
+                    ? t("translator.tooLong", { max: MAX_TRANSLATE_CHARS })
+                    : t("common.chars", { count: sourceText.length })}
+                </span>
               ) : (
                 <span />
               )}
@@ -277,7 +303,12 @@ export function TranslatorPage() {
                 <span className="animate-fade-in">{targetText}</span>
               ) : streaming ? (
                 <span className="font-sans text-sm text-muted-foreground/70">
-                  {t("translator.translating")}
+                  {chunkProgress
+                    ? t("translator.translatingChunk", {
+                        current: chunkProgress.current,
+                        total: chunkProgress.total,
+                      })
+                    : t("translator.translating")}
                 </span>
               ) : (
                 <span className="font-sans text-sm text-muted-foreground/40">
@@ -293,6 +324,13 @@ export function TranslatorPage() {
             <div className="flex h-9 items-center justify-between border-t border-rule px-4 text-xs sm:px-6">
               {error ? (
                 <span className="text-destructive">{error}</span>
+              ) : streaming && chunkProgress ? (
+                <span className="tabular-nums text-muted-foreground">
+                  {t("translator.translatingChunk", {
+                    current: chunkProgress.current,
+                    total: chunkProgress.total,
+                  })}
+                </span>
               ) : targetText.length > 0 ? (
                 <span className="tabular-nums text-muted-foreground">
                   {t("common.chars", { count: targetText.length })}

@@ -7,7 +7,16 @@ import type {
   TranslateModelOption,
   TranslateModelsResponse,
   TranslateRequest,
+  TranslateResponse,
   TranslateStreamEvent,
+  TranslationProvider,
+} from "@opentranslator/shared-types";
+import {
+  DEEPL_CHUNK_THRESHOLD,
+  MAX_TRANSLATE_CHARS,
+  TRANSLATE_CHUNK_THRESHOLD,
+  TRANSLATE_CONTEXT_TAIL_CHARS,
+  TRANSLATE_TARGET_CHUNK_CHARS,
 } from "@opentranslator/shared-types";
 import type { AppBindings, AppVariables } from "../../types";
 import { getSessionUser } from "../../auth/session";
@@ -32,11 +41,144 @@ import { providerRegistry } from "../../providers/registry";
 import { resolveModelLabel } from "../../providers/schema";
 import { getClientIp, enforceRateLimit } from "../../middleware/rate-limit";
 import { publicProviderError } from "../../lib/errors";
+import {
+  normalizePastedText,
+  splitIntoChunks,
+  tailSlice,
+  type ChunkPlan,
+} from "../../lib/text-chunks";
 
 // Side-effect: register every adapter into the registry.
 import "../../providers";
 
 type C = Context<{ Bindings: AppBindings; Variables: AppVariables }>;
+
+type SseWriter = {
+  writeSSE: (message: { data: string }) => Promise<void>;
+};
+
+async function writeEvent(stream: SseWriter, ev: TranslateStreamEvent): Promise<void> {
+  await stream.writeSSE({ data: JSON.stringify(ev) });
+}
+
+async function readStreamText(
+  upstream: ReadableStream<Uint8Array>,
+  onDelta?: (text: string) => Promise<void>,
+): Promise<string> {
+  const reader = upstream.getReader();
+  const decoder = new TextDecoder();
+  let full = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const text = decoder.decode(value, { stream: true });
+      if (text) {
+        full += text;
+        if (onDelta) await onDelta(text);
+      }
+    }
+    const tail = decoder.decode();
+    if (tail) {
+      full += tail;
+      if (onDelta) await onDelta(tail);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return full;
+}
+
+async function translateChunkText(
+  adapter: TranslationProvider,
+  chunkReq: TranslateRequest,
+  ctx: ProviderContext,
+  postProcess: ((raw: string) => string) | undefined,
+  preferStream: boolean,
+  onDelta?: (text: string) => Promise<void>,
+): Promise<TranslateResponse> {
+  if (preferStream && adapter.translateStream && !postProcess) {
+    const full = await readStreamText(adapter.translateStream(chunkReq, ctx), onDelta);
+    return { translatedText: full, provider: adapter.name };
+  }
+  const result = await adapter.translate(chunkReq, ctx);
+  let text = result.translatedText;
+  if (postProcess) text = postProcess(text);
+  if (onDelta) await onDelta(text);
+  return { ...result, translatedText: text };
+}
+
+async function translateChunked(args: {
+  plan: ChunkPlan;
+  baseReq: TranslateRequest;
+  adapter: TranslationProvider;
+  ctx: ProviderContext;
+  providerType: ProviderType;
+  postProcess: ((raw: string) => string) | undefined;
+  preferStream: boolean;
+  onProgress?: (chunkIndex: number, chunkTotal: number) => Promise<void>;
+  onDelta?: (text: string) => Promise<void>;
+}): Promise<TranslateResponse> {
+  const { plan, baseReq, adapter, ctx, providerType, postProcess, preferStream } = args;
+  let full = "";
+  let usage: TranslateResponse["usage"];
+  let detectedSourceLang: string | undefined;
+  let prevSource = "";
+  let prevTranslation = "";
+
+  for (let i = 0; i < plan.chunks.length; i++) {
+    const chunk = plan.chunks[i]!;
+    await args.onProgress?.(i, plan.chunks.length);
+
+    if (i > 0) {
+      const join = plan.joins[i - 1] ?? "";
+      if (join) {
+        full += join;
+        await args.onDelta?.(join);
+      }
+    }
+
+    const chunkReq: TranslateRequest = {
+      ...baseReq,
+      text: chunk,
+      previousContext:
+        i > 0
+          ? {
+              sourceTail: tailSlice(prevSource, TRANSLATE_CONTEXT_TAIL_CHARS),
+              translationTail: tailSlice(prevTranslation, TRANSLATE_CONTEXT_TAIL_CHARS),
+            }
+          : undefined,
+    };
+
+    const result = await translateChunkText(
+      adapter,
+      chunkReq,
+      ctx,
+      postProcess,
+      preferStream,
+      args.onDelta,
+    );
+    full += result.translatedText;
+    prevSource = chunk;
+    prevTranslation = result.translatedText;
+    if (result.usage) {
+      usage = usage
+        ? {
+            inputTokens: usage.inputTokens + result.usage.inputTokens,
+            outputTokens: usage.outputTokens + result.usage.outputTokens,
+          }
+        : result.usage;
+    }
+    if (result.detectedSourceLang) detectedSourceLang = result.detectedSourceLang;
+  }
+
+  return {
+    translatedText: full,
+    provider: providerType,
+    usage,
+    detectedSourceLang,
+  };
+}
 
 /** 解析一行 provider 声明的可选模型集合；旧记录无 models 时回落到 default_model。 */
 function parseAllowedModels(row: ProviderRow): string[] {
@@ -161,9 +303,27 @@ export async function handleTranslate(c: C): Promise<Response> {
     const { promptOverride: _, ...rest } = req;
     req = rest;
   }
+  if (req.previousContext) {
+    const { previousContext: _, ...rest } = req;
+    req = rest;
+  }
 
   if (!req.text?.trim() || !req.targetLang?.trim()) {
     return c.json({ error: "text and targetLang are required" }, 400);
+  }
+
+  // Soft-wrap repair for PDF-like paste; then enforce hard size limit.
+  req = { ...req, text: normalizePastedText(req.text) };
+  if (!req.text) {
+    return c.json({ error: "text and targetLang are required" }, 400);
+  }
+  if (req.text.length > MAX_TRANSLATE_CHARS) {
+    return c.json(
+      {
+        error: `text exceeds maximum length of ${MAX_TRANSLATE_CHARS} characters`,
+      },
+      400,
+    );
   }
 
   const user = await getSessionUser(
@@ -190,13 +350,6 @@ export async function handleTranslate(c: C): Promise<Response> {
 
   const promptBuilt = buildTranslationPrompt(req);
   const needsPostProcess = !!promptBuilt.postProcess;
-
-  // Rate limit: stricter for anonymous, looser for logged-in admins.
-  const limit = user
-    ? settings.authedRateLimitPerMinute
-    : settings.publicRateLimitPerMinute;
-  const blocked = await enforceRateLimit(c, limit);
-  if (blocked) return blocked;
 
   // ---- 选择 provider 与 model ----
   // 登录用户：可选任意 enabled provider 的已声明 model；
@@ -274,7 +427,7 @@ export async function handleTranslate(c: C): Promise<Response> {
   };
 
   const providerType = row.type as ProviderType;
-  let adapter;
+  let adapter: TranslationProvider;
   try {
     adapter = providerRegistry.get(providerType);
   } catch {
@@ -288,7 +441,12 @@ export async function handleTranslate(c: C): Promise<Response> {
   const wantStream =
     clientWantsStream && adapter.translateStream !== undefined && !needsPostProcess;
 
+  const rateLimit = user
+    ? settings.authedRateLimitPerMinute
+    : settings.publicRateLimitPerMinute;
+
   // Translation cache: serve identical repeats without hitting the upstream.
+  // Key uses normalized text so paste-repair still hits cache.
   const cacheKey = settings.translationCacheEnabled
     ? await translationCacheKey(req, row.id)
     : null;
@@ -296,21 +454,16 @@ export async function handleTranslate(c: C): Promise<Response> {
   if (cacheKey) {
     const cached = await getTranslationCache(c.env.SETTINGS_KV, cacheKey);
     if (cached) {
+      const blocked = await enforceRateLimit(c, rateLimit, "default", 1);
+      if (blocked) return blocked;
       if (clientWantsStream) {
         return streamSSE(c, async (stream) => {
-          await stream.writeSSE({
-            data: JSON.stringify({
-              type: "delta",
-              text: cached.translatedText,
-            } satisfies TranslateStreamEvent),
-          });
-          await stream.writeSSE({
-            data: JSON.stringify({
-              type: "done",
-              translatedText: cached.translatedText,
-              provider: cached.provider,
-              usage: cached.usage,
-            } satisfies TranslateStreamEvent),
+          await writeEvent(stream, { type: "delta", text: cached.translatedText });
+          await writeEvent(stream, {
+            type: "done",
+            translatedText: cached.translatedText,
+            provider: cached.provider,
+            usage: cached.usage,
           });
         });
       }
@@ -318,49 +471,80 @@ export async function handleTranslate(c: C): Promise<Response> {
     }
   }
 
-  if (wantStream && adapter.translateStream) {
-    const upstream = adapter.translateStream(req, ctx);
-    return streamSSE(c, async (stream) => {
-      const reader = upstream.getReader();
-      const decoder = new TextDecoder();
-      let full = "";
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const text = decoder.decode(value, { stream: true });
-          if (text) {
-            full += text;
-            await stream.writeSSE({
-              data: JSON.stringify({ type: "delta", text } satisfies TranslateStreamEvent),
-            });
-          }
-        }
-        const tail = decoder.decode();
-        if (tail) {
-          full += tail;
-          await stream.writeSSE({
-            data: JSON.stringify({ type: "delta", text: tail } satisfies TranslateStreamEvent),
+  const threshold =
+    providerType === "deepl" ? DEEPL_CHUNK_THRESHOLD : TRANSLATE_CHUNK_THRESHOLD;
+  const plan =
+    req.text.length > threshold
+      ? splitIntoChunks(req.text, TRANSLATE_TARGET_CHUNK_CHARS)
+      : { chunks: [req.text], joins: [] as string[] };
+  const useChunking = plan.chunks.length > 1;
+
+  // 长文按块数扣配额，避免单次 HTTP 放大成 N 次上游调用却只计 1 次。
+  const blocked = await enforceRateLimit(c, rateLimit, "default", plan.chunks.length);
+  if (blocked) return blocked;
+
+  if (useChunking) {
+    if (clientWantsStream) {
+      return streamSSE(c, async (stream) => {
+        try {
+          const final = await translateChunked({
+            plan,
+            baseReq: req,
+            adapter,
+            ctx,
+            providerType,
+            postProcess: promptBuilt.postProcess,
+            preferStream: wantStream,
+            onProgress: async (chunkIndex, chunkTotal) => {
+              await writeEvent(stream, { type: "progress", chunkIndex, chunkTotal });
+            },
+            onDelta: async (text) => {
+              await writeEvent(stream, { type: "delta", text });
+            },
           });
+          await writeEvent(stream, { type: "done", ...final });
+          if (cacheKey) {
+            void setTranslationCache(c.env.SETTINGS_KV, cacheKey, final, cacheTtlSeconds);
+          }
+          c.executionCtx?.waitUntil(
+            logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)),
+          );
+        } catch (e) {
+          await writeEvent(stream, { type: "error", error: publicProviderError(e) });
         }
-        const result = { translatedText: full, provider: providerType };
-        await stream.writeSSE({
-          data: JSON.stringify({
-            type: "done",
-            ...result,
-          } satisfies TranslateStreamEvent),
+      });
+    }
+
+    try {
+      const final = await translateChunked({
+        plan,
+        baseReq: req,
+        adapter,
+        ctx,
+        providerType,
+        postProcess: promptBuilt.postProcess,
+        preferStream: false,
+      });
+      if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, final, cacheTtlSeconds);
+      c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
+      return c.json(final);
+    } catch (e) {
+      return c.json({ error: publicProviderError(e) }, 502);
+    }
+  }
+
+  if (wantStream && adapter.translateStream) {
+    return streamSSE(c, async (stream) => {
+      try {
+        const full = await readStreamText(adapter.translateStream!(req, ctx), async (text) => {
+          await writeEvent(stream, { type: "delta", text });
         });
+        const result = { translatedText: full, provider: providerType };
+        await writeEvent(stream, { type: "done", ...result });
         if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, result, cacheTtlSeconds);
         c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
       } catch (e) {
-        await stream.writeSSE({
-          data: JSON.stringify({
-            type: "error",
-            error: publicProviderError(e),
-          } satisfies TranslateStreamEvent),
-        });
-      } finally {
-        reader.releaseLock();
+        await writeEvent(stream, { type: "error", error: publicProviderError(e) });
       }
     });
   }
@@ -375,21 +559,12 @@ export async function handleTranslate(c: C): Promise<Response> {
       if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, final, cacheTtlSeconds);
       c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
       return streamSSE(c, async (stream) => {
-        await stream.writeSSE({
-          data: JSON.stringify({ type: "delta", text } satisfies TranslateStreamEvent),
-        });
-        await stream.writeSSE({
-          data: JSON.stringify({ type: "done", ...final } satisfies TranslateStreamEvent),
-        });
+        await writeEvent(stream, { type: "delta", text });
+        await writeEvent(stream, { type: "done", ...final });
       });
     } catch (e) {
       return streamSSE(c, async (stream) => {
-        await stream.writeSSE({
-          data: JSON.stringify({
-            type: "error",
-            error: publicProviderError(e),
-          } satisfies TranslateStreamEvent),
-        });
+        await writeEvent(stream, { type: "error", error: publicProviderError(e) });
       });
     }
   }

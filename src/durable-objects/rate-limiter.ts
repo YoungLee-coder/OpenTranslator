@@ -23,11 +23,17 @@ export class RateLimiter {
       (await this.state.storage.get<number[]>("timestamps")) ?? [];
     timestamps = timestamps.filter((t) => now - t < windowMs);
 
-    if (timestamps.length >= limit) {
+    const costRaw = Number(url.searchParams.get("cost") ?? 1);
+    const cost =
+      Number.isFinite(costRaw) && costRaw >= 1
+        ? Math.min(Math.round(costRaw), limit)
+        : 1;
+
+    if (timestamps.length + cost > limit) {
       return new Response("Rate limited", { status: 429 });
     }
 
-    timestamps.push(now);
+    for (let i = 0; i < cost; i++) timestamps.push(now);
     await this.state.storage.put("timestamps", timestamps);
     return new Response("OK", { status: 200 });
   }

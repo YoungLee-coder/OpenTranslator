@@ -59,8 +59,10 @@ export const en: Messages = {
   "translator.noModel": "No models available",
   "translator.inputPlaceholder": "Enter text to translate…",
   "translator.translating": "Translating…",
+  "translator.translatingChunk": "Translating… ({{current}}/{{total}})",
   "translator.outputPlaceholder": "Translation",
   "translator.copyTranslation": "Copy translation",
+  "translator.tooLong": "Text exceeds the {{max}} character limit",
   "translator.general": "General",
   "translator.expert": "Expert",
 

@@ -258,6 +258,7 @@ Content-Type: application/json
 
 | type | 字段 | 说明 |
 |---|---|---|
+| `progress` | `chunkIndex`, `chunkTotal` | 长文切块进度（0-based index）；短文不发 |
 | `delta` | `text` | 译文增量，客户端拼接显示 |
 | `done` | `translatedText`, `provider`, `usage?` | 最终结果，应用此字段覆盖拼接（与 delta 一致化） |
 | `error` | `error` | 上游或解析错误 |

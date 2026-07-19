@@ -92,6 +92,9 @@ function buildBody(
       ? ctx.configJson.formality.trim().toLowerCase()
       : "";
   if (formality && formality !== "default") body.formality = formality;
+  // Long-text chunk continuity: surrounding source (not billed by DeepL).
+  const ctxTail = req.previousContext?.sourceTail?.trim();
+  if (ctxTail) body.context = ctxTail;
   return body;
 }
 

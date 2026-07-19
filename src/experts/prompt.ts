@@ -16,27 +16,39 @@ export interface BuiltPrompt {
  */
 export function buildTranslationPrompt(req: TranslateRequest): BuiltPrompt {
   const id = req.expertId;
+  let built: BuiltPrompt;
   if (isGeneralExpert(id)) {
-    return buildDefaultPrompt(req);
+    built = buildDefaultPrompt(req);
+  } else {
+    const expert = id ? getExpert(id) : undefined;
+    if (!expert) {
+      built = buildDefaultPrompt(req);
+    } else {
+      const resolved = resolveExpertPrompts(expert, req);
+      const { system, user, outputField, usesYamlOutput } = resolved;
+      built = usesYamlOutput
+        ? {
+            system,
+            user,
+            postProcess: (raw) =>
+              extractExpertTranslation(raw, outputField, usesYamlOutput),
+          }
+        : { system, user };
+    }
   }
+  return withPreviousContext(built, req);
+}
 
-  const expert = id ? getExpert(id) : undefined;
-  if (!expert) {
-    return buildDefaultPrompt(req);
-  }
-
-  const resolved = resolveExpertPrompts(expert, req);
-  const { system, user, outputField, usesYamlOutput } = resolved;
-
-  if (!usesYamlOutput) {
-    return { system, user };
-  }
-
-  return {
-    system,
-    user,
-    postProcess: (raw) => extractExpertTranslation(raw, outputField, usesYamlOutput),
-  };
+function withPreviousContext(built: BuiltPrompt, req: TranslateRequest): BuiltPrompt {
+  const ctx = req.previousContext;
+  if (!ctx?.sourceTail?.trim() || !ctx.translationTail?.trim()) return built;
+  const note = [
+    "For terminology consistency with the previous segment, here is the end of the previous source and its translation.",
+    "Do not repeat them; continue naturally from where they left off.",
+    `Previous source (tail):\n${ctx.sourceTail}`,
+    `Previous translation (tail):\n${ctx.translationTail}`,
+  ].join("\n");
+  return { ...built, system: `${built.system}\n\n${note}` };
 }
 
 function buildDefaultPrompt(req: TranslateRequest): BuiltPrompt {

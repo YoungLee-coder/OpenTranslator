@@ -57,8 +57,10 @@ export const zhCN = {
   "translator.noModel": "暂无可用模型",
   "translator.inputPlaceholder": "输入要翻译的文本…",
   "translator.translating": "翻译中…",
+  "translator.translatingChunk": "翻译中…（{{current}}/{{total}}）",
   "translator.outputPlaceholder": "译文",
   "translator.copyTranslation": "复制译文",
+  "translator.tooLong": "文本超过 {{max}} 字符上限",
   "translator.general": "通用",
   "translator.expert": "专家",
 

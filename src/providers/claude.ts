@@ -28,7 +28,8 @@ interface ClaudeStreamEvent {
 
 const DEFAULT_BASE_URL = "https://api.anthropic.com/v1/messages";
 const DEFAULT_MODEL = "claude-sonnet-4-5";
-const MAX_TOKENS = 8192;
+/** Raised for long-text chunks; models may still truncate below this. */
+const MAX_TOKENS = 16_384;
 const ANTHROPIC_VERSION = "2023-06-01";
 
 function resolve(baseUrl: string | undefined, apiKey: string) {
