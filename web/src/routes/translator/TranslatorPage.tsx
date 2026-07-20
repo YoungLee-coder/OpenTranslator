@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -33,9 +34,14 @@ export function TranslatorPage() {
   const [modelOptions, setModelOptions] = useState<TranslateModelOption[]>([]);
   // 编码选中项：「providerId|model」；null 表示走站点默认
   const [modelKey, setModelKey] = useState<string | null>(null);
+  const [modelsDefault, setModelsDefault] = useState<{
+    providerId: string;
+    model: string;
+  } | null>(null);
   const [expertOptions, setExpertOptions] = useState<AiExpertMeta[]>([]);
   const [expertId, setExpertId] = useState<string>("general");
   const [defaultExpertId, setDefaultExpertId] = useState<string>("general");
+  const [organizeFormat, setOrganizeFormat] = useState(false);
   const [chunkProgress, setChunkProgress] = useState<{
     current: number;
     total: number;
@@ -49,7 +55,10 @@ export function TranslatorPage() {
         const res = await apiGet<TranslateModelsResponse>(
           "/api/translate/models",
         );
-        if (!cancelled) setModelOptions(res.models);
+        if (!cancelled) {
+          setModelOptions(res.models);
+          setModelsDefault(res.default);
+        }
       } catch {
         // 静默：拉取失败则不显示模型选择，回落到站点默认
       }
@@ -78,8 +87,32 @@ export function TranslatorPage() {
   }, [user]);
 
   const showExpertSelect = expertOptions.length > 0;
+  const selectedModel = modelKey
+    ? modelOptions.find((o) => `${o.providerId}|${o.model}` === modelKey)
+    : modelsDefault
+      ? modelOptions.find(
+          (o) =>
+            o.providerId === modelsDefault.providerId &&
+            o.model === modelsDefault.model,
+        )
+      : undefined;
+  const isDeepL = selectedModel?.providerType === "deepl";
+  const isGeneralExpert = expertId === "general";
+  const organizeDisabledReason = !isGeneralExpert
+    ? t("translator.organizeFormatDisabledExpert")
+    : isDeepL
+      ? t("translator.organizeFormatDisabledDeepL")
+      : null;
+
+  // Expert / DeepL 不可用时关掉开关，避免误发无效请求
+  useEffect(() => {
+    if ((!isGeneralExpert || isDeepL) && organizeFormat) {
+      setOrganizeFormat(false);
+    }
+  }, [isGeneralExpert, isDeepL, organizeFormat]);
 
   const streaming = status === "streaming";
+  const organizeDisabled = streaming || !!organizeDisabledReason;
   const noModel = modelOptions.length === 0;
   const overLimit = sourceText.length > MAX_TRANSLATE_CHARS;
   const canTranslate =
@@ -109,6 +142,7 @@ export function TranslatorPage() {
           model = modelKey.slice(sep + 1);
         }
       }
+      const useOrganize = organizeFormat && isGeneralExpert && !isDeepL;
       for await (const ev of streamTranslate(
         {
           text: sourceText,
@@ -117,7 +151,9 @@ export function TranslatorPage() {
           stream: true,
           providerId,
           model,
-          expertId: expertId === "general" ? undefined : expertId,
+          // 显式传 general，避免服务端回落到站点默认专家后丢掉 organizeFormat
+          expertId,
+          ...(useOrganize ? { organizeFormat: true } : {}),
         },
         controller.signal,
       )) {
@@ -232,6 +268,31 @@ export function TranslatorPage() {
                 disabled={streaming}
               />
             )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <label
+                  className={cn(
+                    "flex h-9 items-center gap-2 rounded-md border border-rule bg-background px-2.5 text-sm",
+                    organizeDisabled
+                      ? "cursor-not-allowed opacity-50"
+                      : "cursor-pointer",
+                  )}
+                >
+                  <Switch
+                    checked={organizeFormat}
+                    onCheckedChange={setOrganizeFormat}
+                    disabled={organizeDisabled}
+                    aria-label={t("translator.organizeFormat")}
+                  />
+                  <span className="whitespace-nowrap text-muted-foreground">
+                    {t("translator.organizeFormat")}
+                  </span>
+                </label>
+              </TooltipTrigger>
+              <TooltipContent>
+                {organizeDisabledReason ?? t("translator.organizeFormatTip")}
+              </TooltipContent>
+            </Tooltip>
             <div className="ml-auto flex shrink-0">
               {streaming ? (
                 <Button

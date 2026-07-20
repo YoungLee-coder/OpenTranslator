@@ -65,6 +65,10 @@ export const en: Messages = {
   "translator.tooLong": "Text exceeds the {{max}} character limit",
   "translator.general": "General",
   "translator.expert": "Expert",
+  "translator.organizeFormat": "Organize format",
+  "translator.organizeFormatTip": "Infer structure from messy source and output a clean translation",
+  "translator.organizeFormatDisabledExpert": "Unavailable with an AI expert selected",
+  "translator.organizeFormatDisabledDeepL": "Unavailable with DeepL",
 
   "write.title": "AI Write",
   "write.modeImprove": "Improve",

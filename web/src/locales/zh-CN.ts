@@ -63,6 +63,10 @@ export const zhCN = {
   "translator.tooLong": "文本超过 {{max}} 字符上限",
   "translator.general": "通用",
   "translator.expert": "专家",
+  "translator.organizeFormat": "整理格式",
+  "translator.organizeFormatTip": "根据杂乱原文推断结构，输出整洁译文",
+  "translator.organizeFormatDisabledExpert": "选用 AI 专家时不可用",
+  "translator.organizeFormatDisabledDeepL": "DeepL 不支持此选项",
 
   "write.title": "AI 写作",
   "write.modeImprove": "润色",

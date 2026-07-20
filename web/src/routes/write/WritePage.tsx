@@ -75,7 +75,7 @@ export function WritePage() {
         const res = await apiGet<TranslateModelsResponse>("/api/translate/models");
         if (!cancelled) {
           // DeepL 不支持 AI Write，从可选模型中排除
-          setModelOptions(res.models.filter((m) => !/deepl/i.test(m.providerName)));
+          setModelOptions(res.models.filter((m) => m.providerType !== "deepl"));
         }
       } catch {
         // 静默

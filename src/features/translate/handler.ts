@@ -35,7 +35,7 @@ import {
   translationCacheKey,
 } from "../../lib/cache";
 import { getAiExpertsConfig, resolveExpertId, isAiExpertsFeatureEnabled } from "../ai-experts/store";
-import { listExpertMeta, GENERAL_EXPERT_ID } from "../../experts/registry";
+import { listExpertMeta, GENERAL_EXPERT_ID, isGeneralExpert } from "../../experts/registry";
 import { buildTranslationPrompt } from "../../experts/prompt";
 import { providerRegistry } from "../../providers/registry";
 import { resolveModelLabel } from "../../providers/schema";
@@ -226,10 +226,26 @@ export async function handleListModels(c: C): Promise<Response> {
             model: m,
             modelLabel: resolveModelLabel(p.type, m),
             providerName: p.displayName,
+            providerType: p.type,
           }),
         ),
       );
-    return c.json({ models, default: null } satisfies TranslateModelsResponse);
+    // 与 handleTranslate 未指定模型时一致：公开默认供应商
+    const defRow = await getPublicDefaultProviderRow(c.env.DB);
+    const def =
+      defRow && defRow.enabled
+        ? {
+            providerId: defRow.id,
+            model: defRow.default_model ?? "",
+          }
+        : null;
+    const defaultRef =
+      def && def.model && models.some((m) => m.providerId === def.providerId && m.model === def.model)
+        ? def
+        : models[0]
+          ? { providerId: models[0].providerId, model: models[0].model }
+          : null;
+    return c.json({ models, default: defaultRef } satisfies TranslateModelsResponse);
   }
 
   // 匿名：只返回公开白名单中仍有效的项——provider 存在且 enabled、
@@ -252,6 +268,7 @@ export async function handleListModels(c: C): Promise<Response> {
       model: m.model,
       modelLabel: resolveModelLabel(p.type, m.model),
       providerName: p.displayName,
+      providerType: p.type,
     });
     validRefs.push(m);
   }
@@ -348,6 +365,14 @@ export async function handleTranslate(c: C): Promise<Response> {
     req = rest;
   }
 
+  // organizeFormat only applies to the default (general) prompt.
+  if (req.organizeFormat === true && isGeneralExpert(req.expertId)) {
+    req = { ...req, organizeFormat: true };
+  } else if (req.organizeFormat !== undefined) {
+    const { organizeFormat: _, ...rest } = req;
+    req = rest;
+  }
+
   const promptBuilt = buildTranslationPrompt(req);
   const needsPostProcess = !!promptBuilt.postProcess;
 
@@ -432,6 +457,12 @@ export async function handleTranslate(c: C): Promise<Response> {
     adapter = providerRegistry.get(providerType);
   } catch {
     return c.json({ error: `provider type "${providerType}" not registered` }, 501);
+  }
+
+  // DeepL has no custom prompts — drop organizeFormat so cache keys stay stable.
+  if (providerType === "deepl" && req.organizeFormat !== undefined) {
+    const { organizeFormat: _, ...rest } = req;
+    req = rest;
   }
 
   // 解耦"客户端要 SSE"与"适配器能流式"：客户端请求 stream 时始终返回 SSE，

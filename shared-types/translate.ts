@@ -15,6 +15,11 @@ export interface TranslateRequest {
   targetLang: string;
   /** AI expert id from Immersive Translate prompts; "general" or omitted = default prompt. */
   expertId?: string;
+  /**
+   * When true (default prompt only), infer document structure from messy source
+   * and output a clean, well-formatted translation. Ignored for AI experts / DeepL.
+   */
+  organizeFormat?: boolean;
   stream?: boolean;
   providerId?: string; // optional explicit provider; public mode ignores this
   /** 显式指定的模型名；需属于该 provider 声明的 models 集合，否则被拒。 */
@@ -39,6 +44,8 @@ export interface TranslateModelOption {
   /** 界面展示名；select 型 schema 有 label 时与 model 不同。 */
   modelLabel: string;
   providerName: string;
+  /** Provider adapter type（如 openai / deepl），用于 UI 能力判断。 */
+  providerType: string;
 }
 
 /** GET /api/translate/models 返回体：当前用户可选的模型与默认项。 */

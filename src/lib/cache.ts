@@ -3,8 +3,7 @@ import { utf8Encode } from "./bytes";
 
 /**
  * Translation result cache backed by the SETTINGS_KV namespace. Keyed by
- * provider + language pair + expert + text hash,
- * the upstream model.
+ * provider + model + language pair + expert + organizeFormat + text hash.
  */
 
 const PREFIX = "tr:";
@@ -26,7 +25,8 @@ export async function translationCacheKey(
   const expert = req.expertId ?? "general";
   const text = await sha256Hex(req.text);
   const model = req.model ?? "";
-  return `${PREFIX}${providerId}:${model}:${req.sourceLang}:${req.targetLang}:${expert}:${text}`;
+  const organize = req.organizeFormat ? "org1" : "org0";
+  return `${PREFIX}${providerId}:${model}:${req.sourceLang}:${req.targetLang}:${expert}:${organize}:${text}`;
 }
 
 export async function getTranslationCache(
