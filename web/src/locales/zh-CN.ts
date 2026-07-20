@@ -108,7 +108,7 @@ export const zhCN = {
   "setup.initHint":
     "在 Worker 的 Variables and Secrets 中找到 JWT_SECRET，输入后点击下方按钮幂等建表（不会写入浏览器地址栏）。",
   "setup.migrateHint":
-    "检测到数据库有待执行的迁移。输入 JWT_SECRET 后在本页完成升级（幂等，可重复执行）。",
+    "检测到数据库有待执行的迁移。点击下方按钮在本页完成升级（幂等，无需密钥）。",
   "setup.initSecret": "初始化密钥（JWT_SECRET）",
   "setup.initAction": "初始化数据库",
   "setup.migrateAction": "执行数据库升级",

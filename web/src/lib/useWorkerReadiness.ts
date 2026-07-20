@@ -14,7 +14,10 @@ export interface WorkerReadiness {
   needsMigration: boolean;
   adminReady: boolean;
   siteReady: boolean;
-  checking: boolean;
+  /** 首次拉取 /api/ping，尚无结果时。 */
+  initialLoading: boolean;
+  /** 手动或轮询触发的重新检测进行中（不影响已展示内容）。 */
+  rechecking: boolean;
   recheck: () => Promise<void>;
 }
 
@@ -22,7 +25,7 @@ function fromResponse(
   res: PingResponse | null,
   error: ReadinessError,
   loading: boolean,
-): Omit<WorkerReadiness, "checking" | "recheck"> {
+): Omit<WorkerReadiness, "initialLoading" | "rechecking" | "recheck"> {
   const bindingsOk = !!(res?.bindings?.db && res?.bindings?.kv);
   const dbReady = bindingsOk && !!res?.dbReady;
   const needsMigration = bindingsOk && !!res?.needsMigration;
@@ -53,13 +56,13 @@ export function useWorkerReadiness(opts?: {
   const [data, setData] = useState<PingResponse | null>(null);
   const [error, setError] = useState<ReadinessError>(null);
   const [loading, setLoading] = useState(true);
-  const [checking, setChecking] = useState(false);
-  /** 递增世代号：忽略过期请求，并避免 Strict Mode / 竞态把 checking 卡死。 */
+  const [rechecking, setRechecking] = useState(false);
+  /** 递增世代号：忽略过期请求，并避免 Strict Mode / 竞态把 rechecking 卡死。 */
   const reqGen = useRef(0);
 
   const recheck = useCallback(async () => {
     const gen = ++reqGen.current;
-    setChecking(true);
+    setRechecking(true);
     try {
       const res = await apiGet<PingResponse>("/api/ping");
       if (gen !== reqGen.current) return;
@@ -72,7 +75,7 @@ export function useWorkerReadiness(opts?: {
     } finally {
       if (gen === reqGen.current) {
         setLoading(false);
-        setChecking(false);
+        setRechecking(false);
       }
     }
   }, []);
@@ -100,7 +103,8 @@ export function useWorkerReadiness(opts?: {
   const base = fromResponse(data, error, loading);
   return {
     ...base,
-    checking: loading || checking,
+    initialLoading: loading,
+    rechecking,
     recheck,
   };
 }

@@ -24,12 +24,14 @@ import { cn } from "@/lib/utils";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
-async function runDbInit(secret: string): Promise<void> {
+async function runDbInit(secret?: string): Promise<void> {
+  const headers: Record<string, string> = {};
+  if (secret) headers["X-Init-Secret"] = secret;
   const res = await fetch(`${API_BASE}/api/init`, {
     method: "POST",
     credentials: "include",
     cache: "no-store",
-    headers: { "X-Init-Secret": secret },
+    headers,
   });
   if (!res.ok) {
     let msg = `init -> ${res.status}`;
@@ -77,7 +79,8 @@ export function SetupRequiredPage() {
     dbReady,
     needsMigration,
     adminReady,
-    checking,
+    initialLoading,
+    rechecking,
     recheck,
   } = useWorkerReadiness({ pollIntervalMs: 5000 });
 
@@ -102,6 +105,19 @@ export function SetupRequiredPage() {
     try {
       await runDbInit(initSecret.trim());
       setInitSecret("");
+      await recheck();
+    } catch (err) {
+      setInitError(err instanceof ApiError ? err.message : String(err));
+    } finally {
+      setInitRunning(false);
+    }
+  }
+
+  async function handleMigrate() {
+    setInitRunning(true);
+    setInitError(null);
+    try {
+      await runDbInit();
       await recheck();
     } catch (err) {
       setInitError(err instanceof ApiError ? err.message : String(err));
@@ -176,7 +192,7 @@ export function SetupRequiredPage() {
               <h2 className="text-sm font-medium">{t("setup.stepBindingsTitle")}</h2>
             </div>
 
-            {checking && !data ? (
+            {initialLoading && !data ? (
               <div className="flex flex-col gap-2 pl-8">
                 <Skeleton className="h-5 w-full rounded-md" />
                 <Skeleton className="h-5 w-3/4 rounded-md" />
@@ -247,48 +263,73 @@ export function SetupRequiredPage() {
 
             {showDbForm && (
               <div className="pl-8">
-                <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-                  {isMigrate ? t("setup.migrateHint") : t("setup.initHint")}
-                </p>
-                <form onSubmit={handleInit} className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="init-secret" className="text-xs">
-                      {t("setup.initSecret")}
-                    </Label>
-                    <Input
-                      id="init-secret"
-                      type="password"
-                      value={initSecret}
-                      onChange={(e) => setInitSecret(e.target.value)}
-                      autoComplete="off"
-                      placeholder="••••••••"
-                      className="h-9"
-                      disabled={initRunning}
-                    />
-                  </div>
-                  {initError && (
-                    <p className="text-xs text-destructive">{initError}</p>
-                  )}
-                  <Button
-                    type="submit"
-                    size="sm"
-                    className="h-9 w-fit gap-1.5"
-                    disabled={initRunning || !initSecret.trim()}
-                  >
-                    {initRunning ? (
-                      <>
-                        <Loader2 className="size-3.5 animate-spin" />
-                        {isMigrate
-                          ? t("setup.migrateRunning")
-                          : t("setup.initRunning")}
-                      </>
-                    ) : isMigrate ? (
-                      t("setup.migrateAction")
-                    ) : (
-                      t("setup.initAction")
+                {isMigrate ? (
+                  <>
+                    <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+                      {t("setup.migrateHint")}
+                    </p>
+                    {initError && (
+                      <p className="mb-3 text-xs text-destructive">{initError}</p>
                     )}
-                  </Button>
-                </form>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-9 w-fit gap-1.5"
+                      disabled={initRunning}
+                      onClick={() => void handleMigrate()}
+                    >
+                      {initRunning ? (
+                        <>
+                          <Loader2 className="size-3.5 animate-spin" />
+                          {t("setup.migrateRunning")}
+                        </>
+                      ) : (
+                        t("setup.migrateAction")
+                      )}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+                      {t("setup.initHint")}
+                    </p>
+                    <form onSubmit={handleInit} className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="init-secret" className="text-xs">
+                          {t("setup.initSecret")}
+                        </Label>
+                        <Input
+                          id="init-secret"
+                          type="password"
+                          value={initSecret}
+                          onChange={(e) => setInitSecret(e.target.value)}
+                          autoComplete="off"
+                          placeholder="••••••••"
+                          className="h-9"
+                          disabled={initRunning}
+                        />
+                      </div>
+                      {initError && (
+                        <p className="text-xs text-destructive">{initError}</p>
+                      )}
+                      <Button
+                        type="submit"
+                        size="sm"
+                        className="h-9 w-fit gap-1.5"
+                        disabled={initRunning || !initSecret.trim()}
+                      >
+                        {initRunning ? (
+                          <>
+                            <Loader2 className="size-3.5 animate-spin" />
+                            {t("setup.initRunning")}
+                          </>
+                        ) : (
+                          t("setup.initAction")
+                        )}
+                      </Button>
+                    </form>
+                  </>
+                )}
               </div>
             )}
           </section>
@@ -330,21 +371,14 @@ export function SetupRequiredPage() {
         <Button
           type="button"
           variant="outline"
-          className="h-10 w-full"
-          disabled={checking}
+          className="h-10 w-full gap-2"
+          aria-busy={rechecking}
           onClick={() => void recheck()}
         >
-          {checking ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              {t("setup.checking")}
-            </>
-          ) : (
-            <>
-              <RefreshCw className="size-4" />
-              {t("setup.recheck")}
-            </>
-          )}
+          <RefreshCw
+            className={cn("size-4 shrink-0", rechecking && "animate-spin")}
+          />
+          {t("setup.recheck")}
         </Button>
       </div>
     </div>

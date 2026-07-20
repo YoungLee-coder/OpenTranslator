@@ -75,14 +75,33 @@ app.get("/api/ping", async (c) => {
   }
 });
 
-// Database initializer — JWT_SECRET via X-Init-Secret header (never in URL/path).
-// Idempotent; safe to call repeatedly after deploy (also applies pending migrations).
+// Database initializer — JWT_SECRET via X-Init-Secret for first-time bootstrap.
+// Pending migrations (db already initialized) may run without the secret so the
+// setup page can one-click upgrade after deploy.
 app.post("/api/init", async (c) => {
-  const secret = c.req.header("X-Init-Secret") ?? "";
-  const expected = c.env.JWT_SECRET ?? "";
-  if (!expected || !constantTimeEqual(secret, expected)) {
-    return c.text("Unauthorized", 401);
+  if (!c.env.DB || !c.env.SETTINGS_KV) {
+    return c.text("Bindings not ready", 503);
   }
+
+  let current: string | null = null;
+  try {
+    current = await getCurrentDbVersion(c.env.DB);
+  } catch {
+    current = null;
+  }
+  const pending = getPendingMigrations(current);
+  const isBootstrap = current === null;
+  const needsMigration = !isBootstrap && pending.length > 0;
+
+  // 首次建表必须持有 JWT_SECRET；仅升级待迁移时允许无密钥（幂等、可公开触发）。
+  if (!needsMigration) {
+    const secret = c.req.header("X-Init-Secret") ?? "";
+    const expected = c.env.JWT_SECRET ?? "";
+    if (!expected || !constantTimeEqual(secret, expected)) {
+      return c.text("Unauthorized", 401);
+    }
+  }
+
   const result = await initDatabase({ env: c.env });
   // 迁移可能改了 site_settings；清 KV 缓存与 admin migrate 对齐
   await invalidateSiteSettings(c.env.SETTINGS_KV);

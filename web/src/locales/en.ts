@@ -110,7 +110,7 @@ export const en: Messages = {
   "setup.initHint":
     "Find JWT_SECRET under Worker → Variables and Secrets. Enter it below and run initialization (nothing is written to the address bar).",
   "setup.migrateHint":
-    "Pending database migrations detected. Enter JWT_SECRET below to apply them on this page (idempotent).",
+    "Pending database migrations detected. Click below to apply them on this page (idempotent, no secret required).",
   "setup.initSecret": "Initialization secret (JWT_SECRET)",
   "setup.initAction": "Initialize database",
   "setup.migrateAction": "Apply database update",
