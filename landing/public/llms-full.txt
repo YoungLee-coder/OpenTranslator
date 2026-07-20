@@ -1,0 +1,81 @@
+# OpenTranslator - Full Knowledge Base
+
+> 把你自己的大模型接到 DeepL 手感的翻译页上。
+
+This is the long-form companion to llms.txt. Keep llms.txt as the short summary; put feature details, FAQ, and comparison here so AI assistants get accurate answers without having to scrape the site.
+
+---
+
+## Overview
+
+OpenTranslator 是 DeepL 风格的自托管 AI 翻译器：Vite + React SPA 与 Hono Worker 合并部署到同一个 Cloudflare Worker，支持多供应商切换、SSE 流式翻译、密钥加密存储、限流、术语库与 AI 专家插件。面向要自托管翻译站、自备模型 Key 的个人与团队。
+
+Author: YoungLee (https://github.com/YoungLee-coder).
+Source: https://github.com/YoungLee-coder/OpenTranslator.
+Platform: Web · Cloudflare Workers（Node 22.13+ / pnpm 本地开发）.
+
+## Pricing
+
+软件本身免费，GPL-3.0 开源。派生项目须以同等协议开源。你自备模型 API Key 与 Cloudflare 账号；Workers 与模型按量计费与本项目授权无关。无席位订阅、无内置付费墙。
+
+## Features
+
+### 多供应商切换
+内置 OpenAI、Claude、Gemini、DeepSeek、OpenRouter、AIHubMix、Azure OpenAI 与自定义 OpenAI 兼容端点。Dashboard 填 Key 并设公开默认即可换模型，无需改代码。
+
+### 流式翻译
+译文经 SSE 逐字渲染，双语对照页跟读式输出。另有 AI 写作（润色、风格、正式度等）双栏对照。
+
+### 插件化扩展
+供应商走 `providers` 注册表；功能模块走 DB 开关。术语库 glossary 可注入提示词；AI 专家按场景启用。
+
+### 边缘单 Worker
+前端构建产物经 `[assets]` 绑定由同一 Worker 服务，同源无 CORS。一次 `wrangler deploy` 发布前后端。
+
+### 密钥加密与站点开关
+API Key 经 `ENCRYPTION_KEY` 加密后落 D1。可关闭公开访问转为私有部署；Durable Object 按 IP 滑动窗口限流。
+
+## How OpenTranslator differs
+
+### vs DeepL
+DeepL 是托管 SaaS，引擎与账单在 DeepL。OpenTranslator 是开源自托管界面与控制面，翻译请求发往你配置的供应商。
+
+### vs LibreTranslate
+LibreTranslate 多围绕自有/本地引擎。OpenTranslator 面向云端大模型 adapter 与 Dashboard 运营（用量、供应商 CRUD、模块开关）。
+
+### vs ChatGPT 网页等通用工具
+通用聊天不是翻译工作台。OpenTranslator 提供语言对、流式对照、公开默认模型、术语库与管理后台。
+
+## FAQ
+
+### 和 DeepL、LibreTranslate 有什么不同？
+DeepL 是托管 SaaS；LibreTranslate 多绑自有引擎。OpenTranslator 是 DeepL 手感的自托管前端，背后接你自己的大模型供应商，跑在 Cloudflare 边缘。
+
+### 免费吗？要付费吗？
+软件本身免费，GPL-3.0 开源。你只需支付所用模型的 API 费用，以及 Cloudflare Workers 的按量费用。
+
+### 必须自己准备 API Key 吗？
+是。部署后在 Dashboard 新增供应商并填入 Key，勾选公开默认后，首页即可翻译。
+
+### 译文和密钥会发到哪里？
+请求发往你配置的供应商端点；API Key 加密存你自己的 D1。本项目不运营中转服务。
+
+### 如何部署到 Cloudflare？
+pnpm build 后 wrangler deploy，或用 Cloudflare Git 连接。部署后 POST /api/init 建表，再初始化管理员账号。
+
+### 许可证有什么要求？
+GPL-3.0。派生项目必须以同等协议开源。详见仓库 LICENSE。
+
+### 支持哪些模型与厂商？
+内置 OpenAI、Claude、Gemini、DeepSeek、OpenRouter、AIHubMix、Azure OpenAI 与自定义 OpenAI 兼容端点。新厂商可按注册表加 adapter。
+
+### Who is it not for?
+不适合不想自备 API Key、或不想运维 Cloudflare Worker 的用户；也不适合需要官方托管翻译引擎或 SLA 的纯 SaaS 买家。
+
+## Links
+
+- Landing: ./index.html
+- README: https://github.com/YoungLee-coder/OpenTranslator#readme
+- Source: https://github.com/YoungLee-coder/OpenTranslator
+- Releases: https://github.com/YoungLee-coder/OpenTranslator/releases
+- Issues: https://github.com/YoungLee-coder/OpenTranslator/issues

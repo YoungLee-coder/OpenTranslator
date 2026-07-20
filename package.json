@@ -14,6 +14,9 @@
     "typecheck:api": "pnpm run bundle-experts && tsc --noEmit -p tsconfig.json",
     "typecheck:web": "tsc --noEmit -p web/tsconfig.json",
     "typecheck": "pnpm run typecheck:api && pnpm run typecheck:web",
+    "dev:landing": "pnpm --dir landing dev",
+    "build:landing": "pnpm --dir landing build",
+    "typecheck:landing": "pnpm --dir landing typecheck",
     "db:init": "wrangler d1 execute opentranslator --local -c wrangler.dev.toml --file=src/db/schema.sql",
     "db:init:remote": "wrangler d1 execute opentranslator --remote -c wrangler.dev.toml --file=src/db/schema.sql"
   },

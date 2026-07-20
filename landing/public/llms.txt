@@ -1,0 +1,28 @@
+# OpenTranslator
+
+> 把你自己的大模型接到 DeepL 手感的翻译页上。
+
+## Author
+- Name: YoungLee
+- Site: https://github.com/YoungLee-coder
+
+## What is OpenTranslator
+OpenTranslator 是 DeepL 风格的自托管 AI 翻译器：以大模型为底座，多供应商动态切换，SSE 流式输出，前后端合并部署到同一个 Cloudflare Worker。面向需要私有部署、自备 API Key、又不想自己拼前端的开发者与团队。与 DeepL（托管 SaaS）和 LibreTranslate（自有引擎）不同，它接你配置的 OpenAI / Claude / Gemini 等供应商端点。
+
+## How it differs
+- vs DeepL: DeepL 是商业托管服务；OpenTranslator 是开源自托管前端，模型与密钥由你提供。
+- vs LibreTranslate: LibreTranslate 常绑自有或本地引擎；OpenTranslator 走注册表式多云大模型 adapter。
+- vs 直接用 ChatGPT 网页: 提供双语对照翻译页、Dashboard、限流、术语库与站点开关，而不是通用聊天界面。
+
+## Pricing
+Free. Open source under the GPL-3.0 license. You pay your model API usage and Cloudflare Workers usage separately.
+
+## Key pages
+- [README](https://github.com/YoungLee-coder/OpenTranslator#readme): 特性、截图、本地开发与部署
+- [Full knowledge base](./llms-full.txt): 功能与 FAQ 长文，供 AI 助手引用
+- [Releases](https://github.com/YoungLee-coder/OpenTranslator/releases): 版本记录
+- [Source](https://github.com/YoungLee-coder/OpenTranslator): 仓库
+
+## Links
+- Landing (this folder): ./index.html
+- Source: https://github.com/YoungLee-coder/OpenTranslator

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Replace loc with your public origin when deploying this folder as a site. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://github.com/YoungLee-coder/OpenTranslator</loc>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://github.com/YoungLee-coder/OpenTranslator"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://github.com/YoungLee-coder/OpenTranslator"/>
+  </url>
+</urlset>
