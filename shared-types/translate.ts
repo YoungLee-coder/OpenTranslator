@@ -16,8 +16,8 @@ export interface TranslateRequest {
   /** AI expert id from Immersive Translate prompts; "general" or omitted = default prompt. */
   expertId?: string;
   /**
-   * When true (default prompt only), infer document structure from messy source
-   * and output a clean, well-formatted translation. Ignored for AI experts / DeepL.
+   * Server-side — set from site setting organizeFormatEnabled.
+   * Ignored when sent by clients on the public translate API.
    */
   organizeFormat?: boolean;
   stream?: boolean;

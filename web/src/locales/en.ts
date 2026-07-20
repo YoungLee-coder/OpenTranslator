@@ -65,10 +65,6 @@ export const en: Messages = {
   "translator.tooLong": "Text exceeds the {{max}} character limit",
   "translator.general": "General",
   "translator.expert": "Expert",
-  "translator.organizeFormat": "Organize format",
-  "translator.organizeFormatTip": "Infer structure from messy source and output a clean translation",
-  "translator.organizeFormatDisabledExpert": "Unavailable with an AI expert selected",
-  "translator.organizeFormatDisabledDeepL": "Unavailable with DeepL",
 
   "write.title": "AI Write",
   "write.modeImprove": "Improve",
@@ -99,9 +95,9 @@ export const en: Messages = {
 
   "setup.title": "Service not ready",
   "setup.description":
-    "Complete the steps below to bring OpenTranslator online. Bindings and schema setup happen on this page; create an admin account, then return to the app.",
+    "Complete the steps below to bring OpenTranslator online. Bindings, schema setup, and database upgrades happen on this page; create an admin account, then return to the app.",
   "setup.stepBindingsTitle": "1. Storage bindings",
-  "setup.stepDbTitle": "2. Database initialization",
+  "setup.stepDbTitle": "2. Database",
   "setup.stepAdminTitle": "3. Admin account",
   "setup.dbBinding": "D1 database (binding name DB)",
   "setup.kvBinding": "KV namespace (binding name SETTINGS_KV)",
@@ -113,12 +109,14 @@ export const en: Messages = {
   "setup.step3": "Add a KV namespace with binding name SETTINGS_KV",
   "setup.initHint":
     "Find JWT_SECRET under Worker → Variables and Secrets. Enter it below and run initialization (nothing is written to the address bar).",
+  "setup.migrateHint":
+    "Pending database migrations detected. Enter JWT_SECRET below to apply them on this page (idempotent).",
   "setup.initSecret": "Initialization secret (JWT_SECRET)",
   "setup.initAction": "Initialize database",
+  "setup.migrateAction": "Apply database update",
   "setup.initRunning": "Initializing…",
-  "setup.dbReady": "Database is initialized.",
-  "setup.migrationPending": "Pending database migrations detected.",
-  "setup.migrationHint": "Sign in → Dashboard → Settings → Database version",
+  "setup.migrateRunning": "Updating…",
+  "setup.dbReady": "Database is up to date.",
   "setup.adminHint": "Create the first admin account to open the dashboard and configure providers.",
   "setup.adminReady": "Admin account exists.",
   "setup.goToAdminSetup": "Create admin account",
@@ -165,6 +163,9 @@ export const en: Messages = {
   "settings.cacheTtl": "Cache TTL (hours)",
   "settings.cacheTtlDesc":
     "How long identical results stay in KV before expiring. Range {{min}}–{{max}} hours; ignored when cache is off.",
+  "settings.organizeFormat": "Organize format",
+  "settings.organizeFormatDesc":
+    "When translating, infer paragraph and list structure from messy source text and output a clean translation. Applies to general translation only; AI experts and DeepL are unaffected.",
 
   "modules.title": "Feature modules",
   "modules.description":

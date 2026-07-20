@@ -16,6 +16,11 @@ export interface SiteSettings {
   translationCacheEnabled: boolean;
   /** 翻译结果在 KV 中的保留时长（小时）。受下方范围常量约束。 */
   translationCacheTtlHours: number;
+  /**
+   * 翻译时对杂乱原文推断结构并输出整洁译文（仅默认/通用提示词；专家与 DeepL 仍忽略）。
+   * 默认关闭。
+   */
+  organizeFormatEnabled: boolean;
   [key: string]: unknown;
 }
 

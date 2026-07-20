@@ -73,6 +73,14 @@ adminSettingsRoute.put("/", async (c) => {
       clampCacheTtlHours(body.translationCacheTtlHours),
     );
   }
+  if (body.organizeFormatEnabled !== undefined) {
+    await updateSetting(
+      c.env.SETTINGS_KV,
+      c.env.DB,
+      "organize_format_enabled",
+      body.organizeFormatEnabled,
+    );
+  }
   if (body.publicDefaultProviderId !== undefined) {
     await updateSetting(
       c.env.SETTINGS_KV,

@@ -27,7 +27,8 @@ function fromResponse(
   const dbReady = bindingsOk && !!res?.dbReady;
   const needsMigration = bindingsOk && !!res?.needsMigration;
   const adminReady = bindingsOk && !!res?.adminReady;
-  const siteReady = bindingsOk && dbReady;
+  // 未完成迁移也算未就绪，强制走初始化页升级。
+  const siteReady = bindingsOk && dbReady && !needsMigration;
 
   let status: ReadinessStatus = "loading";
   if (!loading) {
@@ -53,36 +54,42 @@ export function useWorkerReadiness(opts?: {
   const [error, setError] = useState<ReadinessError>(null);
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
-  const mounted = useRef(true);
+  /** 递增世代号：忽略过期请求，并避免 Strict Mode / 竞态把 checking 卡死。 */
+  const reqGen = useRef(0);
 
   const recheck = useCallback(async () => {
+    const gen = ++reqGen.current;
     setChecking(true);
     try {
       const res = await apiGet<PingResponse>("/api/ping");
-      if (!mounted.current) return;
+      if (gen !== reqGen.current) return;
       setData(res);
       setError(null);
     } catch {
-      if (!mounted.current) return;
+      if (gen !== reqGen.current) return;
       setError("network");
       setData(null);
     } finally {
-      if (!mounted.current) return;
-      setLoading(false);
-      setChecking(false);
+      if (gen === reqGen.current) {
+        setLoading(false);
+        setChecking(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    mounted.current = true;
     void recheck();
     return () => {
-      mounted.current = false;
+      // 作废进行中的请求，避免卸载后写 state；世代推进也会让 finally 跳过清理，
+      // 但组件已卸载，下一次挂载会重置 checking。
+      reqGen.current += 1;
     };
   }, [recheck]);
 
   const pollMs = opts?.pollIntervalMs;
-  const siteReady = !!(data?.bindings?.db && data?.bindings?.kv && data?.dbReady);
+  const siteReady =
+    !!(data?.bindings?.db && data?.bindings?.kv && data?.dbReady) &&
+    !data?.needsMigration;
 
   useEffect(() => {
     if (!pollMs || siteReady || loading) return;

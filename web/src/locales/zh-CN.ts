@@ -63,10 +63,6 @@ export const zhCN = {
   "translator.tooLong": "文本超过 {{max}} 字符上限",
   "translator.general": "通用",
   "translator.expert": "专家",
-  "translator.organizeFormat": "整理格式",
-  "translator.organizeFormatTip": "根据杂乱原文推断结构，输出整洁译文",
-  "translator.organizeFormatDisabledExpert": "选用 AI 专家时不可用",
-  "translator.organizeFormatDisabledDeepL": "DeepL 不支持此选项",
 
   "write.title": "AI 写作",
   "write.modeImprove": "润色",
@@ -97,9 +93,9 @@ export const zhCN = {
 
   "setup.title": "服务未就绪",
   "setup.description":
-    "完成以下步骤后 OpenTranslator 即可正常使用。绑定与建表可在本页操作；管理员账号创建后返回首页。",
+    "完成以下步骤后 OpenTranslator 即可正常使用。绑定、建表与数据库升级可在本页操作；管理员账号创建后返回首页。",
   "setup.stepBindingsTitle": "1. 存储绑定",
-  "setup.stepDbTitle": "2. 数据库初始化",
+  "setup.stepDbTitle": "2. 数据库",
   "setup.stepAdminTitle": "3. 管理员账号",
   "setup.dbBinding": "D1 数据库（binding 名 DB）",
   "setup.kvBinding": "KV 命名空间（binding 名 SETTINGS_KV）",
@@ -111,12 +107,14 @@ export const zhCN = {
   "setup.step3": "添加 KV 命名空间，binding 名填 SETTINGS_KV",
   "setup.initHint":
     "在 Worker 的 Variables and Secrets 中找到 JWT_SECRET，输入后点击下方按钮幂等建表（不会写入浏览器地址栏）。",
+  "setup.migrateHint":
+    "检测到数据库有待执行的迁移。输入 JWT_SECRET 后在本页完成升级（幂等，可重复执行）。",
   "setup.initSecret": "初始化密钥（JWT_SECRET）",
   "setup.initAction": "初始化数据库",
+  "setup.migrateAction": "执行数据库升级",
   "setup.initRunning": "初始化中…",
-  "setup.dbReady": "数据库已初始化。",
-  "setup.migrationPending": "数据库有待执行的迁移。",
-  "setup.migrationHint": "登录控制台 → 设置 → 数据库版本执行更新",
+  "setup.migrateRunning": "升级中…",
+  "setup.dbReady": "数据库已是最新。",
   "setup.adminHint": "创建第一个管理员账号以进入控制台、配置供应商。",
   "setup.adminReady": "管理员已创建。",
   "setup.goToAdminSetup": "创建管理员账号",
@@ -163,6 +161,9 @@ export const zhCN = {
   "settings.cacheTtl": "缓存保留时长（小时）",
   "settings.cacheTtlDesc":
     "相同结果在 KV 中的存活时间，到期自动清除。范围 {{min}}–{{max}} 小时；关闭缓存时此值不生效。",
+  "settings.organizeFormat": "整理格式",
+  "settings.organizeFormatDesc":
+    "翻译时根据杂乱原文推断段落与列表结构，输出整洁译文。仅对通用翻译生效；AI 专家与 DeepL 不受影响。",
 
   "modules.title": "功能模块",
   "modules.description":

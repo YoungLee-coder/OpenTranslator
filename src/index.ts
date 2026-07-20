@@ -19,6 +19,7 @@ import {
   initDatabase,
 } from "./db/init";
 import { getAdminCount } from "./db/queries";
+import { invalidateSiteSettings } from "./settings/cache";
 import { RateLimiter } from "./durable-objects/rate-limiter";
 import { constantTimeEqual } from "./lib/bytes";
 
@@ -75,7 +76,7 @@ app.get("/api/ping", async (c) => {
 });
 
 // Database initializer — JWT_SECRET via X-Init-Secret header (never in URL/path).
-// Idempotent; safe to call repeatedly after deploy.
+// Idempotent; safe to call repeatedly after deploy (also applies pending migrations).
 app.post("/api/init", async (c) => {
   const secret = c.req.header("X-Init-Secret") ?? "";
   const expected = c.env.JWT_SECRET ?? "";
@@ -83,6 +84,8 @@ app.post("/api/init", async (c) => {
     return c.text("Unauthorized", 401);
   }
   const result = await initDatabase({ env: c.env });
+  // 迁移可能改了 site_settings；清 KV 缓存与 admin migrate 对齐
+  await invalidateSiteSettings(c.env.SETTINGS_KV);
   return c.json({ ok: true, applied: result.applied });
 });
 

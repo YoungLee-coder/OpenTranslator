@@ -102,6 +102,7 @@ export async function getSiteSettings(
     ),
     translationCacheEnabled: map.translation_cache_enabled !== "false",
     translationCacheTtlHours: clampCacheTtlHours(map.translation_cache_ttl_hours),
+    organizeFormatEnabled: map.organize_format_enabled === "true",
   };
   // Fire-and-forget; don't block the request on cache write.
   void kv.put(CACHE_KEY, JSON.stringify(settings), { expirationTtl: TTL_SECONDS });

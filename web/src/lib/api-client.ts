@@ -27,6 +27,8 @@ async function request<T>(
       body !== undefined ? { "Content-Type": "application/json" } : undefined,
     credentials: "include",
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    //  readiness / 设置类 GET 不能吃浏览器启发式缓存，否则「重新检测」会打到旧结果
+    cache: "no-store",
   });
   if (!res.ok) {
     let msg = `${method} ${path} -> ${res.status}`;

@@ -150,6 +150,15 @@ async function v0_7_0({ env }: InitContext): Promise<void> {
   await env.DB.prepare(`DELETE FROM feature_modules WHERE key = 'ai-write'`).run();
 }
 
+/** v0.8.0：翻译「整理格式」站点开关（默认关闭）。 */
+async function v0_8_0({ env }: InitContext): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO site_settings (key, value, updated_at) VALUES
+      ('organize_format_enabled', 'false', ${now})`,
+  ).run();
+}
+
 /** 迁移记录表，记录已执行的版本，避免重复跑。 */
 async function ensureMigrationTable(db: D1Database): Promise<void> {
   await db
@@ -173,6 +182,7 @@ const migrations: Migration[] = [
   { version: "0.5.0", run: v0_5_0 },
   { version: "0.6.0", run: v0_6_0 },
   { version: "0.7.0", run: v0_7_0 },
+  { version: "0.8.0", run: v0_8_0 },
 ];
 
 export async function initDatabase(ctx: InitContext): Promise<{

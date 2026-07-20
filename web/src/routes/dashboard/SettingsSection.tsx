@@ -151,6 +151,18 @@ export function SettingsSection() {
               className="w-24"
             />
           </SettingRow>
+
+          <SettingRow
+            title={t("settings.organizeFormat")}
+            desc={t("settings.organizeFormatDesc")}
+          >
+            <Switch
+              checked={!!settings.organizeFormatEnabled}
+              onCheckedChange={(v) =>
+                setSettings({ ...settings, organizeFormatEnabled: v })
+              }
+            />
+          </SettingRow>
         </div>
 
         <div className="pt-3">
@@ -162,6 +174,7 @@ export function SettingsSection() {
                 authedRateLimitPerMinute: settings.authedRateLimitPerMinute,
                 translationCacheEnabled: settings.translationCacheEnabled,
                 translationCacheTtlHours: settings.translationCacheTtlHours,
+                organizeFormatEnabled: settings.organizeFormatEnabled,
               })
             }
             className="gap-1.5"

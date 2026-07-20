@@ -28,6 +28,7 @@ async function runDbInit(secret: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/init`, {
     method: "POST",
     credentials: "include",
+    cache: "no-store",
     headers: { "X-Init-Secret": secret },
   });
   if (!res.ok) {
@@ -116,10 +117,10 @@ export function SetupRequiredPage() {
       : "pending";
   const dbState: StepState = !bindingsOk
     ? "pending"
-    : dbReady
+    : dbReady && !needsMigration
       ? "done"
       : "active";
-  const adminState: StepState = !dbReady
+  const adminState: StepState = !(dbReady && !needsMigration)
     ? "pending"
     : adminReady
       ? "done"
@@ -128,6 +129,8 @@ export function SetupRequiredPage() {
   const dbBindingOk = data?.bindings?.db;
   const kvBindingOk = data?.bindings?.kv;
   const showBindingStatus = data !== null && !error;
+  const showDbForm = dbState === "active";
+  const isMigrate = dbReady && needsMigration;
 
   return (
     <div className="flex min-h-svh items-center justify-center px-4 py-10">
@@ -238,23 +241,14 @@ export function SetupRequiredPage() {
               <h2 className="text-sm font-medium">{t("setup.stepDbTitle")}</h2>
             </div>
 
-            {dbState === "done" && needsMigration && (
-              <p className="pl-8 text-sm text-muted-foreground">
-                {t("setup.migrationPending")}{" "}
-                <Link to="/login" className="text-foreground underline-offset-4 hover:underline">
-                  {t("setup.migrationHint")}
-                </Link>
-              </p>
-            )}
-
-            {dbState === "done" && !needsMigration && (
+            {dbState === "done" && (
               <p className="pl-8 text-sm text-muted-foreground">{t("setup.dbReady")}</p>
             )}
 
-            {dbState === "active" && (
+            {showDbForm && (
               <div className="pl-8">
                 <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-                  {t("setup.initHint")}
+                  {isMigrate ? t("setup.migrateHint") : t("setup.initHint")}
                 </p>
                 <form onSubmit={handleInit} className="flex flex-col gap-3">
                   <div className="flex flex-col gap-1.5">
@@ -284,8 +278,12 @@ export function SetupRequiredPage() {
                     {initRunning ? (
                       <>
                         <Loader2 className="size-3.5 animate-spin" />
-                        {t("setup.initRunning")}
+                        {isMigrate
+                          ? t("setup.migrateRunning")
+                          : t("setup.initRunning")}
                       </>
+                    ) : isMigrate ? (
+                      t("setup.migrateAction")
                     ) : (
                       t("setup.initAction")
                     )}

@@ -324,6 +324,11 @@ export async function handleTranslate(c: C): Promise<Response> {
     const { previousContext: _, ...rest } = req;
     req = rest;
   }
+  // organizeFormat is site-controlled; ignore client-supplied value.
+  if (req.organizeFormat !== undefined) {
+    const { organizeFormat: _, ...rest } = req;
+    req = rest;
+  }
 
   if (!req.text?.trim() || !req.targetLang?.trim()) {
     return c.json({ error: "text and targetLang are required" }, 400);
@@ -365,12 +370,9 @@ export async function handleTranslate(c: C): Promise<Response> {
     req = rest;
   }
 
-  // organizeFormat only applies to the default (general) prompt.
-  if (req.organizeFormat === true && isGeneralExpert(req.expertId)) {
+  // Site setting: organize messy source while translating (default prompt only).
+  if (settings.organizeFormatEnabled && isGeneralExpert(req.expertId)) {
     req = { ...req, organizeFormat: true };
-  } else if (req.organizeFormat !== undefined) {
-    const { organizeFormat: _, ...rest } = req;
-    req = rest;
   }
 
   const promptBuilt = buildTranslationPrompt(req);
