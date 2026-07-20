@@ -80,13 +80,14 @@ export function SetupRequiredPage() {
     needsMigration,
     adminReady,
     initialLoading,
-    rechecking,
     recheck,
   } = useWorkerReadiness({ pollIntervalMs: 5000 });
 
   const [initSecret, setInitSecret] = useState("");
   const [initRunning, setInitRunning] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
+  /** 手动重检的图标动画；与 hook 的 rechecking 解耦，避免轮询也转、且保证至少转满一圈。 */
+  const [recheckSpinning, setRecheckSpinning] = useState(false);
 
   const allReady = bindingsOk && dbReady && adminReady && !needsMigration;
   const fullyOperational = bindingsOk && dbReady && adminReady;
@@ -123,6 +124,22 @@ export function SetupRequiredPage() {
       setInitError(err instanceof ApiError ? err.message : String(err));
     } finally {
       setInitRunning(false);
+    }
+  }
+
+  async function handleRecheck() {
+    if (recheckSpinning) return;
+    setRecheckSpinning(true);
+    const started = Date.now();
+    try {
+      await recheck();
+    } finally {
+      // Tailwind animate-spin 一圈 1s；ping 往往 <100ms，若不保底会只转一点点就弹回。
+      const remain = 1000 - (Date.now() - started);
+      if (remain > 0) {
+        await new Promise((r) => window.setTimeout(r, remain));
+      }
+      setRecheckSpinning(false);
     }
   }
 
@@ -372,11 +389,14 @@ export function SetupRequiredPage() {
           type="button"
           variant="outline"
           className="h-10 w-full gap-2"
-          aria-busy={rechecking}
-          onClick={() => void recheck()}
+          aria-busy={recheckSpinning}
+          onClick={() => void handleRecheck()}
         >
           <RefreshCw
-            className={cn("size-4 shrink-0", rechecking && "animate-spin")}
+            className={cn(
+              "size-4 shrink-0",
+              recheckSpinning && "animate-spin",
+            )}
           />
           {t("setup.recheck")}
         </Button>
