@@ -129,9 +129,11 @@ export type Content = {
   };
 };
 
+import rootPkg from "../../package.json";
+
 const sharedUrls = {
   productName: "OpenTranslator",
-  version: "v0.1.0",
+  version: `v${rootPkg.version}`,
   repoUrl: "https://github.com/YoungLee-coder/OpenTranslator",
   releasesUrl: "https://github.com/YoungLee-coder/OpenTranslator/releases",
   licenseUrl:

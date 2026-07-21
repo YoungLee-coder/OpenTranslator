@@ -1,4 +1,5 @@
 import { useContent } from "@/lib/i18n";
+import { GitHubIcon } from "@/components/GitHubIcon";
 
 export function Footer() {
   const { footer, site } = useContent();
@@ -12,8 +13,15 @@ export function Footer() {
       </div>
       <div className="colophon">
         <div className="links">
-          <a href={site.repoUrl} target="_blank" rel="noopener noreferrer">
-            GitHub
+          <a
+            className="github-link"
+            href={site.repoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="GitHub"
+            title="GitHub"
+          >
+            <GitHubIcon />
           </a>{" "}
           &middot;{" "}
           <a href={site.readmeMdUrl} target="_blank" rel="noopener noreferrer">

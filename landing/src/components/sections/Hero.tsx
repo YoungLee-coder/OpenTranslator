@@ -1,5 +1,6 @@
 import { useContent } from "@/lib/i18n";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
+import { GitHubIcon } from "@/components/GitHubIcon";
 
 export function Hero() {
   const { site, hero } = useContent();
@@ -15,8 +16,15 @@ export function Hero() {
         </span>
         <span className="hero-links">
           <LanguageSwitch />
-          <a href={site.repoUrl} target="_blank" rel="noopener noreferrer">
-            GitHub
+          <a
+            className="github-link"
+            href={site.repoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="GitHub"
+            title="GitHub"
+          >
+            <GitHubIcon />
           </a>
         </span>
       </div>

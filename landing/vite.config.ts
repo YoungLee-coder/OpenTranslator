@@ -11,6 +11,10 @@ export default defineConfig({
   },
   server: {
     port: 4173,
+    fs: {
+      // Allow importing root package.json for site.version
+      allow: [path.resolve(import.meta.dirname, "..")],
+    },
   },
   build: {
     outDir: "dist",
