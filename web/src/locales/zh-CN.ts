@@ -23,6 +23,7 @@ export const zhCN = {
   "common.noChanges": "没有变更",
   "common.defaultSuffix": " · 默认",
 
+  "nav.home": "OpenTranslator 首页",
   "nav.translate": "翻译",
   "nav.write": "写作",
   "nav.dashboard": "控制台",

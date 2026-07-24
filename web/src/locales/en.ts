@@ -25,6 +25,7 @@ export const en: Messages = {
   "common.noChanges": "No changes",
   "common.defaultSuffix": " · default",
 
+  "nav.home": "OpenTranslator home",
   "nav.translate": "Translate",
   "nav.write": "Write",
   "nav.dashboard": "Dashboard",

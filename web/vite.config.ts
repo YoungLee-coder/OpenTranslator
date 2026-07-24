@@ -19,8 +19,11 @@ export default defineConfig({
   },
   // Production build output goes to the repo root ./dist so a single
   // `wrangler deploy` ships both frontend (as [assets]) and backend.
+  // 路由级 lazy() 会自动拆出 page chunks；不再 manualChunks，避免把
+  // @radix-ui 等误并入 react-vendor（pnpm 路径易误匹配）。
   build: {
     outDir: "../dist",
+    emptyOutDir: true,
   },
   server: {
     port: 5173,

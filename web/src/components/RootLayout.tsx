@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import type { AuthUser } from "@opentranslator/shared-types";
 import { Ellipsis, Languages, LayoutDashboard, LogOut, Moon, PenLine, Sun, X } from "lucide-react";
@@ -27,14 +27,15 @@ type NavItem = {
 };
 
 function BrandMark({ compact = false }: { compact?: boolean }) {
+  const { t } = useTranslation();
   return (
-    <Link to="/" className="group flex shrink-0 items-center gap-2">
+    <Link to="/" className="group flex shrink-0 items-center gap-2" aria-label={t("nav.home")}>
       <span
         className={cn(
           "flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform group-hover:scale-[1.06]",
         )}
       >
-        <Languages className="size-3.5" />
+        <Languages className="size-3.5" aria-hidden />
       </span>
       {!compact && (
         <span className="hidden font-display text-[0.95rem] font-semibold tracking-tight md:inline">
@@ -175,7 +176,16 @@ export function RootLayout() {
       </header>
 
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 pt-5 pb-[max(3.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-8 md:pt-10">
-        <Outlet />
+        <Suspense
+          fallback={
+            <div className="flex flex-1 items-center justify-center py-16 text-sm text-muted-foreground">
+              <span className="mr-2 size-4 animate-spin rounded-full border-2 border-rule border-t-transparent" />
+              {t("common.loading")}
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );
