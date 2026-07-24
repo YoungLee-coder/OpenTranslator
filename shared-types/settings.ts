@@ -1,4 +1,4 @@
-/** 指向某个供应商下某个模型的引用，用于公开模型白名单与公开默认模型。 */
+/** 指向某个供应商下某个模型的引用。 */
 export interface PublicModelRef {
   providerId: string;
   model: string;
@@ -9,8 +9,13 @@ export interface SiteSettings {
   publicDefaultProviderId?: string;
   /** 对匿名访客开放的模型集合；为空时回落到旧的 is_public_default 机制。 */
   publicModels?: PublicModelRef[];
-  /** 匿名访客不主动选择时的默认模型；需属于 publicModels。 */
+  /** 匿名访客未主动选择时的默认模型；需属于 publicModels。 */
   publicDefaultModel?: PublicModelRef | null;
+  /**
+   * 登录用户未主动选择时的站点默认模型；需指向可用供应商下的已声明模型。
+   * 与公开访问的 publicDefaultModel 相互独立。
+   */
+  defaultModel?: PublicModelRef | null;
   publicRateLimitPerMinute: number;
   authedRateLimitPerMinute: number;
   translationCacheEnabled: boolean;

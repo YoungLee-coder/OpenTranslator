@@ -7,7 +7,9 @@ import type {
 import { apiDelete, apiPut, apiUploadAvatar, ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
 import { validateAvatarFile } from "@/lib/avatar";
+import { useOnceAnimation } from "@/lib/useOnceAnimation";
 import { useTranslation } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/UserAvatar";
 import {
   Card,
@@ -26,6 +28,7 @@ export function ProfileSection() {
   const { t } = useTranslation();
   const { user, refresh } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
+  const rise = useOnceAnimation(true, 650);
   const [email, setEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -144,7 +147,7 @@ export function ProfileSection() {
     : user;
 
   return (
-    <Card className="animate-rise">
+    <Card className={cn(rise && "animate-rise motion-reduce:animate-none")}>
       <CardHeader>
         <CardTitle>{t("profile.title")}</CardTitle>
       </CardHeader>

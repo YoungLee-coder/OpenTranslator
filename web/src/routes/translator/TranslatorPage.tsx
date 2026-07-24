@@ -31,8 +31,9 @@ export function TranslatorPage() {
   const abortRef = useRef<AbortController | null>(null);
   const { user } = useAuth();
   const [modelOptions, setModelOptions] = useState<TranslateModelOption[]>([]);
-  // 编码选中项：「providerId|model」；null 表示走站点默认
+  // 编码选中项：「providerId|model」；加载后选中站点默认模型
   const [modelKey, setModelKey] = useState<string | null>(null);
+  const [defaultModelKey, setDefaultModelKey] = useState<string | null>(null);
   const [expertOptions, setExpertOptions] = useState<AiExpertMeta[]>([]);
   const [expertId, setExpertId] = useState<string>("general");
   const [defaultExpertId, setDefaultExpertId] = useState<string>("general");
@@ -49,7 +50,13 @@ export function TranslatorPage() {
         const res = await apiGet<TranslateModelsResponse>(
           "/api/translate/models",
         );
-        if (!cancelled) setModelOptions(res.models);
+        if (cancelled) return;
+        setModelOptions(res.models);
+        const defKey = res.default
+          ? `${res.default.providerId}|${res.default.model}`
+          : null;
+        setDefaultModelKey(defKey);
+        setModelKey(defKey);
       } catch {
         // 静默：拉取失败则不显示模型选择，回落到站点默认
       }
@@ -230,6 +237,7 @@ export function TranslatorPage() {
                 value={modelKey}
                 onChange={setModelKey}
                 options={modelOptions}
+                defaultKey={defaultModelKey}
                 disabled={streaming}
               />
             )}
@@ -442,11 +450,13 @@ function ModelSelect({
   options,
   value,
   onChange,
+  defaultKey,
   disabled,
 }: {
   options: TranslateModelOption[];
   value: string | null;
   onChange: (v: string | null) => void;
+  defaultKey: string | null;
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
@@ -455,22 +465,24 @@ function ModelSelect({
     ? options.find((o) => `${o.providerId}|${o.model}` === value)
     : undefined;
   const label = selected?.modelLabel ?? t("common.default");
+  // 无选中时回落到站点默认键，避免出现抽象「默认」选项
+  const selectValue = value ?? defaultKey ?? undefined;
   return (
     <Select
-      value={value ?? "default"}
-      onValueChange={(v) => onChange(v === "default" ? null : v)}
-      disabled={disabled}
+      value={selectValue}
+      onValueChange={(v) => onChange(v)}
+      disabled={disabled || options.length === 0}
     >
       <SelectTrigger className="h-9 min-w-[7.5rem] flex-1 sm:w-[180px] sm:flex-none">
         <span className="truncate">{label}</span>
       </SelectTrigger>
       <SelectContent>
-          <SelectItem value="default">{t("common.default")}</SelectItem>
           {options.map((o) => {
             const key = `${o.providerId}|${o.model}`;
             return (
               <SelectItem key={key} value={key}>
                 {o.providerName} · {o.modelLabel}
+                {key === defaultKey ? t("common.defaultSuffix") : ""}
               </SelectItem>
             );
           })}

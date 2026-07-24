@@ -10,10 +10,6 @@ function cycleNext(list: readonly string[], current: string): string {
 /** Interactive write workbench — mirrors web WritePage card. */
 export function WriteWorkbench() {
   const data = useContent().product.write;
-  const langOptions =
-    data.language === "English"
-      ? (["English", "中文", "日本語"] as const)
-      : (["中文", "English", "日本語"] as const);
   const modelOptions =
     data.model === "Default"
       ? (["Default", "GPT-4.1 mini", "Claude Sonnet"] as const)
@@ -22,7 +18,6 @@ export function WriteWorkbench() {
   const initialMode =
     data.modes.find((m) => m.active)?.id ?? data.modes[0]?.id ?? "polish";
   const [modeId, setModeId] = useState(initialMode);
-  const [language, setLanguage] = useState(data.language);
   const [model, setModel] = useState(data.model);
   const [resultText, setResultText] = useState(
     data.modeResults[initialMode] ?? data.resultText,
@@ -79,13 +74,6 @@ export function WriteWorkbench() {
             ))}
           </div>
           <div className="mock-toolbar-right">
-            <button
-              type="button"
-              className="mock-select"
-              onClick={() => setLanguage(cycleNext(langOptions, language))}
-            >
-              {language}
-            </button>
             <button
               type="button"
               className="mock-select"

@@ -4,6 +4,7 @@ import type {
   ProviderField,
   ProviderRecord,
   ProviderType,
+  SiteSettings,
   TestProviderLatencyResponse,
 } from "@opentranslator/shared-types";
 import {
@@ -24,7 +25,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -50,7 +50,7 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, Gauge, Plus, RotateCw, Server, Star, Trash2 } from "lucide-react";
+import { AlertCircle, Gauge, Plus, RotateCw, Server, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useTranslation } from "@/lib/i18n";
 import type { MessageKey } from "@/locales/zh-CN";
@@ -61,7 +61,6 @@ interface FormState {
   apiKey: string;
   fields: Record<string, string>;
   enabled: boolean;
-  isPublicDefault: boolean;
 }
 
 const EMPTY_FORM: FormState = {
@@ -70,7 +69,6 @@ const EMPTY_FORM: FormState = {
   apiKey: "",
   fields: {},
   enabled: true,
-  isPublicDefault: false,
 };
 
 // 技术类型 ID → 展示名，表格与下拉均用此映射（custom 走 i18n）
@@ -89,6 +87,15 @@ function providerLabel(
 ): string {
   if (type === "custom") return t("providers.typeCustom");
   return PROVIDER_LABELS[type] ?? type;
+}
+
+function encodeModelKey(providerId: string, model: string): string {
+  return `${providerId}|${model}`;
+}
+
+function decodeModelKey(key: string): { providerId: string; model: string } {
+  const sep = key.indexOf("|");
+  return { providerId: key.slice(0, sep), model: key.slice(sep + 1) };
 }
 
 export function ProvidersSection() {
@@ -116,20 +123,26 @@ export function ProvidersSection() {
   const [latencyTesting, setLatencyTesting] = useState(false);
   const [latencyResult, setLatencyResult] = useState<string | null>(null);
   const [latencyError, setLatencyError] = useState<string | null>(null);
+  // 站点默认模型：「providerId|model」；不依赖公开访问模块
+  const [defaultModelKey, setDefaultModelKey] = useState<string | null>(null);
+  const [savingDefault, setSavingDefault] = useState(false);
 
   async function load() {
     try {
-      const [listRes, schemaRes] = await Promise.all([
+      const [listRes, schemaRes, setRes] = await Promise.all([
         apiGet<{ providers: ProviderRecord[]; types: ProviderType[] }>(
           "/api/admin/providers",
         ),
         apiGet<{ schemas: Record<ProviderType, ProviderField[]> }>(
           "/api/admin/providers/schema",
         ),
+        apiGet<{ settings: SiteSettings }>("/api/admin/settings"),
       ]);
       setProviders(listRes.providers);
       setTypes(listRes.types);
       setSchemas(schemaRes.schemas);
+      const pdm = setRes.settings.defaultModel;
+      setDefaultModelKey(pdm ? encodeModelKey(pdm.providerId, pdm.model) : null);
       setError(null);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : String(e));
@@ -174,7 +187,6 @@ export function ProvidersSection() {
       apiKey: "",
       fields,
       enabled: p.enabled,
-      isPublicDefault: p.isPublicDefault,
     });
     setEditing({ id: p.id });
     setError(null);
@@ -231,7 +243,6 @@ export function ProvidersSection() {
       models: models.length ? models : undefined,
       configJson: Object.keys(configJson).length ? configJson : undefined,
       enabled: form.enabled,
-      isPublicDefault: form.isPublicDefault,
     };
   }
 
@@ -301,24 +312,41 @@ export function ProvidersSection() {
     }
   }
 
-  // 行内设为默认：互斥，乐观更新
-  async function setDefault(p: ProviderRecord) {
-    if (p.isPublicDefault || busyId) return;
-    const prev = providers;
-    setProviders(
-      prev.map((x) => ({ ...x, isPublicDefault: x.id === p.id })),
-    );
-    setBusyId(p.id);
+  // 站点默认模型：写入 defaultModel，与公开访问相互独立
+  async function saveDefaultModel(key: string) {
+    if (savingDefault || key === defaultModelKey) return;
+    const prev = defaultModelKey;
+    setDefaultModelKey(key);
+    setSavingDefault(true);
     try {
-      await apiPut(`/api/admin/providers/${p.id}`, { isPublicDefault: true });
-      toast.success(t("providers.setDefaultToast", { name: p.displayName }));
+      await apiPut("/api/admin/settings", {
+        defaultModel: decodeModelKey(key),
+      });
+      toast.success(t("providers.defaultModelSaved"));
     } catch (e) {
-      setProviders(prev);
+      setDefaultModelKey(prev);
       toast.error(e instanceof ApiError ? e.message : t("common.operationFailed"));
     } finally {
-      setBusyId(null);
+      setSavingDefault(false);
     }
   }
+
+  const defaultModelOptions = providers
+    .filter((p) => p.enabled)
+    .flatMap((p) =>
+      (p.models?.length ? p.models : p.defaultModel ? [p.defaultModel] : []).map(
+        (m) => ({
+          key: encodeModelKey(p.id, m),
+          label: `${p.displayName} · ${m}`,
+        }),
+      ),
+    );
+  // 当前默认若不在可选列表（供应商已停用/模型已删），仍展示以便管理员改选
+  const defaultSelectValue =
+    defaultModelKey &&
+    defaultModelOptions.some((o) => o.key === defaultModelKey)
+      ? defaultModelKey
+      : undefined;
 
   function onTypeChange(type: ProviderType) {
     setForm({ ...form, type, fields: {} });
@@ -438,89 +466,99 @@ export function ProvidersSection() {
             </Button>
           </div>
         ) : (
-          <div className="rounded-md border border-rule">
-            <Table className="min-w-[640px] lg:table-fixed">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="lg:w-40">{t("providers.name")}</TableHead>
-                  <TableHead className="lg:w-28">{t("providers.type")}</TableHead>
-                  <TableHead className="lg:w-48">{t("providers.models")}</TableHead>
-                  <TableHead className="lg:w-44">{t("providers.status")}</TableHead>
-                  <TableHead className="lg:w-44 text-right">{t("providers.actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {providers.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="max-w-0 font-medium">
-                      <span className="block truncate" title={p.displayName}>
-                        {p.displayName}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {providerLabel(p.type, t)}
-                    </TableCell>
-                    <TableCell className="max-w-0">
-                      <span
-                        className="block truncate font-mono text-xs text-muted-foreground"
-                        title={modelsText(p)}
-                      >
-                        {modelsText(p)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+          <>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <div className="text-sm font-medium">{t("providers.defaultModel")}</div>
+              {defaultModelOptions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {t("providers.defaultModelNone")}
+                </p>
+              ) : (
+                <Select
+                  value={defaultSelectValue}
+                  onValueChange={(v) => void saveDefaultModel(v)}
+                  disabled={savingDefault}
+                >
+                  <SelectTrigger className="w-full sm:max-w-md">
+                    <SelectValue placeholder={t("providers.defaultModelPick")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {defaultModelOptions.map((o) => (
+                      <SelectItem key={o.key} value={o.key}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <div className="rounded-md border border-rule">
+              <Table className="min-w-[640px] lg:table-fixed">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="lg:w-40">{t("providers.name")}</TableHead>
+                    <TableHead className="lg:w-28">{t("providers.type")}</TableHead>
+                    <TableHead className="lg:w-48">{t("providers.models")}</TableHead>
+                    <TableHead className="lg:w-44">{t("providers.status")}</TableHead>
+                    <TableHead className="lg:w-44 text-right">{t("providers.actions")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {providers.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="max-w-0 font-medium">
+                        <span className="block truncate" title={p.displayName}>
+                          {p.displayName}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {providerLabel(p.type, t)}
+                      </TableCell>
+                      <TableCell className="max-w-0">
+                        <span
+                          className="block truncate font-mono text-xs text-muted-foreground"
+                          title={modelsText(p)}
+                        >
+                          {modelsText(p)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
                         <Switch
                           checked={p.enabled}
                           disabled={busyId === p.id}
                           onCheckedChange={() => void toggleEnabled(p)}
                           aria-label={t("providers.toggleEnabled", { name: p.displayName })}
                         />
-                        {p.isPublicDefault ? (
-                          <Badge variant="accent">{t("common.default")}</Badge>
-                        ) : (
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+                            className="h-7"
                             type="button"
-                            disabled={busyId === p.id}
-                            onClick={() => void setDefault(p)}
+                            onClick={() => startEdit(p)}
                           >
-                            <Star className="size-3" />
-                            <span className="hidden sm:inline">{t("providers.setDefault")}</span>
+                            {t("common.edit")}
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7"
-                          type="button"
-                          onClick={() => startEdit(p)}
-                        >
-                          {t("common.edit")}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          type="button"
-                          onClick={() => setDeleteTarget(p)}
-                        >
-                          <Trash2 className="size-3" />
-                          <span className="hidden sm:inline">{t("common.delete")}</span>
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            type="button"
+                            onClick={() => setDeleteTarget(p)}
+                          >
+                            <Trash2 className="size-3" />
+                            <span className="hidden sm:inline">{t("common.delete")}</span>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </CardContent>
 
@@ -722,16 +760,6 @@ export function ProvidersSection() {
                   }
                 />
                 <Label htmlFor="enabled">{t("providers.enable")}</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="public-default"
-                  checked={form.isPublicDefault}
-                  onCheckedChange={(v) =>
-                    setForm({ ...form, isPublicDefault: v })
-                  }
-                />
-                <Label htmlFor="public-default">{t("providers.publicDefault")}</Label>
               </div>
             </div>
 

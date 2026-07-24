@@ -67,7 +67,7 @@ export interface TranslateResponse {
 }
 
 /**
- * SSE events emitted by POST /api/translate?stream=true.
+ * SSE events emitted by POST /api/translate when stream: true.
  * Each event is JSON-encoded and wrapped as an SSE `data:` frame.
  */
 export type TranslateStreamEvent =

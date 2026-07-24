@@ -368,7 +368,6 @@ const zhCN: Content = {
         tone: "本功能协助用户提升文稿正式度，措辞更严谨、结构更分明。",
         shorten: "帮用户更快润色文稿，表达更清楚。",
       },
-      language: "中文",
       model: "默认",
       sourceText: "这个功能可以让用户很快把文章改得更好看一点。",
       resultText: "该功能帮助用户迅速润色文稿，使表达更清晰、更有节奏。",
@@ -672,7 +671,6 @@ const en: Content = {
           "This feature helps users raise formality — more precise wording, clearer structure.",
         shorten: "Helps users polish drafts faster and write more clearly.",
       },
-      language: "English",
       model: "Default",
       sourceText:
         "This feature lets users quickly make their writing look a bit better.",

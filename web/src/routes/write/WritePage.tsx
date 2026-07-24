@@ -9,7 +9,6 @@ import type {
 } from "@opentranslator/shared-types";
 import { ApiError, apiGet, streamWrite } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
-import { LANGUAGES, languageName } from "@/lib/languages";
 import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +16,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -56,7 +54,6 @@ export function WritePage() {
   );
   const [sourceText, setSourceText] = useState("");
   const [revisedText, setRevisedText] = useState("");
-  const [lang, setLang] = useState("zh-CN");
   const [mode, setMode] = useState<WriteMode>("improve");
   const [style, setStyle] = useState<WriteStyle>("simple");
   const [formality, setFormality] = useState<WriteFormality>("formal");
@@ -67,16 +64,31 @@ export function WritePage() {
   const { user } = useAuth();
   const [modelOptions, setModelOptions] = useState<TranslateModelOption[]>([]);
   const [modelKey, setModelKey] = useState<string | null>(null);
+  const [defaultModelKey, setDefaultModelKey] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
         const res = await apiGet<TranslateModelsResponse>("/api/translate/models");
-        if (!cancelled) {
-          // DeepL 不支持 AI Write，从可选模型中排除
-          setModelOptions(res.models.filter((m) => m.providerType !== "deepl"));
-        }
+        if (cancelled) return;
+        // DeepL 不支持 AI Write，从可选模型中排除
+        const models = res.models.filter((m) => m.providerType !== "deepl");
+        setModelOptions(models);
+        const apiDefault = res.default;
+        const defKey =
+          apiDefault &&
+          models.some(
+            (m) =>
+              m.providerId === apiDefault.providerId &&
+              m.model === apiDefault.model,
+          )
+            ? `${apiDefault.providerId}|${apiDefault.model}`
+            : models[0]
+              ? `${models[0].providerId}|${models[0].model}`
+              : null;
+        setDefaultModelKey(defKey);
+        setModelKey(defKey);
       } catch {
         // 静默
       }
@@ -111,7 +123,6 @@ export function WritePage() {
       for await (const ev of streamWrite(
         {
           text: sourceText,
-          lang,
           mode,
           style: mode === "style" ? style : undefined,
           formality: mode === "formality" ? formality : undefined,
@@ -206,12 +217,12 @@ export function WritePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <LangSelect value={lang} onChange={setLang} disabled={streaming} />
             {modelOptions.length > 0 && (
               <ModelSelect
                 value={modelKey}
                 onChange={setModelKey}
                 options={modelOptions}
+                defaultKey={defaultModelKey}
                 disabled={streaming}
               />
             )}
@@ -542,41 +553,17 @@ function SubSegment<T extends string>({
   );
 }
 
-function LangSelect({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  disabled?: boolean;
-}) {
-  const { t } = useTranslation();
-  return (
-    <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className="h-9 min-w-0 flex-1 sm:w-[160px] sm:flex-none">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {LANGUAGES.filter((l) => l.code !== "auto").map((l) => (
-          <SelectItem key={l.code} value={l.code}>
-            {languageName(l.code, t)}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
 function ModelSelect({
   options,
   value,
   onChange,
+  defaultKey,
   disabled,
 }: {
   options: TranslateModelOption[];
   value: string | null;
   onChange: (v: string | null) => void;
+  defaultKey: string | null;
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
@@ -584,22 +571,23 @@ function ModelSelect({
     ? options.find((o) => `${o.providerId}|${o.model}` === value)
     : undefined;
   const label = selected?.modelLabel ?? t("common.default");
+  const selectValue = value ?? defaultKey ?? undefined;
   return (
     <Select
-      value={value ?? "default"}
-      onValueChange={(v) => onChange(v === "default" ? null : v)}
-      disabled={disabled}
+      value={selectValue}
+      onValueChange={(v) => onChange(v)}
+      disabled={disabled || options.length === 0}
     >
       <SelectTrigger className="h-9 min-w-[7.5rem] flex-1 sm:w-[180px] sm:flex-none">
         <span className="truncate">{label}</span>
       </SelectTrigger>
         <SelectContent>
-          <SelectItem value="default">{t("common.default")}</SelectItem>
           {options.map((o) => {
             const key = `${o.providerId}|${o.model}`;
             return (
               <SelectItem key={key} value={key}>
                 {o.providerName} · {o.modelLabel}
+                {key === defaultKey ? t("common.defaultSuffix") : ""}
               </SelectItem>
             );
           })}

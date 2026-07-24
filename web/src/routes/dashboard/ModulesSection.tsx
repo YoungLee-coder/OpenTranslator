@@ -4,7 +4,6 @@ import { useTranslation } from "@/lib/i18n";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -46,7 +45,6 @@ export function ModulesSection({ features, onChanged }: Props) {
     <Card className="animate-rise">
       <CardHeader>
         <CardTitle>{t("modules.title")}</CardTitle>
-        <CardDescription>{t("modules.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border border-rule">

@@ -169,8 +169,6 @@ export const en: Messages = {
     "When translating, infer paragraph and list structure from messy source text and output a clean translation. Applies to general translation only; AI experts and DeepL are unaffected.",
 
   "modules.title": "Feature modules",
-  "modules.description":
-    "Enabled modules appear in the dashboard navigation. Register a backend manifest and a frontend component to add new modules.",
   "modules.module": "Module",
   "modules.descriptionCol": "Description",
   "modules.status": "Status",
@@ -188,7 +186,6 @@ export const en: Messages = {
   "providers.deleted": "Deleted \"{{name}}\"",
   "providers.enabledToast": "Enabled \"{{name}}\"",
   "providers.disabledToast": "Disabled \"{{name}}\"",
-  "providers.setDefaultToast": "Set \"{{name}}\" as default provider",
   "providers.empty": "No providers yet. Add one to start translating.",
   "providers.addProvider": "Add provider",
   "providers.name": "Name",
@@ -198,6 +195,10 @@ export const en: Messages = {
   "providers.actions": "Actions",
   "providers.toggleEnabled": "Toggle {{name}} enabled",
   "providers.setDefault": "Set as default",
+  "providers.defaultModel": "Site default model",
+  "providers.defaultModelPick": "Choose default model",
+  "providers.defaultModelNone": "Enable at least one provider with models first.",
+  "providers.defaultModelSaved": "Site default model updated",
   "providers.editTitle": "Edit provider",
   "providers.addTitle": "Add provider",
   "providers.formDesc":
@@ -208,7 +209,6 @@ export const en: Messages = {
   "providers.locked": "Locked",
   "providers.modelsHint": "One per line; first is default",
   "providers.enable": "Enable",
-  "providers.publicDefault": "Set as public default",
   "providers.deleteTitle": "Delete provider",
   "providers.deleteConfirm":
     "Delete \"{{name}}\"? This action cannot be undone.",
@@ -260,7 +260,7 @@ export const en: Messages = {
   "dbAudit.repairAll": "Repair all",
   "dbAudit.repairTitle": "Repair consistency issues",
   "dbAudit.repairDesc":
-    "Safely repair stale public model references, out-of-range default models, duplicate public-default flags, invalid AI expert config, and legacy glossary data. Corrupted JSON is not auto-modified. Continue?",
+    "Safely repair stale site/public model references, out-of-range default models, duplicate public-default flags, invalid AI expert config, and legacy glossary data. Corrupted JSON is not auto-modified. Continue?",
   "dbAudit.confirmRepair": "Confirm repair",
 
   "experts.title": "AI experts",
@@ -274,7 +274,7 @@ export const en: Messages = {
 
   "publicAccess.title": "Public access",
   "publicAccess.description":
-    "Choose models available to anonymous visitors and set one public default. Visitors can switch among open models on the home page.",
+    "Choose models available to anonymous visitors and set one public default. Independent from the site default model.",
   "publicAccess.saveFailed": "Save failed",
   "publicAccess.rateLimitSaved": "Rate limit saved",
   "publicAccess.publicModels": "Public models",

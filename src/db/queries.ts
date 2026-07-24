@@ -1,4 +1,9 @@
-import type { ProviderRecord, ProviderType } from "@opentranslator/shared-types";
+import type {
+  ProviderRecord,
+  ProviderType,
+  PublicModelRef,
+  SiteSettings,
+} from "@opentranslator/shared-types";
 
 interface ProviderRow {
   id: string;
@@ -123,6 +128,50 @@ export async function getPublicDefaultProviderRow(
   return db
     .prepare("SELECT * FROM providers WHERE enabled = 1 ORDER BY created_at ASC LIMIT 1")
     .first<ProviderRow>();
+}
+
+/** 解析 provider 行声明的模型列表；无 models 时回落到 default_model。 */
+function modelsOfProviderRow(row: ProviderRow): string[] {
+  if (row.models) {
+    try {
+      const parsed = JSON.parse(row.models) as unknown;
+      if (Array.isArray(parsed)) {
+        const list = parsed.filter((m): m is string => typeof m === "string");
+        if (list.length > 0) return list;
+      }
+    } catch {
+      // 损坏的 JSON 忽略
+    }
+  }
+  return row.default_model ? [row.default_model] : [];
+}
+
+/**
+ * 解析站点默认模型（登录用户未主动选择时使用）。
+ * 优先 `defaultModel`；失效时回落到公开默认供应商的 default_model /
+ * 首个可用模型（兼容旧的供应商级默认）。
+ * 与公开访问的 `publicDefaultModel` 相互独立。
+ */
+export async function resolveSiteDefaultModel(
+  db: D1Database,
+  settings: Pick<SiteSettings, "defaultModel">,
+): Promise<PublicModelRef | null> {
+  const dm = settings.defaultModel;
+  if (dm) {
+    const row = await getProviderRow(db, dm.providerId);
+    if (row?.enabled && modelsOfProviderRow(row).includes(dm.model)) {
+      return { providerId: dm.providerId, model: dm.model };
+    }
+  }
+  const row = await getPublicDefaultProviderRow(db);
+  if (!row) return null;
+  const models = modelsOfProviderRow(row);
+  const model =
+    row.default_model && models.includes(row.default_model)
+      ? row.default_model
+      : models[0];
+  if (!model) return null;
+  return { providerId: row.id, model };
 }
 
 export interface ProviderInsert {

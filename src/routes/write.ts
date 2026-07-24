@@ -7,7 +7,7 @@ const writeRoute = new Hono<{
   Variables: AppVariables;
 }>();
 
-// POST /api/write { text, lang, mode, style?, formality?, stream?, providerId?, model? }
+// POST /api/write { text, mode, style?, formality?, stream?, providerId?, model? }
 writeRoute.post("/", handleWrite);
 
 export default writeRoute;

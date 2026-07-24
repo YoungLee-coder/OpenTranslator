@@ -167,8 +167,6 @@ export const zhCN = {
     "翻译时根据杂乱原文推断段落与列表结构，输出整洁译文。仅对通用翻译生效；AI 专家与 DeepL 不受影响。",
 
   "modules.title": "功能模块",
-  "modules.description":
-    "启用的模块会出现在控制台导航中。新增模块只需在后端注册 manifest + 前端注册组件。",
   "modules.module": "模块",
   "modules.descriptionCol": "说明",
   "modules.status": "状态",
@@ -185,7 +183,6 @@ export const zhCN = {
   "providers.deleted": "已删除「{{name}}」",
   "providers.enabledToast": "已启用「{{name}}」",
   "providers.disabledToast": "已停用「{{name}}」",
-  "providers.setDefaultToast": "已将「{{name}}」设为默认供应商",
   "providers.empty": "还没有供应商，添加一个即可开始翻译。",
   "providers.addProvider": "新增供应商",
   "providers.name": "名称",
@@ -195,6 +192,10 @@ export const zhCN = {
   "providers.actions": "操作",
   "providers.toggleEnabled": "切换{{name}}启用状态",
   "providers.setDefault": "设为默认",
+  "providers.defaultModel": "站点默认模型",
+  "providers.defaultModelPick": "选择默认模型",
+  "providers.defaultModelNone": "请先启用至少一个带有模型的供应商。",
+  "providers.defaultModelSaved": "站点默认模型已更新",
   "providers.editTitle": "编辑供应商",
   "providers.addTitle": "新增供应商",
   "providers.formDesc": "配置模型供应商的连接信息。API Key 加密存储，明文不入库。",
@@ -204,7 +205,6 @@ export const zhCN = {
   "providers.locked": "已锁定",
   "providers.modelsHint": "一行一个，首项为默认",
   "providers.enable": "启用",
-  "providers.publicDefault": "设为公开默认",
   "providers.deleteTitle": "删除供应商",
   "providers.deleteConfirm": "确认删除「{{name}}」？此操作不可撤销。",
   "providers.testLatency": "测试延迟",
@@ -255,7 +255,7 @@ export const zhCN = {
   "dbAudit.repairAll": "修复全部",
   "dbAudit.repairTitle": "修复一致性问题",
   "dbAudit.repairDesc":
-    "将对失效的公开模型引用、越界默认模型、重复公开默认供应商标记、无效 AI 专家配置与术语库残留等执行安全修复，操作幂等、可重复执行。损坏的 JSON 字段不会自动修改，需到对应管理页重填。确认继续？",
+    "将对失效的站点/公开模型引用、越界默认模型、重复公开默认供应商标记、无效 AI 专家配置与术语库残留等执行安全修复，操作幂等、可重复执行。损坏的 JSON 字段不会自动修改，需到对应管理页重填。确认继续？",
   "dbAudit.confirmRepair": "确认修复",
 
   "experts.title": "AI 专家",
@@ -269,7 +269,7 @@ export const zhCN = {
 
   "publicAccess.title": "公开访问",
   "publicAccess.description":
-    "勾选对匿名访客开放的模型，并指定一个公开默认模型。匿名访客可在首页在这些模型间切换。",
+    "勾选对匿名访客开放的模型，并指定一个公开默认模型。与站点默认模型相互独立。",
   "publicAccess.saveFailed": "保存失败",
   "publicAccess.rateLimitSaved": "限流设置已保存",
   "publicAccess.publicModels": "公开模型",
@@ -280,7 +280,8 @@ export const zhCN = {
   "publicAccess.open": "开放",
   "publicAccess.publicDefault": "公开默认",
   "publicAccess.openModel": "开放 {{model}}",
-  "publicAccess.hint": "勾选与设默认即时保存。未开放任何模型时，匿名访客将无法翻译。",
+  "publicAccess.hint":
+    "勾选与设默认即时保存。未开放任何模型时，匿名访客将无法翻译。",
   "publicAccess.anonRateLimit": "匿名访客限流（次/分钟）",
   "publicAccess.anonRateLimitDesc": "匿名访客每分钟最大请求数；超出会触发限流。",
 } as const;

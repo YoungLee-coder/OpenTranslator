@@ -111,6 +111,16 @@ adminSettingsRoute.put("/", async (c) => {
       isPublicModelRef(m) ? JSON.stringify(m) : "",
     );
   }
+  // 站点默认模型（登录用户）：与公开访问相互独立。
+  if (body.defaultModel !== undefined) {
+    const m = body.defaultModel;
+    await updateSetting(
+      c.env.SETTINGS_KV,
+      c.env.DB,
+      "default_model",
+      isPublicModelRef(m) ? JSON.stringify(m) : "",
+    );
+  }
 
   const settings = await getSiteSettings(c.env.SETTINGS_KV, c.env.DB);
   return c.json({ settings });

@@ -84,10 +84,10 @@ chrome-extension://<extension-id>
 | 区块 | 行为 |
 |---|---|
 | 实例地址 | `https://…` 输入，存 `baseUrl` |
-| 测试连接 | `GET {baseUrl}/api/ping`，成功显示 bindings |
+| 测试连接 | `GET {baseUrl}/api/ping`；检查 `ok` 与 `bindings`；可提示 `needsMigration` / `!adminReady` |
 | 登录 | `POST {baseUrl}/api/auth/login` → 存 `token`、`user`（含 `avatarUrl`） |
 | 登出 | 清 storage |
-| 状态 | `GET /api/auth/me` 显示邮箱、头像、`sitePublic` |
+| 状态 | `GET /api/auth/me` 显示邮箱、头像、`sitePublic`、`setupCompleted` |
 
 未配置 `baseUrl` 或无效 token 时，Popup 应重定向到 Options（或内嵌登录表单）。
 
@@ -200,7 +200,8 @@ v1 可在 Popup 内直接 `fetch`。若后续需要：
 |---|---|
 | 401 | 清 token，Popup 显示「请重新登录」 |
 | 403 site is private | 不应出现于已登录扩展 |
-| 429 | Toast：稍后重试 |
+| 429 | Toast：稍后重试；可读 `retryAfterSeconds` |
+| 400 text exceeds maximum | 提示缩短原文（上限 80 000 字符） |
 | 503 | 无可用模型，检查 Dashboard 供应商 |
 | 网络失败 | 检查 URL、`ORIGINS`、HTTPS |
 
@@ -218,8 +219,10 @@ v1 可在 Popup 内直接 `fetch`。若后续需要：
 - [ ] Ping / 登录 / 登出 / 流式翻译 / 复制 / 中止
 - [ ] 无 token 时不发翻译请求
 - [ ] `done.translatedText` 覆盖 delta
+- [ ] 可选：长文 `progress`（第 N / M 段）
 - [ ] 模型列表加载与选择（`modelKey` 持久化）
 - [ ] 用户头像 Bearer 加载（Blob URL + revoke）
+- [ ] 429 展示限流提示（`retryAfterSeconds`）
 
 **配置**
 
@@ -237,8 +240,9 @@ v1 可在 Popup 内直接 `fetch`。若后续需要：
 |---|---|
 | v0.1 | Popup 翻译 + Options 登录 + 模型选择 + 用户头像 |
 | v0.2 | AI 专家选择（`GET /api/translate/experts`） |
-| v0.3 | Content script 划词 / 双击翻译 |
-| v0.4 | Background 代理、跨页共享翻译状态 |
+| v0.3 | AI Write（`POST /api/write`；过滤 `providerType === "deepl"`） |
+| v0.4 | Content script 划词 / 双击翻译 |
+| v0.5 | Background 代理、跨页共享翻译状态 |
 
 ## 参考文件
 

@@ -8,9 +8,29 @@
 |---|---|
 | Base URL | 用户自填实例地址，如 `https://translate.example.com` |
 | 前缀 | 所有 API 以 `/api/` 开头 |
-| 健康检查 | `GET /api/ping` → `{ ok, service, bindings }` |
+| 健康检查 | `GET /api/ping` → `PingResponse`（见下） |
 | CORS | Worker 环境变量 `ORIGINS` 逗号分隔允许来源；扩展 origin 须列入 |
-| 内容类型 | JSON 请求/响应；流式翻译为 SSE（`text/event-stream`） |
+| 内容类型 | JSON 请求/响应；流式翻译 / 写作为 SSE（`text/event-stream`） |
+
+### 健康检查 `GET /api/ping`
+
+无需鉴权。响应类型 `PingResponse`（`shared-types/health.ts`）：
+
+```typescript
+{
+  ok: boolean;
+  service: string;
+  bindings: { db: boolean; kv: boolean };
+  /** bindings 齐全且 _migrations 已存在 */
+  dbReady: boolean;
+  /** dbReady 且仍有未执行迁移 */
+  needsMigration: boolean;
+  /** dbReady 且至少有一名管理员 */
+  adminReady: boolean;
+}
+```
+
+Options「测试连接」建议：`ok && bindings.db && bindings.kv` 为连通；`needsMigration` / `!adminReady` 可提示实例尚未完成初始化（引导用户打开主站）。
 
 ## 鉴权
 
@@ -19,9 +39,9 @@
 | 端点 | 方法 | 说明 |
 |---|---|---|
 | `/api/auth/login` | POST | `{ email, password }` → `AuthSessionResponse`（含 `token`） |
-| `/api/auth/setup` | POST | 首次初始化管理员（仅无用户时） |
+| `/api/auth/setup` | POST | 首次初始化管理员（仅无用户时）；密码至少 8 位 |
 | `/api/auth/logout` | POST | 注销（Cookie 客户端；Bearer 客户端本地删 token 即可） |
-| `/api/auth/me` | GET | 会话状态 + `sitePublic` |
+| `/api/auth/me` | GET | 会话状态（见 `AuthMeResponse`） |
 
 **请求头：**
 
@@ -29,17 +49,17 @@
 Authorization: Bearer <token>
 ```
 
-服务端优先 Cookie，其次 Bearer（`src/auth/session.ts`）。
+服务端优先 Cookie，其次 Bearer（`src/auth/session.ts`）。登录与 setup 另有独立限流桶（约 10 次/分钟/IP），与翻译配额分开。
 
-**私站门禁：** `sitePublic === false` 时，未登录调用翻译相关 API 返回 `403 { error: "site is private" }`。扩展应强制登录，不支持匿名翻译。
+**私站门禁：** `sitePublic === false` 时，未登录调用翻译 / 写作相关 API 返回 `403 { error: "site is private", authenticated: false }`。扩展应强制登录，不支持匿名翻译。
 
-**登录响应类型**（`shared-types/auth.ts`）：
+**类型**（`shared-types/auth.ts`）：
 
 ```typescript
 interface AuthSessionResponse {
   authenticated: boolean;
   user: AuthUser;
-  token: string;  // 存 chrome.storage.local 等
+  token: string;  // 存 chrome.storage.local 等；与 ot_session Cookie 同值
 }
 
 interface AuthUser {
@@ -48,6 +68,16 @@ interface AuthUser {
   role: string;
   /** 相对路径，如 /api/admin/profile/avatar?v=1710000000；无自定义头像时省略 */
   avatarUrl?: string;
+}
+
+/** GET /api/auth/me */
+interface AuthMeResponse {
+  authenticated: boolean;
+  user?: AuthUser;
+  /** 是否已完成首次管理员初始化 */
+  setupCompleted: boolean;
+  /** 站点是否公开；私站未登录会被拒 */
+  sitePublic: boolean;
 }
 ```
 
@@ -145,15 +175,16 @@ GET /api/translate/models
     model: string;
     modelLabel: string;
     providerName: string;
+    /** 适配器类型，如 "openai" / "deepl"；可用于隐藏不支持的能力（如 Write） */
+    providerType: string;
   }>;
   default: { providerId: string; model: string } | null;
 }
 ```
 
-- 登录用户：所有已启用供应商的模型。
-- 匿名用户（仅公开站）：公开白名单内的模型 + `default`。
+- 登录用户：所有已启用供应商的模型；`default` 为站点 `defaultModel` 或第一项。
+- 匿名用户（仅公开站）：`publicModels` 白名单内的模型 + `publicDefaultModel`。
 - 私站未登录：`{ models: [], default: null }`。
-
 ### 模型选择（客户端示例）
 
 主站用 `providerId|model` 编码选中项（模型名不含 `|`）。扩展可复用同一约定：
@@ -254,14 +285,27 @@ Content-Type: application/json
 }
 ```
 
+**客户端可发送字段**（`TranslateRequest` 子集）：`text`、`sourceLang`、`targetLang`、`expertId?`、`stream?`、`providerId?`、`model?`。
+
+**服务端专用字段（客户端勿依赖）：** `organizeFormat`、`promptOverride`、`previousContext` — 若随请求发送会被剥离。
+
+| 行为 | 说明 |
+|---|---|
+| 长度上限 | `text` 最长 `MAX_TRANSLATE_CHARS`（80 000）；超出 → `400` |
+| 粘贴规范化 | 服务端自动修 CRLF / 断词换行等，客户端无需预处理 |
+| 长文切块 | 超阈值时服务端自动分块；限流按**块数**计费；SSE 发 `progress` |
+| 整理格式 | 站点设置 `organizeFormatEnabled`；仅通用专家生效，专家 / DeepL 忽略 |
+
 **SSE 事件**（每帧 `data: {...}\n\n`，类型 `TranslateStreamEvent`）：
 
 | type | 字段 | 说明 |
 |---|---|---|
 | `progress` | `chunkIndex`, `chunkTotal` | 长文切块进度（0-based index）；短文不发 |
 | `delta` | `text` | 译文增量，客户端拼接显示 |
-| `done` | `translatedText`, `provider`, `usage?` | 最终结果，应用此字段覆盖拼接（与 delta 一致化） |
+| `done` | `translatedText`, `provider`, `usage?`, `detectedSourceLang?` | 最终结果，用此字段覆盖拼接 |
 | `error` | `error` | 上游或解析错误 |
+
+收到 `progress` 时可显示「第 N / M 段」；不展示也无妨，不影响最终结果。
 
 **客户端状态机：**
 
@@ -314,23 +358,66 @@ async function* parseSSE(body: ReadableStream<Uint8Array>) {
 
 ## 写作 API（可选）
 
+与翻译共用公开门禁与模型解析；模型列表复用 `GET /api/translate/models`。扩展 v1 可不实现。
+
 ```
 POST /api/write
+Content-Type: application/json
 ```
 
-请求/响应类型见 `shared-types/write.ts`，同样支持 SSE。扩展 v1 通常不需要。
+请求 `WriteRequest`（`shared-types/write.ts`）：
+
+```typescript
+{
+  text: string;           // 必填
+  mode: "improve" | "style" | "formality" | "shorten";
+  style?: "simple" | "business" | "academic" | "casual";  // mode === "style" 时必填
+  formality?: "formal" | "informal";                      // mode === "formality" 时必填
+  stream?: boolean;
+  providerId?: string;
+  model?: string;
+}
+```
+
+| 约束 | 说明 |
+|---|---|
+| DeepL | 不支持 AI Write → `400` |
+| 私站匿名 | 同翻译 → `403 site is private` |
+| 流式 | `stream: true` 时走 SSE（请求体字段，非 query） |
+
+非流式响应 `WriteResponse`：
+
+```typescript
+{
+  revisedText: string;
+  provider: string;
+  usage?: { inputTokens: number; outputTokens: number };
+}
+```
+
+**SSE 事件**（`WriteStreamEvent`）：
+
+| type | 字段 | 说明 |
+|---|---|---|
+| `delta` | `text` | 增量文本 |
+| `done` | `revisedText`, `provider`, `usage?` | 最终结果，用此字段覆盖拼接 |
+| `error` | `error` | 上游或解析错误 |
+
+解析逻辑与翻译相同（见上文 `parseSSE`）；主站参考 `streamWrite`（`web/src/lib/api-client.ts`）。UI 选择模型时可用 `providerType !== "deepl"` 过滤。
 
 ## HTTP 错误码
 
-| 状态 | 典型 `error` | 客户端处理 |
+| 状态 | 典型 `error` / 响应体 | 客户端处理 |
 |---|---|---|
-| 400 | `text and targetLang are required` | 表单校验 |
+| 400 | `text and targetLang are required` / `text exceeds maximum length of …` / Write 校验失败 | 表单校验或截断提示 |
 | 401 | 凭证无效 | 清 token，引导登录 |
-| 403 | `site is private` | 引导登录 |
+| 403 | `{ error: "site is private", authenticated: false }` | 引导登录 |
 | 404 | `provider not available` / `model not available` | 刷新模型列表 |
-| 429 | 限流 | 提示稍后重试 |
+| 429 | `{ error: "rate limited", retryAfterSeconds: 60 }` | 提示稍后重试；可参考 `retryAfterSeconds` |
 | 502 | 上游错误信息 | 展示 `error` 字段 |
-| 503 | `no provider configured` | 实例未配置供应商 |
+| 503 | `no provider configured` / 公开站无可用模型 | 检查 Dashboard 供应商 / 公开模型白名单 |
+
+**限流说明：** 匿名与登录用户分桶（默认约 20 / 60 次每分钟每 IP，可由站点设置调整）。长文翻译按切块数消耗配额。登录 / setup 使用独立 `auth` 桶。
 
 ## 语言代码
 
@@ -359,6 +446,7 @@ POST /api/write
 | 模型选择 | `GET /api/translate/models` + 下拉 | 同一 API；`modelKey` 存 `chrome.storage` |
 | 头像展示 | `<img src>` + Cookie | `fetch` + Blob URL + Bearer |
 | AI 专家选择 | 完整 UI | 可选；见 `GET /api/translate/experts` |
+| AI Write | `/write` 页 | 可选；见 `POST /api/write` |
 | CORS | 同源 | 需配置 `ORIGINS` |
 
 ## TypeScript 类型引用
@@ -369,7 +457,11 @@ POST /api/write
 import type {
   TranslateRequest,
   TranslateStreamEvent,
+  WriteRequest,
+  WriteStreamEvent,
   AuthSessionResponse,
+  AuthMeResponse,
+  PingResponse,
 } from "@opentranslator/shared-types";
 ```
 
@@ -381,9 +473,10 @@ import type {
 |---|---|
 | 主站 API 客户端 | `web/src/lib/api-client.ts` |
 | 翻译 handler | `src/features/translate/handler.ts` |
+| 写作 handler | `src/features/write/handler.ts` |
 | 鉴权 | `src/auth/session.ts`、`src/routes/auth.ts` |
 | 头像 URL 拼接（主站） | `web/src/lib/avatar.ts` |
 | 模型选择 UI（主站） | `web/src/routes/translator/TranslatorPage.tsx` |
-| 共享类型 | `shared-types/translate.ts`、`shared-types/auth.ts` |
+| 共享类型 | `shared-types/translate.ts`、`shared-types/write.ts`、`shared-types/auth.ts`、`shared-types/health.ts` |
 | Chrome 扩展计划 | [plan.md](./plan.md) |
 | 视觉规范 | [design-guide.md](./design-guide.md) |

@@ -7,8 +7,6 @@ export type WriteFormality = "formal" | "informal";
 
 export interface WriteRequest {
   text: string;
-  /** Language of the text being edited (not "auto"). */
-  lang: string;
   mode: WriteMode;
   /** Required when mode is "style". */
   style?: WriteStyle;
@@ -31,7 +29,7 @@ export interface WriteResponse {
 }
 
 /**
- * SSE events emitted by POST /api/write?stream=true.
+ * SSE events emitted by POST /api/write when stream: true.
  * Same framing as translate — JSON in `data:` frames.
  */
 export type WriteStreamEvent =

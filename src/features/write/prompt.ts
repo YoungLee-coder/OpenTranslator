@@ -1,23 +1,5 @@
-import type { WriteFormality, WriteRequest, WriteStyle } from "@opentranslator/shared-types";
+import type { WriteRequest, WriteStyle } from "@opentranslator/shared-types";
 import type { BuiltPrompt } from "../../experts/prompt";
-
-const LANG_LABELS: Record<string, string> = {
-  "zh-CN": "Simplified Chinese",
-  "zh-TW": "Traditional Chinese (Taiwan)",
-  "zh-HK": "Traditional Chinese (Hong Kong)",
-  en: "English",
-  ja: "Japanese",
-  ko: "Korean",
-  fr: "French",
-  de: "German",
-  es: "Spanish",
-  it: "Italian",
-  pt: "Portuguese",
-  ru: "Russian",
-  ar: "Arabic",
-  vi: "Vietnamese",
-  th: "Thai",
-};
 
 const STYLE_LABELS: Record<WriteStyle, string> = {
   simple: "simple and straightforward, accessible to a broad audience",
@@ -26,14 +8,10 @@ const STYLE_LABELS: Record<WriteStyle, string> = {
   casual: "informal and conversational, suitable for social media, messaging, and blogs",
 };
 
-function langLabel(code: string): string {
-  return LANG_LABELS[code] ?? code;
-}
-
-function baseSystem(req: WriteRequest): string[] {
+function baseSystem(): string[] {
   return [
     "You are a professional writing assistant similar to DeepL Write.",
-    `The user's text is in ${langLabel(req.lang)}.`,
+    "Detect the language of the user's text and keep the revised output in the same language.",
     "Revise the text while preserving the original meaning and the writer's voice.",
     "Output ONLY the revised text — no explanations, no quotes, no preamble.",
     "Preserve the original formatting, line breaks, and document structure exactly.",
@@ -48,7 +26,7 @@ export function buildWritePrompt(req: WriteRequest): BuiltPrompt {
     case "improve":
       return {
         system: [
-          ...baseSystem(req),
+          ...baseSystem(),
           "Fix grammar, spelling, and punctuation.",
           "Improve clarity, fluency, and natural phrasing.",
         ].join("\n"),
@@ -58,7 +36,7 @@ export function buildWritePrompt(req: WriteRequest): BuiltPrompt {
       const style = req.style ?? "simple";
       return {
         system: [
-          ...baseSystem(req),
+          ...baseSystem(),
           `Rewrite the entire text in a ${STYLE_LABELS[style]} style.`,
         ].join("\n"),
         user: req.text,
@@ -72,7 +50,7 @@ export function buildWritePrompt(req: WriteRequest): BuiltPrompt {
           : "more informal and relaxed";
       return {
         system: [
-          ...baseSystem(req),
+          ...baseSystem(),
           `Adjust the formality of the entire text to be ${tone}, while keeping the same meaning.`,
         ].join("\n"),
         user: req.text,
@@ -81,7 +59,7 @@ export function buildWritePrompt(req: WriteRequest): BuiltPrompt {
     case "shorten":
       return {
         system: [
-          ...baseSystem(req),
+          ...baseSystem(),
           "Make the text more concise without losing essential meaning or nuance.",
           "Remove redundancy and wordiness while keeping the core message intact.",
         ].join("\n"),

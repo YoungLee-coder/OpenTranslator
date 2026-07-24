@@ -11,9 +11,9 @@ import type { AppBindings, AppVariables } from "../../types";
 import { getSessionUser } from "../../auth/session";
 import { getSiteSettings } from "../../settings/cache";
 import {
-  getPublicDefaultProviderRow,
   getProviderRow,
   logUsage,
+  resolveSiteDefaultModel,
   type ProviderRow,
 } from "../../db/queries";
 import { decryptSecret } from "../../lib/crypto";
@@ -46,7 +46,6 @@ function parseAllowedModels(row: ProviderRow): string[] {
 
 function validateWriteRequest(req: WriteRequest): string | null {
   if (!req.text?.trim()) return "text is required";
-  if (!req.lang?.trim() || req.lang === "auto") return "lang is required";
   if (!req.mode) return "mode is required";
   if (req.mode === "style" && !req.style) return "style is required for style mode";
   if (req.mode === "formality" && !req.formality) {
@@ -59,8 +58,9 @@ function toTranslateRequest(req: WriteRequest): TranslateRequest {
   const prompt = buildWritePrompt(req);
   return {
     text: req.text,
-    sourceLang: req.lang,
-    targetLang: req.lang,
+    // Placeholder — LLM adapters use promptOverride; language stays with the text.
+    sourceLang: "auto",
+    targetLang: "auto",
     stream: req.stream,
     providerId: req.providerId,
     model: req.model,
@@ -108,19 +108,32 @@ export async function handleWrite(c: C): Promise<Response> {
       if (!row || !row.enabled) {
         return c.json({ error: "provider not available" }, 404);
       }
-    } else {
-      row = await getPublicDefaultProviderRow(c.env.DB);
-    }
-    if (!row) {
-      return c.json({ error: "no provider configured" }, 503);
-    }
-    const allowedModels = parseAllowedModels(row);
-    resolvedModel = row.default_model ?? undefined;
-    if (req.model) {
-      if (!allowedModels.includes(req.model)) {
-        return c.json({ error: "model not available" }, 404);
+      const allowedModels = parseAllowedModels(row);
+      resolvedModel = row.default_model ?? allowedModels[0];
+      if (req.model) {
+        if (!allowedModels.includes(req.model)) {
+          return c.json({ error: "model not available" }, 404);
+        }
+        resolvedModel = req.model;
       }
-      resolvedModel = req.model;
+    } else {
+      const def = await resolveSiteDefaultModel(c.env.DB, settings);
+      if (!def) {
+        return c.json({ error: "no provider configured" }, 503);
+      }
+      row = await getProviderRow(c.env.DB, def.providerId);
+      if (!row || !row.enabled) {
+        return c.json({ error: "no provider configured" }, 503);
+      }
+      const allowedModels = parseAllowedModels(row);
+      if (req.model) {
+        if (!allowedModels.includes(req.model)) {
+          return c.json({ error: "model not available" }, 404);
+        }
+        resolvedModel = req.model;
+      } else {
+        resolvedModel = def.model;
+      }
     }
   } else {
     const publicModels = settings.publicModels ?? [];
@@ -137,7 +150,15 @@ export async function handleWrite(c: C): Promise<Response> {
       }
       resolvedModel = req.model;
     } else {
-      const def = settings.publicDefaultModel ?? publicModels[0] ?? null;
+      // 匿名默认必须落在公开白名单内；站点默认若不在白名单则回落首个开放模型
+      const pdm = settings.publicDefaultModel;
+      const def =
+        pdm &&
+        publicModels.some(
+          (m) => m.providerId === pdm.providerId && m.model === pdm.model,
+        )
+          ? pdm
+          : (publicModels[0] ?? null);
       if (!def) {
         return c.json({ error: "no public model configured" }, 503);
       }

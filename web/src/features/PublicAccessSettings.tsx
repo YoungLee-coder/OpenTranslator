@@ -39,8 +39,7 @@ function decodeKey(key: string): { providerId: string; model: string } {
 
 /**
  * 公开访问模块设置页：勾选对匿名访客开放的模型，并指定一个公开默认模型。
- * 匿名访客在首页可在这些开放模型间切换；不主动选择时用公开默认模型。
- * 模块本身的启停（= site_public 总开关）在「设置 → 模块」里切换。
+ * 与供应商页的站点默认模型相互独立；模块启停（= site_public）在「设置 → 模块」切换。
  */
 export function PublicAccessSettings() {
   const { t } = useTranslation();

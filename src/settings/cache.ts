@@ -92,6 +92,7 @@ export async function getSiteSettings(
     publicDefaultProviderId: map.public_default_provider_id || undefined,
     publicModels: parsePublicModels(map.public_models),
     publicDefaultModel: parsePublicModelRef(map.public_default_model),
+    defaultModel: parsePublicModelRef(map.default_model),
     publicRateLimitPerMinute: clampRateLimitPerMinute(
       map.public_rate_limit_per_minute,
       PUBLIC_RATE_LIMIT_PER_MINUTE_DEFAULT,
@@ -129,11 +130,11 @@ export async function updateSetting(
 }
 
 /**
- * 级联清理公开模型白名单与公开默认项中的失效引用。
+ * 级联清理模型引用快照中的失效项。
  *
- * public_models / public_default_model 是独立存储的引用快照：删除 provider
- * 或从其 models 集合移除某个模型时，必须调用本函数剔除指向已失效 provider/模型
- * 的引用，否则匿名访客的模型列表会出现「幽灵」选项（handleListModels 另有读取兜底）。
+ * default_model / public_models / public_default_model 是独立存储的引用快照：
+ * 删除 provider 或从其 models 集合移除某个模型时，必须调用本函数剔除指向已失效
+ * provider/模型的引用，否则模型列表会出现「幽灵」选项（handleListModels 另有读取兜底）。
  *
  * @param isStaleRef 判定某个 {providerId, model} 引用是否已失效（应移除）
  * @param isStaleProviderId 可选，判定公开默认 provider id 是否已失效；
@@ -147,6 +148,13 @@ export async function prunePublicModelRefs(
 ): Promise<void> {
   const map = await getSiteSettingsMap(db);
   let changed = false;
+
+  // default_model：站点默认，单个 ref，失效则清空。
+  const siteDef = parsePublicModelRef(map.default_model);
+  if (siteDef && isStaleRef(siteDef)) {
+    await setSiteSetting(db, "default_model", "");
+    changed = true;
+  }
 
   // public_models：JSON 数组，剔除失效引用；全空则写空串清空。
   const models = parsePublicModels(map.public_models);

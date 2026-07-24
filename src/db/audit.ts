@@ -19,8 +19,9 @@ const AI_EXPERTS_KV_CACHE_KEY = "ai-experts:v1";
 /**
  * 数据库一致性审计与修复。
  *
- * 公开模型白名单（public_models / public_default_model / public_default_provider_id）
- * 是独立存储的引用快照，删 provider/模型时若未级联清理会残留「幽灵」引用；此外还可能
+ * 站点默认模型（default_model）与公开模型白名单
+ * （public_models / public_default_model / public_default_provider_id）是独立存储的
+ * 引用快照，删 provider/模型时若未级联清理会残留「幽灵」引用；此外还可能
  * 出现默认模型越界、重复公开默认供应商标记、JSON 损坏、AI 专家配置无效、术语库迁移
  * 残留等问题。本模块做只读体检 + 安全修复。
  *
@@ -360,6 +361,18 @@ export async function auditDatabase(db: D1Database): Promise<DbAuditIssue[]> {
     });
   }
 
+  const siteDefaultModel = parsePublicModelRef(settings.default_model);
+  if (siteDefaultModel && isStaleRef(siteDefaultModel, index)) {
+    issues.push({
+      code: "default_model_stale",
+      title: "站点默认模型失效",
+      detail: `站点默认模型指向已删除/禁用的供应商或已移除的模型，将被清空。`,
+      severity: "error",
+      repairable: true,
+      ref: "default_model",
+    });
+  }
+
   const publicDefaultProviderId = settings.public_default_provider_id;
   if (publicDefaultProviderId && isStaleProviderId(publicDefaultProviderId, index)) {
     issues.push({
@@ -393,10 +406,11 @@ export async function repairDatabase(
     const rows = await listProviderRows(env.DB);
     const index = buildProviderIndex(rows);
 
-    // 任一 public_*_stale → 一次 prune（两个 predicate 都传，清三项设置）。
+    // 任一模型引用 stale → 一次 prune（清站点默认、公开白名单与公开默认）。
     if (
       target.has("public_model_stale") ||
       target.has("public_default_model_stale") ||
+      target.has("default_model_stale") ||
       target.has("public_default_provider_stale")
     ) {
       await prunePublicModelRefs(

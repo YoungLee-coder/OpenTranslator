@@ -9,7 +9,7 @@ function Tabs({
   return (
     <TabsPrimitive.Root
       data-slot="tabs"
-      className={cn("flex flex-col gap-6", className)}
+      className={cn("relative flex flex-col gap-6", className)}
       {...props}
     />
   );
@@ -53,14 +53,36 @@ function TabsContent({
   className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Content>) {
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  // forceMount 面板切回时若用 display:none，子树 CSS animation 会重放闪白；
+  // 改为移出文档流 + inert，保留已完成的 animation 终态。
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const syncInert = () => {
+      if (el.getAttribute("data-state") === "inactive") {
+        el.setAttribute("inert", "");
+      } else {
+        el.removeAttribute("inert");
+      }
+    };
+    syncInert();
+    const mo = new MutationObserver(syncInert);
+    mo.observe(el, { attributes: true, attributeFilter: ["data-state"] });
+    return () => mo.disconnect();
+  }, []);
+
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
       className={cn(
-        "flex-1 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 data-[state=inactive]:hidden",
+        "flex-1 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        "data-[state=inactive]:pointer-events-none data-[state=inactive]:absolute data-[state=inactive]:inset-x-0 data-[state=inactive]:top-0 data-[state=inactive]:h-0 data-[state=inactive]:overflow-hidden data-[state=inactive]:opacity-0",
         className,
       )}
       {...props}
+      ref={ref}
     />
   );
 }
