@@ -4,6 +4,7 @@ import type {
   ProviderField,
   ProviderRecord,
   ProviderType,
+  TestProviderLatencyResponse,
 } from "@opentranslator/shared-types";
 import {
   apiDelete,
@@ -49,7 +50,7 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, Plus, RotateCw, Server, Star, Trash2 } from "lucide-react";
+import { AlertCircle, Gauge, Plus, RotateCw, Server, Star, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useTranslation } from "@/lib/i18n";
 import type { MessageKey } from "@/locales/zh-CN";
@@ -112,6 +113,9 @@ export function ProvidersSection() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ProviderRecord | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [latencyTesting, setLatencyTesting] = useState(false);
+  const [latencyResult, setLatencyResult] = useState<string | null>(null);
+  const [latencyError, setLatencyError] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -138,10 +142,16 @@ export function ProvidersSection() {
     void load();
   }, []);
 
+  function clearLatencyFeedback() {
+    setLatencyResult(null);
+    setLatencyError(null);
+  }
+
   function startCreate() {
     setForm({ ...EMPTY_FORM });
     setEditing({ id: null });
     setError(null);
+    clearLatencyFeedback();
   }
 
   function startEdit(p: ProviderRecord) {
@@ -168,11 +178,13 @@ export function ProvidersSection() {
     });
     setEditing({ id: p.id });
     setError(null);
+    clearLatencyFeedback();
   }
 
   function closeDialog() {
     setEditing(null);
     setForm(EMPTY_FORM);
+    clearLatencyFeedback();
   }
 
   // 取字段有效值：preset 优先，其次用户输入，最后 defaultValue（select 初始选中项）
@@ -310,6 +322,57 @@ export function ProvidersSection() {
 
   function onTypeChange(type: ProviderType) {
     setForm({ ...form, type, fields: {} });
+    clearLatencyFeedback();
+  }
+
+  async function testBaseUrlLatency() {
+    const baseUrl = eff("baseUrl").trim();
+    if (!baseUrl || !/^https?:\/\//i.test(baseUrl)) {
+      setLatencyResult(null);
+      setLatencyError(t("providers.testLatencyNeedUrl"));
+      return;
+    }
+    setLatencyTesting(true);
+    setLatencyResult(null);
+    setLatencyError(null);
+    try {
+      const res = await apiPost<TestProviderLatencyResponse>(
+        "/api/admin/providers/test-latency",
+        { baseUrl },
+      );
+      if (res.ok && res.latencyMs != null) {
+        setLatencyResult(
+          t("providers.testLatencyOk", {
+            ms: res.latencyMs,
+            status: res.status ?? "—",
+          }),
+        );
+      } else {
+        const detail = mapLatencyError(res.error);
+        setLatencyError(t("providers.testLatencyFail", { error: detail }));
+      }
+    } catch (e) {
+      const raw = e instanceof ApiError ? e.message : String(e);
+      const detail = mapLatencyError(raw);
+      setLatencyError(t("providers.testLatencyFail", { error: detail }));
+    } finally {
+      setLatencyTesting(false);
+    }
+  }
+
+  function mapLatencyError(raw: string | undefined): string {
+    if (!raw) return t("providers.testLatencyUnreachable");
+    if (/timed out|timeout|AbortError/i.test(raw)) {
+      return t("providers.testLatencyTimeout");
+    }
+    if (
+      /private or link-local|localhost|invalid URL|must use http|credentials|baseUrl is required/i.test(
+        raw,
+      )
+    ) {
+      return t("providers.testLatencyBadUrl");
+    }
+    return t("providers.testLatencyUnreachable");
   }
 
   function modelsText(p: ProviderRecord): string {
@@ -590,6 +653,46 @@ export function ProvidersSection() {
                       })}
                     </SelectContent>
                   </Select>
+                ) : f.key === "baseUrl" ? (
+                  <>
+                    <div className="flex gap-2">
+                      <Input
+                        id={`field-${f.key}`}
+                        type="text"
+                        value={f.preset ?? form.fields[f.key] ?? ""}
+                        placeholder={f.placeholder}
+                        required={f.required}
+                        disabled={!!f.preset}
+                        onChange={(e) => {
+                          clearLatencyFeedback();
+                          setForm({
+                            ...form,
+                            fields: { ...form.fields, [f.key]: e.target.value },
+                          });
+                        }}
+                        className="min-w-0 flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 shrink-0 gap-1.5"
+                        disabled={latencyTesting}
+                        onClick={() => void testBaseUrlLatency()}
+                      >
+                        <Gauge className="size-3.5" />
+                        {latencyTesting
+                          ? t("providers.testLatencyTesting")
+                          : t("providers.testLatency")}
+                      </Button>
+                    </div>
+                    {latencyResult && (
+                      <p className="text-xs text-muted-foreground">{latencyResult}</p>
+                    )}
+                    {latencyError && (
+                      <p className="text-xs text-destructive">{latencyError}</p>
+                    )}
+                  </>
                 ) : (
                   <Input
                     id={`field-${f.key}`}

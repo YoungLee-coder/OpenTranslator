@@ -207,6 +207,14 @@ export const zhCN = {
   "providers.publicDefault": "设为公开默认",
   "providers.deleteTitle": "删除供应商",
   "providers.deleteConfirm": "确认删除「{{name}}」？此操作不可撤销。",
+  "providers.testLatency": "测试延迟",
+  "providers.testLatencyTesting": "测试中…",
+  "providers.testLatencyOk": "{{ms}} ms · HTTP {{status}}",
+  "providers.testLatencyFail": "无法连通：{{error}}",
+  "providers.testLatencyNeedUrl": "请先填写有效的 Base URL",
+  "providers.testLatencyBadUrl": "Base URL 无效或指向内网地址",
+  "providers.testLatencyTimeout": "请求超时",
+  "providers.testLatencyUnreachable": "上游无响应或网络错误",
 
   "dbVersion.title": "数据库版本",
   "dbVersion.description":

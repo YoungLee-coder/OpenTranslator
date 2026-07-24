@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import type {
   CreateProviderRequest,
   ProviderType,
+  TestProviderLatencyRequest,
+  TestProviderLatencyResponse,
 } from "@opentranslator/shared-types";
 import type { AppBindings, AppVariables } from "../types";
 import { providerSchemas } from "../providers/schema";
@@ -16,7 +18,10 @@ import {
   type ProviderPatch,
 } from "../db/queries";
 import { encryptSecret } from "../lib/crypto";
+import { assertPublicHttpUrl } from "../lib/url-safety";
 import { invalidateSiteSettings, prunePublicModelRefs } from "../settings/cache";
+
+const LATENCY_PROBE_TIMEOUT_MS = 8_000;
 
 const adminProvidersRoute = new Hono<{
   Bindings: AppBindings;
@@ -34,6 +39,48 @@ adminProvidersRoute.get("/", async (c) => {
 
 /** GET /api/admin/providers/schema — form schema per provider type. */
 adminProvidersRoute.get("/schema", (c) => c.json({ schemas: providerSchemas }));
+
+/**
+ * POST /api/admin/providers/test-latency — Worker → baseUrl HTTP RTT probe.
+ * No API key; 401/404/405 still count as reachable (network RTT only).
+ * Must be registered before /:id routes.
+ */
+adminProvidersRoute.post("/test-latency", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as TestProviderLatencyRequest | null;
+  const checked = assertPublicHttpUrl(body?.baseUrl ?? "");
+  if ("error" in checked) {
+    return c.json({ error: checked.error }, 400);
+  }
+
+  const started = Date.now();
+  try {
+    const res = await fetch(checked.url, {
+      method: "GET",
+      redirect: "manual",
+      signal: AbortSignal.timeout(LATENCY_PROBE_TIMEOUT_MS),
+      headers: { "User-Agent": "OpenTranslator-latency-probe" },
+    });
+    // Discard body promptly so we don't buffer large error pages.
+    void res.body?.cancel().catch(() => undefined);
+    const latencyMs = Date.now() - started;
+    const payload: TestProviderLatencyResponse = {
+      ok: true,
+      latencyMs,
+      status: res.status,
+    };
+    return c.json(payload);
+  } catch (e) {
+    const latencyMs = Date.now() - started;
+    const message = e instanceof Error ? e.message : String(e);
+    const timedOut = /timeout|timed out|aborted|AbortError/i.test(message);
+    const payload: TestProviderLatencyResponse = {
+      ok: false,
+      latencyMs,
+      error: timedOut ? "request timed out" : message || "request failed",
+    };
+    return c.json(payload);
+  }
+});
 
 /** GET /api/admin/providers/:id — fetch one. */
 adminProvidersRoute.get("/:id", async (c) => {

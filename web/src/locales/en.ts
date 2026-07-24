@@ -212,6 +212,14 @@ export const en: Messages = {
   "providers.deleteTitle": "Delete provider",
   "providers.deleteConfirm":
     "Delete \"{{name}}\"? This action cannot be undone.",
+  "providers.testLatency": "Test latency",
+  "providers.testLatencyTesting": "Testing…",
+  "providers.testLatencyOk": "{{ms}} ms · HTTP {{status}}",
+  "providers.testLatencyFail": "Unreachable: {{error}}",
+  "providers.testLatencyNeedUrl": "Enter a valid Base URL first",
+  "providers.testLatencyBadUrl": "Invalid Base URL or private/local target",
+  "providers.testLatencyTimeout": "Request timed out",
+  "providers.testLatencyUnreachable": "Upstream unreachable or network error",
 
   "dbVersion.title": "Database version",
   "dbVersion.description":

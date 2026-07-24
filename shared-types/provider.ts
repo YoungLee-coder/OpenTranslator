@@ -63,6 +63,18 @@ export interface CreateProviderRequest {
 
 export type UpdateProviderRequest = Partial<CreateProviderRequest>;
 
+/** Admin: probe Worker → baseUrl HTTP RTT (no API key). */
+export interface TestProviderLatencyRequest {
+  baseUrl: string;
+}
+
+export interface TestProviderLatencyResponse {
+  ok: boolean;
+  latencyMs?: number;
+  status?: number;
+  error?: string;
+}
+
 /** Dynamic form field descriptor for the dashboard provider form. */
 export type ProviderFieldType = "text" | "password" | "boolean" | "select" | "models";
 
