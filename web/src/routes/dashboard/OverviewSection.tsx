@@ -29,14 +29,21 @@ export function OverviewSection() {
   const [providers, setProviders] = useState<ProviderRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const rise = useOnceAnimation(true, 650);
-  // 覆盖最晚一行 stagger（约 160+ n*70）+ settle 时长
-  const tableEnter = useOnceAnimation(!!usage && usage.byProvider.length > 0, 900);
-
   const providerNames = useMemo(
     () => new Map(providers.map((p) => [p.id, p.displayName])),
     [providers],
   );
+
+  // 已删除供应商不出现在表格里，但其用量仍计入上方总数
+  const visibleByProvider = useMemo(
+    () =>
+      usage?.byProvider.filter((p) => providerNames.has(p.providerId)) ?? [],
+    [usage, providerNames],
+  );
+
+  const rise = useOnceAnimation(true, 650);
+  // 覆盖最晚一行 stagger（约 160+ n*70）+ settle 时长
+  const tableEnter = useOnceAnimation(visibleByProvider.length > 0, 900);
 
   async function load() {
     try {
@@ -87,8 +94,8 @@ export function OverviewSection() {
               />
             </div>
 
-            {usage.byProvider.length > 0 && (
-              <div className="rounded-md border border-rule">
+            {visibleByProvider.length > 0 && (
+              <div className="overflow-hidden rounded-md border border-rule">
                 <Table className="min-w-[360px]">
                   <TableHeader>
                     <TableRow
@@ -103,7 +110,7 @@ export function OverviewSection() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {usage.byProvider.map((p, i) => (
+                    {visibleByProvider.map((p, i) => (
                       <TableRow
                         key={p.providerId}
                         className={cn(
