@@ -46,7 +46,7 @@ export const providerSchemas: Record<ProviderType, ProviderField[]> = {
       type: "select",
       defaultValue: "prefer_quality_optimized",
       options: [
-        { value: "prefer_quality_optimized", label: "偏好质量优化（推荐）" },
+        { value: "prefer_quality_optimized", label: "偏好质量优化" },
         { value: "quality_optimized", label: "质量优化" },
         { value: "latency_optimized", label: "延迟优化" },
       ],

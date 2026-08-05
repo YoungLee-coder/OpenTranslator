@@ -17,11 +17,9 @@ import {
   updateProvider,
   type ProviderPatch,
 } from "../db/queries";
-import { encryptSecret } from "../lib/crypto";
-import { assertPublicHttpUrl } from "../lib/url-safety";
+import { decryptSecret, encryptSecret } from "../lib/crypto";
 import { invalidateSiteSettings, prunePublicModelRefs } from "../settings/cache";
-
-const LATENCY_PROBE_TIMEOUT_MS = 8_000;
+import { probeProviderLatency } from "../providers/latency-probe";
 
 const adminProvidersRoute = new Hono<{
   Bindings: AppBindings;
@@ -41,45 +39,44 @@ adminProvidersRoute.get("/", async (c) => {
 adminProvidersRoute.get("/schema", (c) => c.json({ schemas: providerSchemas }));
 
 /**
- * POST /api/admin/providers/test-latency — Worker → baseUrl HTTP RTT probe.
- * No API key; 401/404/405 still count as reachable (network RTT only).
+ * POST /api/admin/providers/test-latency — Worker → model API probe ("say hi").
  * Must be registered before /:id routes.
  */
 adminProvidersRoute.post("/test-latency", async (c) => {
   const body = (await c.req.json().catch(() => null)) as TestProviderLatencyRequest | null;
-  const checked = assertPublicHttpUrl(body?.baseUrl ?? "");
-  if ("error" in checked) {
-    return c.json({ error: checked.error }, 400);
+  if (!body?.type || !providerSchemas[body.type]) {
+    return c.json({ error: "valid provider type is required" }, 400);
   }
 
-  const started = Date.now();
-  try {
-    const res = await fetch(checked.url, {
-      method: "GET",
-      redirect: "manual",
-      signal: AbortSignal.timeout(LATENCY_PROBE_TIMEOUT_MS),
-      headers: { "User-Agent": "OpenTranslator-latency-probe" },
-    });
-    // Discard body promptly so we don't buffer large error pages.
-    void res.body?.cancel().catch(() => undefined);
-    const latencyMs = Date.now() - started;
-    const payload: TestProviderLatencyResponse = {
-      ok: true,
-      latencyMs,
-      status: res.status,
-    };
-    return c.json(payload);
-  } catch (e) {
-    const latencyMs = Date.now() - started;
-    const message = e instanceof Error ? e.message : String(e);
-    const timedOut = /timeout|timed out|aborted|AbortError/i.test(message);
-    const payload: TestProviderLatencyResponse = {
-      ok: false,
-      latencyMs,
-      error: timedOut ? "request timed out" : message || "request failed",
-    };
-    return c.json(payload);
+  let apiKey = body.apiKey?.trim() ?? "";
+  if (!apiKey && body.providerId) {
+    const row = await getProviderRow(c.env.DB, body.providerId);
+    if (!row) return c.json({ error: "provider not found" }, 404);
+    try {
+      apiKey = await decryptSecret(row.encrypted_api_key, c.env.ENCRYPTION_KEY);
+    } catch {
+      return c.json({ error: "api key decryption failed" }, 500);
+    }
   }
+  if (!apiKey) {
+    return c.json({ error: "apiKey is required" }, 400);
+  }
+
+  const result = await probeProviderLatency(body.type, {
+    apiKey,
+    baseUrl: body.baseUrl?.trim() || undefined,
+    defaultModel: body.model?.trim() || undefined,
+    configJson: body.configJson,
+  });
+
+  const payload: TestProviderLatencyResponse = {
+    ok: result.ok,
+    latencyMs: result.latencyMs,
+    status: result.status,
+    error: result.error,
+    replyPreview: result.replyPreview,
+  };
+  return c.json(payload);
 });
 
 /** GET /api/admin/providers/:id — fetch one. */

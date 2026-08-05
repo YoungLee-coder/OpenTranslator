@@ -5,6 +5,7 @@ import type {
   ProviderRecord,
   ProviderType,
   SiteSettings,
+  TestProviderLatencyRequest,
   TestProviderLatencyResponse,
 } from "@opentranslator/shared-types";
 import {
@@ -353,26 +354,42 @@ export function ProvidersSection() {
     clearLatencyFeedback();
   }
 
-  async function testBaseUrlLatency() {
-    const baseUrl = eff("baseUrl").trim();
-    if (!baseUrl || !/^https?:\/\//i.test(baseUrl)) {
+  async function testProviderLatency() {
+    const built = buildRequest();
+    if (!built) return;
+    if (!built.apiKey && !editing?.id) {
       setLatencyResult(null);
-      setLatencyError(t("providers.testLatencyNeedUrl"));
+      setLatencyError(t("providers.testLatencyNeedKey"));
+      return;
+    }
+    const model = built.models?.[0];
+    if (!model) {
+      setLatencyResult(null);
+      setLatencyError(t("providers.testLatencyNeedModel"));
       return;
     }
     setLatencyTesting(true);
     setLatencyResult(null);
     setLatencyError(null);
     try {
+      const body: TestProviderLatencyRequest = {
+        type: built.type,
+        baseUrl: built.baseUrl,
+        model,
+        configJson: built.configJson,
+      };
+      if (built.apiKey) body.apiKey = built.apiKey;
+      else if (editing?.id) body.providerId = editing.id;
+
       const res = await apiPost<TestProviderLatencyResponse>(
         "/api/admin/providers/test-latency",
-        { baseUrl },
+        body,
       );
       if (res.ok && res.latencyMs != null) {
         setLatencyResult(
           t("providers.testLatencyOk", {
             ms: res.latencyMs,
-            status: res.status ?? "—",
+            preview: res.replyPreview ?? "—",
           }),
         );
       } else {
@@ -394,13 +411,13 @@ export function ProvidersSection() {
       return t("providers.testLatencyTimeout");
     }
     if (
-      /private or link-local|localhost|invalid URL|must use http|credentials|baseUrl is required/i.test(
+      /private or link-local|localhost|invalid URL|must use http|credentials|baseUrl is required|accountId is required|model is required|apiKey is required/i.test(
         raw,
       )
     ) {
-      return t("providers.testLatencyBadUrl");
+      return t("providers.testLatencyBadConfig");
     }
-    return t("providers.testLatencyUnreachable");
+    return raw.length > 120 ? `${raw.slice(0, 120)}…` : raw;
   }
 
   function modelsText(p: ProviderRecord): string {
@@ -692,45 +709,21 @@ export function ProvidersSection() {
                     </SelectContent>
                   </Select>
                 ) : f.key === "baseUrl" ? (
-                  <>
-                    <div className="flex gap-2">
-                      <Input
-                        id={`field-${f.key}`}
-                        type="text"
-                        value={f.preset ?? form.fields[f.key] ?? ""}
-                        placeholder={f.placeholder}
-                        required={f.required}
-                        disabled={!!f.preset}
-                        onChange={(e) => {
-                          clearLatencyFeedback();
-                          setForm({
-                            ...form,
-                            fields: { ...form.fields, [f.key]: e.target.value },
-                          });
-                        }}
-                        className="min-w-0 flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-9 shrink-0 gap-1.5"
-                        disabled={latencyTesting}
-                        onClick={() => void testBaseUrlLatency()}
-                      >
-                        <Gauge className="size-3.5" />
-                        {latencyTesting
-                          ? t("providers.testLatencyTesting")
-                          : t("providers.testLatency")}
-                      </Button>
-                    </div>
-                    {latencyResult && (
-                      <p className="text-xs text-muted-foreground">{latencyResult}</p>
-                    )}
-                    {latencyError && (
-                      <p className="text-xs text-destructive">{latencyError}</p>
-                    )}
-                  </>
+                  <Input
+                    id={`field-${f.key}`}
+                    type="text"
+                    value={f.preset ?? form.fields[f.key] ?? ""}
+                    placeholder={f.placeholder}
+                    required={f.required}
+                    disabled={!!f.preset}
+                    onChange={(e) => {
+                      clearLatencyFeedback();
+                      setForm({
+                        ...form,
+                        fields: { ...form.fields, [f.key]: e.target.value },
+                      });
+                    }}
+                  />
                 ) : (
                   <Input
                     id={`field-${f.key}`}
@@ -763,17 +756,40 @@ export function ProvidersSection() {
               </div>
             </div>
 
-            <DialogFooter className="pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeDialog}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving ? t("common.saving") : t("common.save")}
-              </Button>
+            <DialogFooter className="flex-col items-stretch gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-1.5 sm:min-w-0 sm:flex-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 self-start"
+                  disabled={latencyTesting || saving}
+                  onClick={() => void testProviderLatency()}
+                >
+                  <Gauge className="size-3.5" />
+                  {latencyTesting
+                    ? t("providers.testLatencyTesting")
+                    : t("providers.testLatency")}
+                </Button>
+                {latencyResult && (
+                  <p className="text-xs text-muted-foreground">{latencyResult}</p>
+                )}
+                {latencyError && (
+                  <p className="text-xs text-destructive">{latencyError}</p>
+                )}
+              </div>
+              <div className="flex shrink-0 gap-2 self-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeDialog}
+                >
+                  {t("common.cancel")}
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? t("common.saving") : t("common.save")}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </DialogContent>

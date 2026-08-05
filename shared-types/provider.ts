@@ -63,9 +63,15 @@ export interface CreateProviderRequest {
 
 export type UpdateProviderRequest = Partial<CreateProviderRequest>;
 
-/** Admin: probe Worker → baseUrl HTTP RTT (no API key). */
+/** Admin: probe Worker → model API with a minimal "say hi" request. */
 export interface TestProviderLatencyRequest {
-  baseUrl: string;
+  type: ProviderType;
+  /** Plaintext key; optional when providerId is set (uses stored key). */
+  apiKey?: string;
+  providerId?: string;
+  baseUrl?: string;
+  model?: string;
+  configJson?: Record<string, unknown>;
 }
 
 export interface TestProviderLatencyResponse {
@@ -73,6 +79,8 @@ export interface TestProviderLatencyResponse {
   latencyMs?: number;
   status?: number;
   error?: string;
+  /** Short model reply snippet when the probe succeeds. */
+  replyPreview?: string;
 }
 
 /** Dynamic form field descriptor for the dashboard provider form. */
