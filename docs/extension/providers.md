@@ -130,7 +130,9 @@ your-vendor: [
 | `select` | 下拉（如 DeepL 套餐、正式度） |
 | `boolean` | 开关 |
 
-**preset：** 设 `preset: "https://..."` 可锁定为预设值，前端不可编辑（见 `aihubmix`）。
+**preset：** 设 `preset: "https://..."` 可锁定为预设值，前端不可编辑。
+
+**select + defaultValue：** 下拉可选、有默认项（见 `aihubmix` 的 Base URL 主站/备用域名）。
 
 **defaultValue：** select 字段的初始选中项，用户可改选。
 

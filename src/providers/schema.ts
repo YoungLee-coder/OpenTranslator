@@ -7,7 +7,8 @@ import type {
 // Add a vendor here + an adapter file = new provider, no core logic changes.
 // baseUrl 填写完整端点 URL（OpenAI 兼容含 /chat/completions，Claude 含
 // /v1/messages），需以 http(s):// 开头，adapter 不再拼接路径；
-// preset 字段（如 aihubmix）由 schema 锁定为完整预设值，前端不可编辑。
+// preset 字段由 schema 锁定为完整预设值，前端不可编辑；
+// select + defaultValue 用于可选预设（如 aihubmix 主站/备用 Base URL）。
 // models 字段一行一个模型名，首项视为该供应商的默认模型。
 export const providerSchemas: Record<ProviderType, ProviderField[]> = {
   openai: [
@@ -22,7 +23,22 @@ export const providerSchemas: Record<ProviderType, ProviderField[]> = {
     { key: "models", label: "模型", type: "models", placeholder: "gemini-2.0-flash\ngemini-2.5-pro" },
   ],
   aihubmix: [
-    { key: "baseUrl", label: "Base URL", type: "text", preset: "https://aihubmix.com/v1/chat/completions" },
+    {
+      key: "baseUrl",
+      label: "Base URL",
+      type: "select",
+      defaultValue: "https://aihubmix.com/v1/chat/completions",
+      options: [
+        {
+          value: "https://aihubmix.com/v1/chat/completions",
+          label: "aihubmix.com（主站）",
+        },
+        {
+          value: "https://api.inferera.com/v1/chat/completions",
+          label: "api.inferera.com（备用）",
+        },
+      ],
+    },
     { key: "models", label: "模型", type: "models", placeholder: "gpt-4o-mini\ngpt-4o" },
   ],
   cloudflare: [
