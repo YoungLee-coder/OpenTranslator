@@ -37,7 +37,8 @@ export function SettingsSection() {
   const [ready, setReady] = useState(() => !!initial);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const formEnter = useOnceAnimation(ready, 400);
+  const fromCache = !!initial;
+  const formEnter = useOnceAnimation(ready && !fromCache, 400);
   const interactive = ready && !saving;
 
   useEffect(() => {

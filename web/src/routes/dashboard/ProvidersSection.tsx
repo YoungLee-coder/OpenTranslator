@@ -153,7 +153,11 @@ export function ProvidersSection() {
     () => initial?.defaultModelKey ?? null,
   );
   const [savingDefault, setSavingDefault] = useState(false);
-  const tableEnter = useOnceAnimation(ready && providers.length > 0, 400);
+  const fromCache = !!initial;
+  const tableEnter = useOnceAnimation(
+    ready && !fromCache && providers.length > 0,
+    400,
+  );
 
   async function load(opts?: { force?: boolean }) {
     try {

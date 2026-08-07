@@ -15,6 +15,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { LanguageMenuButton, LanguageMenuItems } from "@/components/LanguageMenu";
 import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/lib/auth";
+import { prefetchDashboard } from "@/lib/dashboard-caches";
 import { useTranslation } from "@/lib/i18n";
 import { useWorkerReadiness } from "@/lib/useWorkerReadiness";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -86,6 +87,12 @@ export function RootLayout() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [mobileExpanded]);
+
+  // 已登录：立刻预拉控制台数据与 chunk，进页时尽量命中快照
+  useEffect(() => {
+    if (!user || authLoading) return;
+    prefetchDashboard();
+  }, [user, authLoading]);
 
   if (authLoading || readinessStatus === "loading") {
     return (

@@ -58,8 +58,12 @@ export function OverviewSection() {
   );
 
   const rise = useOnceAnimation(true, 650);
-  // 数据就绪后整块淡入；加载中先露出空表头
-  const tableEnter = useOnceAnimation(ready && visibleByProvider.length > 0, 400);
+  // 仅冷启动（无快照）才 soft-in；预加载命中则静默展示
+  const fromCache = !!initial;
+  const tableEnter = useOnceAnimation(
+    ready && !fromCache && visibleByProvider.length > 0,
+    400,
+  );
   const showTable = !ready || visibleByProvider.length > 0;
 
   useEffect(() => {
@@ -107,6 +111,7 @@ export function OverviewSection() {
                 value={usage.totalRequests}
                 label={t("overview.totalRequests")}
                 delayMs={0}
+                animate={!fromCache}
               />
               <StatTile
                 icon={<FileText className="size-4" />}
@@ -114,6 +119,7 @@ export function OverviewSection() {
                 label={t("overview.totalChars")}
                 format={(n) => n.toLocaleString()}
                 delayMs={60}
+                animate={!fromCache}
               />
             </div>
 
@@ -140,12 +146,13 @@ export function OverviewSection() {
                           {providerNames.get(p.providerId) ?? p.providerId}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
-                          <CountCell value={p.requests} />
+                          <CountCell value={p.requests} animate={!fromCache} />
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           <CountCell
                             value={p.chars}
                             format={(n) => n.toLocaleString()}
+                            animate={!fromCache}
                           />
                         </TableCell>
                       </TableRow>
@@ -167,14 +174,16 @@ function StatTile({
   label,
   format,
   delayMs = 0,
+  animate = true,
 }: {
   icon: React.ReactNode;
   value: number;
   label: string;
   format?: (n: number) => string;
   delayMs?: number;
+  animate?: boolean;
 }) {
-  const display = useCountUp(value, { delayMs });
+  const display = useCountUp(value, { delayMs, enabled: animate });
   const text = format ? format(display) : String(display);
 
   return (
@@ -193,10 +202,12 @@ function StatTile({
 function CountCell({
   value,
   format,
+  animate = true,
 }: {
   value: number;
   format?: (n: number) => string;
+  animate?: boolean;
 }) {
-  const display = useCountUp(value, { durationMs: 520 });
+  const display = useCountUp(value, { durationMs: 520, enabled: animate });
   return <>{format ? format(display) : display}</>;
 }
