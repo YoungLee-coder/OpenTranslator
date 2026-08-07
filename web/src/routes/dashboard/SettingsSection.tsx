@@ -4,8 +4,17 @@ import {
   TRANSLATION_CACHE_TTL_HOURS_MAX,
   TRANSLATION_CACHE_TTL_HOURS_MIN,
 } from "@opentranslator/shared-types";
-import { apiGet, apiPut, ApiError } from "@/lib/api-client";
+import { apiPut, ApiError } from "@/lib/api-client";
+import {
+  beginSettingsWrite,
+  getSettingsSnapshot,
+  loadSettingsSnapshot,
+  PLACEHOLDER_SETTINGS,
+  setSettingsSnapshot,
+} from "@/lib/dashboard-settings-cache";
+import { useOnceAnimation } from "@/lib/useOnceAnimation";
 import { useTranslation } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -15,34 +24,46 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Check } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 
 export function SettingsSection() {
   const { t } = useTranslation();
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
+  const initial = getSettingsSnapshot();
+  const [settings, setSettings] = useState<SiteSettings>(
+    () => initial?.settings ?? PLACEHOLDER_SETTINGS,
+  );
+  const [ready, setReady] = useState(() => !!initial);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  async function load() {
-    try {
-      const res = await apiGet<{ settings: SiteSettings }>(
-        "/api/admin/settings",
-      );
-      setSettings(res.settings);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
-    }
-  }
+  const formEnter = useOnceAnimation(ready, 700);
+  const interactive = ready && !saving;
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void (async () => {
+      try {
+        const snap = await loadSettingsSnapshot();
+        if (cancelled) return;
+        setSettings(snap.settings);
+        setReady(true);
+        setError(null);
+      } catch (e) {
+        if (cancelled) return;
+        setReady(true);
+        if (!getSettingsSnapshot()) {
+          setError(e instanceof ApiError ? e.message : String(e));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function save(patch: Partial<SiteSettings>) {
+    const writeGen = beginSettingsWrite();
     setSaving(true);
     try {
       const res = await apiPut<{ settings: SiteSettings }>(
@@ -50,6 +71,7 @@ export function SettingsSection() {
         patch,
       );
       setSettings(res.settings);
+      setSettingsSnapshot(res.settings, writeGen);
       setError(null);
       toast.success(t("settings.saved"));
     } catch (e) {
@@ -59,30 +81,6 @@ export function SettingsSection() {
     } finally {
       setSaving(false);
     }
-  }
-
-  if (settings === null) {
-    return (
-      <Card className="animate-rise">
-        <CardHeader>
-          <CardTitle>{t("settings.title")}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {error ? (
-            <Alert variant="destructive">
-              <AlertCircle />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <Skeleton className="h-16 rounded-md" />
-              <Skeleton className="h-16 rounded-md" />
-              <Skeleton className="h-16 rounded-md" />
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
   }
 
   return (
@@ -98,7 +96,13 @@ export function SettingsSection() {
           </Alert>
         )}
 
-        <div className="divide-y divide-rule">
+        <div
+          className={cn(
+            "divide-y divide-rule transition-[opacity,transform] duration-300 motion-reduce:transition-none",
+            formEnter && "animate-settle motion-reduce:animate-none",
+            ready ? "opacity-100" : "opacity-70",
+          )}
+        >
           <SettingRow
             title={t("settings.authedRateLimit")}
             desc={t("settings.authedRateLimitDesc")}
@@ -107,6 +111,7 @@ export function SettingsSection() {
               type="number"
               min={1}
               value={settings.authedRateLimitPerMinute}
+              disabled={!interactive}
               onChange={(e) =>
                 setSettings({
                   ...settings,
@@ -123,6 +128,7 @@ export function SettingsSection() {
           >
             <Switch
               checked={settings.translationCacheEnabled}
+              disabled={!interactive}
               onCheckedChange={(v) =>
                 setSettings({ ...settings, translationCacheEnabled: v })
               }
@@ -141,7 +147,7 @@ export function SettingsSection() {
               min={TRANSLATION_CACHE_TTL_HOURS_MIN}
               max={TRANSLATION_CACHE_TTL_HOURS_MAX}
               value={settings.translationCacheTtlHours}
-              disabled={!settings.translationCacheEnabled}
+              disabled={!interactive || !settings.translationCacheEnabled}
               onChange={(e) =>
                 setSettings({
                   ...settings,
@@ -158,6 +164,7 @@ export function SettingsSection() {
           >
             <Switch
               checked={!!settings.organizeFormatEnabled}
+              disabled={!interactive}
               onCheckedChange={(v) =>
                 setSettings({ ...settings, organizeFormatEnabled: v })
               }
@@ -168,7 +175,7 @@ export function SettingsSection() {
         <div className="pt-3">
           <Button
             type="button"
-            disabled={saving}
+            disabled={!interactive}
             onClick={() =>
               save({
                 authedRateLimitPerMinute: settings.authedRateLimitPerMinute,

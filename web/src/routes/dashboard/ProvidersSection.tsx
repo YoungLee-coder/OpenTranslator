@@ -4,17 +4,22 @@ import type {
   ProviderField,
   ProviderRecord,
   ProviderType,
-  SiteSettings,
   TestProviderLatencyRequest,
   TestProviderLatencyResponse,
 } from "@opentranslator/shared-types";
 import {
   apiDelete,
-  apiGet,
   apiPost,
   apiPut,
   ApiError,
 } from "@/lib/api-client";
+import {
+  EMPTY_SCHEMAS,
+  beginProvidersWrite,
+  getProvidersSnapshot,
+  loadProvidersSnapshot,
+  patchProvidersSnapshot,
+} from "@/lib/dashboard-providers-cache";
 import {
   Card,
   CardContent,
@@ -50,9 +55,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Gauge, Plus, RotateCw, Server, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
+import { useOnceAnimation } from "@/lib/useOnceAnimation";
 import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { MessageKey } from "@/locales/zh-CN";
@@ -122,20 +127,17 @@ function decodeModelKey(key: string): { providerId: string; model: string } {
 
 export function ProvidersSection() {
   const { t } = useTranslation();
-  const [providers, setProviders] = useState<ProviderRecord[]>([]);
-  const [types, setTypes] = useState<ProviderType[]>([]);
-  const [schemas, setSchemas] = useState<Record<ProviderType, ProviderField[]>>(
-    {
-      openai: [],
-      claude: [],
-      gemini: [],
-      aihubmix: [],
-      custom: [],
-      cloudflare: [],
-      deepl: [],
-    },
+  const initial = getProvidersSnapshot();
+  const [providers, setProviders] = useState<ProviderRecord[]>(
+    () => initial?.providers ?? [],
   );
-  const [loading, setLoading] = useState(true);
+  const [types, setTypes] = useState<ProviderType[]>(
+    () => initial?.types ?? [],
+  );
+  const [schemas, setSchemas] = useState<Record<ProviderType, ProviderField[]>>(
+    () => initial?.schemas ?? EMPTY_SCHEMAS,
+  );
+  const [ready, setReady] = useState(() => !!initial);
   const [editing, setEditing] = useState<null | { id: string | null }>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
@@ -147,35 +149,52 @@ export function ProvidersSection() {
     null,
   );
   // 站点默认模型：「providerId|model」；不依赖公开访问模块
-  const [defaultModelKey, setDefaultModelKey] = useState<string | null>(null);
+  const [defaultModelKey, setDefaultModelKey] = useState<string | null>(
+    () => initial?.defaultModelKey ?? null,
+  );
   const [savingDefault, setSavingDefault] = useState(false);
+  const tableEnter = useOnceAnimation(ready && providers.length > 0, 900);
 
-  async function load() {
+  async function load(opts?: { force?: boolean }) {
     try {
-      const [listRes, schemaRes, setRes] = await Promise.all([
-        apiGet<{ providers: ProviderRecord[]; types: ProviderType[] }>(
-          "/api/admin/providers",
-        ),
-        apiGet<{ schemas: Record<ProviderType, ProviderField[]> }>(
-          "/api/admin/providers/schema",
-        ),
-        apiGet<{ settings: SiteSettings }>("/api/admin/settings"),
-      ]);
-      setProviders(listRes.providers);
-      setTypes(listRes.types);
-      setSchemas(schemaRes.schemas);
-      const pdm = setRes.settings.defaultModel;
-      setDefaultModelKey(pdm ? encodeModelKey(pdm.providerId, pdm.model) : null);
+      const snap = await loadProvidersSnapshot(opts);
+      setProviders(snap.providers);
+      setTypes(snap.types);
+      setSchemas(snap.schemas);
+      setDefaultModelKey(snap.defaultModelKey);
+      setReady(true);
       setError(null);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
-    } finally {
-      setLoading(false);
+      setReady(true);
+      if (!getProvidersSnapshot()) {
+        setError(e instanceof ApiError ? e.message : String(e));
+      }
     }
   }
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void (async () => {
+      try {
+        const snap = await loadProvidersSnapshot();
+        if (cancelled) return;
+        setProviders(snap.providers);
+        setTypes(snap.types);
+        setSchemas(snap.schemas);
+        setDefaultModelKey(snap.defaultModelKey);
+        setReady(true);
+        setError(null);
+      } catch (e) {
+        if (cancelled) return;
+        setReady(true);
+        if (!getProvidersSnapshot()) {
+          setError(e instanceof ApiError ? e.message : String(e));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function clearLatencyFeedback() {
@@ -289,7 +308,7 @@ export function ProvidersSection() {
         toast.success(t("providers.added"));
       }
       closeDialog();
-      await load();
+      await load({ force: true });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : String(e));
     } finally {
@@ -303,7 +322,7 @@ export function ProvidersSection() {
     try {
       await apiDelete(`/api/admin/providers/${target.id}`);
       toast.success(t("providers.deleted", { name: target.displayName }));
-      await load();
+      await load({ force: true });
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : String(e));
     } finally {
@@ -314,10 +333,13 @@ export function ProvidersSection() {
   // 行内切换启用：乐观更新，失败回滚
   async function toggleEnabled(p: ProviderRecord) {
     if (busyId) return;
+    const writeGen = beginProvidersWrite();
     const prev = providers;
-    setProviders(
-      prev.map((x) => (x.id === p.id ? { ...x, enabled: !x.enabled } : x)),
+    const next = prev.map((x) =>
+      x.id === p.id ? { ...x, enabled: !x.enabled } : x,
     );
+    setProviders(next);
+    patchProvidersSnapshot({ providers: next }, writeGen);
     setBusyId(p.id);
     try {
       await apiPut(`/api/admin/providers/${p.id}`, { enabled: !p.enabled });
@@ -328,6 +350,7 @@ export function ProvidersSection() {
       );
     } catch (e) {
       setProviders(prev);
+      patchProvidersSnapshot({ providers: prev }, writeGen);
       toast.error(e instanceof ApiError ? e.message : t("common.operationFailed"));
     } finally {
       setBusyId(null);
@@ -337,8 +360,10 @@ export function ProvidersSection() {
   // 站点默认模型：写入 defaultModel，与公开访问相互独立
   async function saveDefaultModel(key: string) {
     if (savingDefault || key === defaultModelKey) return;
+    const writeGen = beginProvidersWrite();
     const prev = defaultModelKey;
     setDefaultModelKey(key);
+    patchProvidersSnapshot({ defaultModelKey: key }, writeGen);
     setSavingDefault(true);
     try {
       await apiPut("/api/admin/settings", {
@@ -347,6 +372,7 @@ export function ProvidersSection() {
       toast.success(t("providers.defaultModelSaved"));
     } catch (e) {
       setDefaultModelKey(prev);
+      patchProvidersSnapshot({ defaultModelKey: prev }, writeGen);
       toast.error(e instanceof ApiError ? e.message : t("common.operationFailed"));
     } finally {
       setSavingDefault(false);
@@ -460,42 +486,47 @@ export function ProvidersSection() {
       <CardHeader>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>{t("providers.title")}</CardTitle>
-          <Button type="button" size="sm" onClick={startCreate} className="w-full gap-1.5 sm:w-auto">
+          <Button
+            type="button"
+            size="sm"
+            onClick={startCreate}
+            disabled={!ready}
+            className="w-full gap-1.5 sm:w-auto"
+          >
             <Plus className="size-4" />
             {t("common.add")}
           </Button>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {loading ? (
-          <div className="flex flex-col gap-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 rounded-md" />
-            ))}
-          </div>
-        ) : error ? (
+        {error && (
           <>
             <Alert variant="destructive">
               <AlertCircle />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
-            <div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => {
-                  setLoading(true);
-                  void load();
-                }}
-              >
-                <RotateCw className="size-4" />
-                {t("common.retry")}
-              </Button>
-            </div>
+            {providers.length === 0 && (
+              <div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => {
+                    setReady(false);
+                    setError(null);
+                    void load({ force: true });
+                  }}
+                >
+                  <RotateCw className="size-4" />
+                  {t("common.retry")}
+                </Button>
+              </div>
+            )}
           </>
-        ) : providers.length === 0 ? (
+        )}
+
+        {ready && providers.length === 0 && !error ? (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
             <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
               <Server className="size-5" />
@@ -513,37 +544,55 @@ export function ProvidersSection() {
               {t("providers.addProvider")}
             </Button>
           </div>
-        ) : (
+        ) : providers.length > 0 || !ready ? (
           <>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-              <div className="text-sm font-medium">{t("providers.defaultModel")}</div>
-              {defaultModelOptions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {t("providers.defaultModelNone")}
-                </p>
-              ) : (
-                <Select
-                  value={defaultSelectValue}
-                  onValueChange={(v) => void saveDefaultModel(v)}
-                  disabled={savingDefault}
-                >
-                  <SelectTrigger className="w-full sm:max-w-md">
-                    <SelectValue placeholder={t("providers.defaultModelPick")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {defaultModelOptions.map((o) => (
-                      <SelectItem key={o.key} value={o.key}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {ready && (
+              <div
+                className={cn(
+                  "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4",
+                  tableEnter &&
+                    "animate-settle motion-reduce:animate-none [animation-delay:40ms]",
+                )}
+              >
+                <div className="text-sm font-medium">{t("providers.defaultModel")}</div>
+                {defaultModelOptions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("providers.defaultModelNone")}
+                  </p>
+                ) : (
+                  <Select
+                    value={defaultSelectValue}
+                    onValueChange={(v) => void saveDefaultModel(v)}
+                    disabled={savingDefault}
+                  >
+                    <SelectTrigger className="w-full sm:max-w-md">
+                      <SelectValue placeholder={t("providers.defaultModelPick")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {defaultModelOptions.map((o) => (
+                        <SelectItem key={o.key} value={o.key}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
+            <div
+              className={cn(
+                "rounded-md border border-rule transition-opacity duration-300 motion-reduce:transition-none",
+                ready ? "opacity-100" : "opacity-70",
               )}
-            </div>
-            <div className="rounded-md border border-rule">
+            >
               <Table className="min-w-[640px] lg:table-fixed">
                 <TableHeader>
-                  <TableRow>
+                  <TableRow
+                    className={cn(
+                      tableEnter &&
+                        "animate-settle motion-reduce:animate-none [animation-delay:80ms]",
+                    )}
+                  >
                     <TableHead className="lg:w-40">{t("providers.name")}</TableHead>
                     <TableHead className="lg:w-28">{t("providers.type")}</TableHead>
                     <TableHead className="lg:w-48">{t("providers.models")}</TableHead>
@@ -552,8 +601,19 @@ export function ProvidersSection() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {providers.map((p) => (
-                    <TableRow key={p.id}>
+                  {providers.map((p, i) => (
+                    <TableRow
+                      key={p.id}
+                      className={cn(
+                        tableEnter &&
+                          "animate-settle motion-reduce:animate-none",
+                      )}
+                      style={
+                        tableEnter
+                          ? { animationDelay: `${140 + i * 70}ms` }
+                          : undefined
+                      }
+                    >
                       <TableCell className="max-w-0 font-medium">
                         <span className="block truncate" title={p.displayName}>
                           {p.displayName}
@@ -573,7 +633,7 @@ export function ProvidersSection() {
                       <TableCell>
                         <Switch
                           checked={p.enabled}
-                          disabled={busyId === p.id}
+                          disabled={!ready || busyId === p.id}
                           onCheckedChange={() => void toggleEnabled(p)}
                           aria-label={t("providers.toggleEnabled", { name: p.displayName })}
                         />
@@ -585,6 +645,7 @@ export function ProvidersSection() {
                             size="sm"
                             className="h-7"
                             type="button"
+                            disabled={!ready}
                             onClick={() => startEdit(p)}
                           >
                             {t("common.edit")}
@@ -594,6 +655,7 @@ export function ProvidersSection() {
                             size="sm"
                             className="h-7 gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
                             type="button"
+                            disabled={!ready}
                             onClick={() => setDeleteTarget(p)}
                           >
                             <Trash2 className="size-3" />
@@ -607,7 +669,7 @@ export function ProvidersSection() {
               </Table>
             </div>
           </>
-        )}
+        ) : null}
       </CardContent>
 
       {/* 编辑 / 新增 对话框 */}

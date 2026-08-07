@@ -7,7 +7,7 @@ import {
 } from "react";
 import type { AuthMeResponse, AuthUser } from "@opentranslator/shared-types";
 import { apiGet, apiPost } from "./api-client";
-import { clearOverviewSnapshot } from "./dashboard-overview-cache";
+import { clearDashboardCaches } from "./dashboard-caches";
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -33,10 +33,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(res.user ?? null);
       setSetupCompleted(res.setupCompleted);
       setSitePublic(res.sitePublic);
-      if (!res.user) clearOverviewSnapshot();
+      if (!res.user) clearDashboardCaches();
     } catch {
       setUser(null);
-      clearOverviewSnapshot();
+      clearDashboardCaches();
     } finally {
       if (!opts?.silent) setLoading(false);
     }
@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     }
-    clearOverviewSnapshot();
+    clearDashboardCaches();
     setUser(null);
   }, []);
 
