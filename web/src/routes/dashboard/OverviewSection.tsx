@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Activity, FileText, AlertCircle } from "lucide-react";
 import type { ProviderRecord, UsageSummary } from "@opentranslator/shared-types";
-import { apiGet, ApiError } from "@/lib/api-client";
+import { ApiError } from "@/lib/api-client";
+import {
+  getOverviewSnapshot,
+  loadOverviewSnapshot,
+} from "@/lib/dashboard-overview-cache";
 import { useCountUp } from "@/lib/useCountUp";
 import { useOnceAnimation } from "@/lib/useOnceAnimation";
 import { useTranslation } from "@/lib/i18n";
@@ -20,13 +24,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
+const EMPTY_USAGE: UsageSummary = {
+  totalRequests: 0,
+  totalChars: 0,
+  byProvider: [],
+};
 
 export function OverviewSection() {
   const { t } = useTranslation();
-  const [usage, setUsage] = useState<UsageSummary | null>(null);
-  const [providers, setProviders] = useState<ProviderRecord[]>([]);
+  // 会话内 / sessionStorage 快照：有旧数先画；无快照时用 0 占位，不再出 skeleton
+  const initial = getOverviewSnapshot();
+  const [usage, setUsage] = useState<UsageSummary>(
+    () => initial?.usage ?? EMPTY_USAGE,
+  );
+  const [providers, setProviders] = useState<ProviderRecord[]>(
+    () => initial?.providers ?? [],
+  );
+  const [ready, setReady] = useState(() => !!initial);
   const [error, setError] = useState<string | null>(null);
 
   const providerNames = useMemo(
@@ -37,30 +53,37 @@ export function OverviewSection() {
   // 已删除供应商不出现在表格里，但其用量仍计入上方总数
   const visibleByProvider = useMemo(
     () =>
-      usage?.byProvider.filter((p) => providerNames.has(p.providerId)) ?? [],
+      usage.byProvider.filter((p) => providerNames.has(p.providerId)),
     [usage, providerNames],
   );
 
   const rise = useOnceAnimation(true, 650);
-  // 覆盖最晚一行 stagger（约 160+ n*70）+ settle 时长
-  const tableEnter = useOnceAnimation(visibleByProvider.length > 0, 900);
-
-  async function load() {
-    try {
-      const [usageRes, providersRes] = await Promise.all([
-        apiGet<{ usage: UsageSummary }>("/api/admin/usage"),
-        apiGet<{ providers: ProviderRecord[] }>("/api/admin/providers"),
-      ]);
-      setUsage(usageRes.usage);
-      setProviders(providersRes.providers);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
-    }
-  }
+  // 数据就绪后触发行入场；加载中先露出空表头
+  const tableEnter = useOnceAnimation(ready && visibleByProvider.length > 0, 900);
+  const showTable = !ready || visibleByProvider.length > 0;
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void (async () => {
+      try {
+        const snap = await loadOverviewSnapshot();
+        if (cancelled) return;
+        setUsage(snap.usage);
+        setProviders(snap.providers);
+        setReady(true);
+        setError(null);
+      } catch (e) {
+        if (cancelled) return;
+        setReady(true);
+        // 有快照时静默保留旧数；仅冷启动失败才展示错误
+        if (!getOverviewSnapshot()) {
+          setError(e instanceof ApiError ? e.message : String(e));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -76,7 +99,7 @@ export function OverviewSection() {
           </Alert>
         )}
 
-        {usage ? (
+        {!error && (
           <>
             <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-rule bg-rule">
               <StatTile
@@ -94,8 +117,13 @@ export function OverviewSection() {
               />
             </div>
 
-            {visibleByProvider.length > 0 && (
-              <div className="overflow-hidden rounded-md border border-rule">
+            {showTable && (
+              <div
+                className={cn(
+                  "overflow-hidden rounded-md border border-rule transition-opacity duration-300 motion-reduce:transition-none",
+                  ready ? "opacity-100" : "opacity-70",
+                )}
+              >
                 <Table className="min-w-[360px]">
                   <TableHeader>
                     <TableRow
@@ -127,10 +155,14 @@ export function OverviewSection() {
                           {providerNames.get(p.providerId) ?? p.providerId}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
-                          {p.requests}
+                          <CountCell value={p.requests} delayMs={140 + i * 70} />
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
-                          {p.chars.toLocaleString()}
+                          <CountCell
+                            value={p.chars}
+                            format={(n) => n.toLocaleString()}
+                            delayMs={160 + i * 70}
+                          />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -139,16 +171,6 @@ export function OverviewSection() {
               </div>
             )}
           </>
-        ) : (
-          !error && (
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-rule bg-rule">
-                <Skeleton className="h-24 rounded-none" />
-                <Skeleton className="h-24 rounded-none" />
-              </div>
-              <Skeleton className="h-40 rounded-md" />
-            </div>
-          )
         )}
       </CardContent>
     </Card>
@@ -168,7 +190,6 @@ function StatTile({
   format?: (n: number) => string;
   delayMs?: number;
 }) {
-  // 指标块不做 opacity 进场，避免 skeleton→内容时闪白；签名动效只保留 count-up
   const display = useCountUp(value, { delayMs });
   const text = format ? format(display) : String(display);
 
@@ -183,4 +204,17 @@ function StatTile({
       <div className="text-xs text-muted-foreground">{label}</div>
     </div>
   );
+}
+
+function CountCell({
+  value,
+  format,
+  delayMs = 0,
+}: {
+  value: number;
+  format?: (n: number) => string;
+  delayMs?: number;
+}) {
+  const display = useCountUp(value, { delayMs, durationMs: 640 });
+  return <>{format ? format(display) : display}</>;
 }

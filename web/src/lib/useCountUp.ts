@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function easeOutQuart(t: number): number {
   return 1 - (1 - t) ** 4;
@@ -21,7 +21,7 @@ export function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
-/** 克制的数字滚入：ease-out，尊重 prefers-reduced-motion。 */
+/** 克制的数字滚入：从当前值过渡到目标，ease-out，尊重 prefers-reduced-motion。 */
 export function useCountUp(
   target: number,
   opts?: { durationMs?: number; delayMs?: number; enabled?: boolean },
@@ -33,6 +33,8 @@ export function useCountUp(
   const [value, setValue] = useState(() =>
     enabled && !reduced ? 0 : target,
   );
+  const valueRef = useRef(value);
+  valueRef.current = value;
 
   useEffect(() => {
     if (!enabled || reduced) {
@@ -40,14 +42,16 @@ export function useCountUp(
       return;
     }
 
-    setValue(0);
+    const from = valueRef.current;
+    if (from === target) return;
+
     let raf = 0;
     let start = 0;
     let timeoutId = 0;
 
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / durationMs);
-      setValue(Math.round(target * easeOutQuart(t)));
+      setValue(Math.round(from + (target - from) * easeOutQuart(t)));
       if (t < 1) {
         raf = requestAnimationFrame(tick);
       } else {
