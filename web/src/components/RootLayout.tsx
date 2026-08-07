@@ -34,7 +34,9 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
     <Link to="/" className="group flex shrink-0 items-center gap-2" aria-label={t("nav.home")}>
       <LogoMark
         size={28}
+        variant="mark"
         decorative
+        haloFill="var(--background)"
         className="text-foreground transition-transform group-hover:scale-[1.06]"
       />
       {!compact && (

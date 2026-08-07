@@ -9,7 +9,7 @@ export function Hero() {
     <>
       <nav className="site-nav" aria-label="Primary">
         <a className="site-nav-brand" href="#top">
-          <LogoMark size={28} className="site-nav-logo" decorative />
+          <LogoMark size={28} variant="mark" className="site-nav-logo" decorative />
           <span>{site.productName}</span>
         </a>
         <div className="site-nav-links">

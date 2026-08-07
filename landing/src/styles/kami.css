@@ -166,16 +166,9 @@ a {
   display: block;
   width: 28px;
   height: 28px;
-  border-radius: 6px;
   flex-shrink: 0;
   color: var(--sand-12);
   shape-rendering: geometricPrecision;
-  /* Radix --shadow-3 */
-  box-shadow:
-    0 0 0 1px var(--sand-a3),
-    0 2px 3px -2px var(--sand-a3),
-    0 3px 12px -4px rgba(0, 0, 0, 0.06),
-    0 4px 16px -8px rgba(0, 0, 0, 0.06);
 }
 
 .site-nav-links {

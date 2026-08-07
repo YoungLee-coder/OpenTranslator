@@ -5,23 +5,28 @@ import {
   LOGO_TILE_FILL,
 } from "./logo-paths";
 
+/** `mark` — pure logo for in-app UI; `tile` — cream tile for favicon/marketing. */
+export type LogoVariant = "mark" | "tile";
+
 type LogoMarkProps = {
+  variant?: LogoVariant;
   size?: number;
   className?: string;
-  tile?: boolean;
   decorative?: boolean;
-  /** Badge halo fill when tile is off (e.g. app chrome background). */
+  /** Badge halo fill when variant is `mark` (separates badge from star). */
   haloFill?: string;
 };
 
 /** OpenTranslator logomark — star + bottom-right diamond badge. */
 export function LogoMark({
+  variant = "mark",
   size = 28,
   className,
-  tile = true,
   decorative = false,
   haloFill = "var(--background, #fff)",
 }: LogoMarkProps) {
+  const tile = variant === "tile";
+
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

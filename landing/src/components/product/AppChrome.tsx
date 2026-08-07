@@ -38,7 +38,12 @@ export function AppChrome({ active, title, children }: AppChromeProps) {
         <div className="mock-nav-pill">
           <div className="mock-brand">
             <span className="mock-brand-mark">
-              <LogoMark size={22} tile={false} decorative />
+              <LogoMark
+                size={22}
+                variant="mark"
+                decorative
+                haloFill="var(--glass-bg-fallback)"
+              />
             </span>
             <span>{site.productName}</span>
           </div>
