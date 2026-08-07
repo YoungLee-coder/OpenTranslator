@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import type { AuthUser } from "@opentranslator/shared-types";
+import { LogoMark } from "@opentranslator/brand/LogoMark";
 import { Ellipsis, Languages, LayoutDashboard, LogOut, Moon, PenLine, Sun, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,13 +32,11 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
   const { t } = useTranslation();
   return (
     <Link to="/" className="group flex shrink-0 items-center gap-2" aria-label={t("nav.home")}>
-      <span
-        className={cn(
-          "flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform group-hover:scale-[1.06]",
-        )}
-      >
-        <Languages className="size-3.5" aria-hidden />
-      </span>
+      <LogoMark
+        size={28}
+        decorative
+        className="text-foreground transition-transform group-hover:scale-[1.06]"
+      />
       {!compact && (
         <span className="hidden font-display text-[0.95rem] font-semibold tracking-tight md:inline">
           OpenTranslator

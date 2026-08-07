@@ -29,7 +29,7 @@ pnpm preview
 | `src/components/product/` | AppChrome、各 Workbench、ProductWindow |
 | `src/fixtures/` | 展示层 props 的示例数据 |
 | `src/content.ts` | 落地页文案 |
-| `src/styles/` | Kami 纸感样式 + product mock |
+| `src/styles/` | Apple 极简营销样式 + product mock |
 | `public/` | favicon、llms.txt、robots 等 |
 
 ## 与主仓库

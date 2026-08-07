@@ -102,16 +102,15 @@
 .mock-brand-mark {
   width: 22px;
   height: 22px;
-  border-radius: 50%;
-  background: var(--primary);
-  color: var(--primary-foreground);
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  color: var(--foreground);
 }
 .mock-brand-mark svg {
-  width: 11px;
-  height: 11px;
+  display: block;
+  width: 22px;
+  height: 22px;
 }
 .mock-nav-rule {
   width: 1px;

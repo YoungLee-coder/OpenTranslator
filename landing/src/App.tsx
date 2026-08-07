@@ -8,14 +8,16 @@ import { Footer } from "@/components/sections/Footer";
 
 export function App() {
   return (
-    <main className="page">
-      <Hero />
-      <Gallery />
-      <Features />
-      <Principles />
-      <Pricing />
-      <Faq />
-      <Footer />
-    </main>
+    <div className="page-shell">
+      <div className="page-inner">
+        <Hero />
+        <Gallery />
+        <Features />
+        <Principles />
+        <Pricing />
+        <Faq />
+        <Footer />
+      </div>
+    </div>
   );
 }

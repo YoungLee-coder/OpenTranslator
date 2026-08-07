@@ -4,18 +4,20 @@ export function Pricing() {
   const { pricingSection, pricing, site } = useContent();
 
   return (
-    <section>
+    <section id="pricing">
       <div className="section-head">
-        <p className="section-num">{pricingSection.sectionNum}</p>
         <h2 className="section-title">{pricingSection.sectionTitle}</h2>
+        {pricingSection.sectionLede ? (
+          <p className="section-lede">{pricingSection.sectionLede}</p>
+        ) : null}
       </div>
       <div className="price-card">
+        <p className="price-amount">{pricing.price}</p>
         <ul className="price-benefits">
           {pricing.benefits.map((b) => (
             <li key={b}>{b}</li>
           ))}
         </ul>
-        <p className="price-amount">{pricing.price}</p>
         <p
           className="price-vs"
           dangerouslySetInnerHTML={{ __html: pricing.comparisonHtml }}

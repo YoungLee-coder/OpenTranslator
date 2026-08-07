@@ -31,6 +31,7 @@ export type Content = {
     productName: string;
     category: string;
     version: string;
+    headline: string;
     tagline: string;
     tokens: readonly string[];
     repoUrl: string;
@@ -41,22 +42,28 @@ export type Content = {
     issuesUrl: string;
     readmeMdUrl: string;
   };
+  nav: {
+    features: string;
+    principles: string;
+    followCta: string;
+  };
   hero: {
     readmeCta: string;
     repoCta: string;
+    meta: string;
+    cloneHint: string;
+    cloneCommand: string;
     langLabel: string;
     langZh: string;
     langEn: string;
   };
   gallery: {
-    sectionNum: string;
     sectionTitle: string;
-    sectionLede: string;
     tabsAria: string;
+    chips: readonly { key: string; label: string }[];
     slides: readonly GallerySlide[];
   };
   featuresSection: {
-    sectionNum: string;
     sectionTitle: string;
   };
   features: readonly {
@@ -65,16 +72,17 @@ export type Content = {
     description: string;
   }[];
   principlesSection: {
-    sectionNum: string;
     sectionTitle: string;
+    lead: string;
+    sign: string;
   };
   principles: readonly {
     title: string;
     description: string;
   }[];
   pricingSection: {
-    sectionNum: string;
     sectionTitle: string;
+    sectionLede: string;
     repoCta: string;
   };
   pricing: {
@@ -85,7 +93,6 @@ export type Content = {
     terms: string;
   };
   faqSection: {
-    sectionNum: string;
     sectionTitle: string;
     tailBefore: string;
     tailLink: string;
@@ -95,6 +102,14 @@ export type Content = {
   footer: {
     tagline: string;
     ethos: string;
+    credit: string;
+    links: {
+      github: string;
+      readme: string;
+      contact: string;
+      switchEn: string;
+      switchZh: string;
+    };
   };
   product: {
     nav: {
@@ -152,95 +167,104 @@ const zhCN: Content = {
   site: {
     ...sharedUrls,
     category: "自托管 AI 翻译器",
-    tagline: "把你自己的大模型接到 DeepL 手感的翻译页上。",
+    headline: "DeepL 的手感，钥匙在你手里。",
+    tagline:
+      "把你自己的大模型接到 DeepL 手感的翻译页上。多供应商、SSE 流式，一次部署到 Cloudflare 边缘。",
     tokens: ["流式输出", "边缘部署", "密钥自持"],
     readmeUrl:
       "https://github.com/YoungLee-coder/OpenTranslator#-%E7%89%B9%E6%80%A7",
     deployUrl:
       "https://github.com/YoungLee-coder/OpenTranslator#-%E9%83%A8%E7%BD%B2",
   },
+  nav: {
+    features: "能力",
+    principles: "原则",
+    followCta: "打开仓库",
+  },
   hero: {
     readmeCta: "阅读 README",
-    repoCta: "打开仓库",
+    repoCta: "打开 GitHub",
+    meta: "GPL-3.0 开源 · 自托管 · Cloudflare Workers",
+    cloneHint: "用 Git 也行：",
+    cloneCommand: "git clone https://github.com/YoungLee-coder/OpenTranslator",
     langLabel: "语言",
     langZh: "中文",
     langEn: "EN",
   },
   gallery: {
-    sectionNum: "00 · 界面",
     sectionTitle: "工作台",
-    sectionLede: "翻译、写作、控制台与供应商，展示层组件 + fixture 驱动。",
     tabsAria: "选择界面",
+    chips: [
+      { key: "SSE", label: "流式翻译" },
+      { key: "D1", label: "密钥加密" },
+    ],
     slides: [
       {
         id: "translate",
-        tab: "翻译页",
+        tab: "翻译",
         title: "翻译页",
-        line: "左右对照 · 字随流至",
-        windowTitle: "OpenTranslator · 翻译",
+        line: "左右对照，字随流至",
+        windowTitle: "OpenTranslator",
       },
       {
         id: "write",
-        tab: "AI 写作",
+        tab: "写作",
         title: "AI 写作",
-        line: "润色改写 · 双栏同屏",
-        windowTitle: "OpenTranslator · 写作",
+        line: "润色改写，双栏同屏",
+        windowTitle: "OpenTranslator",
       },
       {
         id: "overview",
-        tab: "用量概览",
+        tab: "用量",
         title: "用量概览",
-        line: "用量一目了然",
-        windowTitle: "OpenTranslator · 控制台",
+        line: "请求与字符一目了然",
+        windowTitle: "OpenTranslator",
       },
       {
         id: "providers",
         tab: "供应商",
         title: "供应商",
         line: "一家一家接上",
-        windowTitle: "OpenTranslator · 供应商",
+        windowTitle: "OpenTranslator",
       },
     ],
   },
   featuresSection: {
-    sectionNum: "01 · 能力",
-    sectionTitle: "为自托管翻译而设",
+    sectionTitle: "它能做什么",
   },
   features: [
     {
       name: "多供应商切换",
       subtitle: "一把钥匙开多家门",
       description:
-        "OpenAI、Claude、Gemini、DeepSeek、OpenRouter 等 adapter 内置。Dashboard 填 Key 即可换模型，无需改代码、无需重新部署。",
+        "OpenAI、Claude、Gemini、DeepSeek 等内置。Dashboard 填 Key 即可换模型。",
     },
     {
       name: "流式翻译",
       subtitle: "字跟着来",
-      description:
-        "译文经 SSE 逐字渲染。等待变成跟读，长文也不再闷在加载圈里。",
+      description: "译文经 SSE 逐字渲染，长文也不再闷在加载圈里。",
     },
     {
       name: "插件化扩展",
       subtitle: "注册一行就够",
-      description:
-        "供应商走注册表，功能模块走 DB 开关。加厂商或加术语库，只动 adapter 与一行注册，核心路由保持不动。",
+      description: "供应商走注册表，功能模块走 DB 开关，核心路由保持不动。",
     },
     {
       name: "边缘单 Worker",
       subtitle: "前后端同址",
-      description:
-        "Vite SPA 与 Hono API 打进同一个 Cloudflare Worker。一次 wrangler deploy，同源无 CORS，按量计费。",
+      description: "Vite SPA 与 Hono API 打进同一个 Cloudflare Worker，一次部署。",
     },
     {
       name: "密钥加密落库",
       subtitle: "明文不入库",
-      description:
-        "供应商 API Key 经 ENCRYPTION_KEY 加密后写入 D1。站点可一键关闭公开访问，变成纯私有部署。",
+      description: "API Key 加密写入 D1，也可一键关掉公开访问。",
     },
   ],
   principlesSection: {
-    sectionNum: "02 · 原则",
-    sectionTitle: "我们守住的边界",
+    sectionTitle: "为什么做它",
+    lead:
+      "现成的翻译 SaaS 好用，但模型、密钥、数据都不在你手里。<mark>OpenTranslator</mark> 想留住 DeepL 那种手感，把钥匙交还给部署它的人。",
+    sign: "—— OpenTranslator",
   },
   principles: [
     {
@@ -270,8 +294,8 @@ const zhCN: Content = {
     },
   ],
   pricingSection: {
-    sectionNum: "03 · 获取",
     sectionTitle: "开源即全部",
+    sectionLede: "没有套餐分层。克隆仓库，接上你的 Key，自己部署。",
     repoCta: "打开仓库",
   },
   pricing: {
@@ -290,8 +314,7 @@ const zhCN: Content = {
       "你自备模型 API Key 与 Cloudflare 账号。Workers 按量计费，与本项目授权无关。",
   },
   faqSection: {
-    sectionNum: "04 · 问答",
-    sectionTitle: "先把误会说清",
+    sectionTitle: "常见问题",
     tailBefore: "部署细节以",
     tailLink: "README 部署章节",
     tailAfter: "为准。",
@@ -329,6 +352,14 @@ const zhCN: Content = {
   footer: {
     tagline: "自托管 · 多供应商 · 边缘部署",
     ethos: "字在边缘流转，钥在你手。",
+    credit: "OpenTranslator · GPL-3.0 · © 2026",
+    links: {
+      github: "GitHub",
+      readme: "README",
+      contact: "Issues",
+      switchEn: "English",
+      switchZh: "中文",
+    },
   },
   product: {
     nav: {
@@ -452,100 +483,112 @@ const en: Content = {
   site: {
     ...sharedUrls,
     category: "Self-hosted AI translator",
-    tagline: "Plug your own models into a DeepL-feel translation page.",
+    headline: "DeepL feel. Keys stay yours.",
+    tagline:
+      "Plug your own models into a DeepL-feel translation page. Multi-provider, SSE streaming, one Cloudflare Worker deploy.",
     tokens: ["Streaming", "Edge deploy", "Keys stay yours"],
     readmeUrl: "https://github.com/YoungLee-coder/OpenTranslator#readme",
     deployUrl: "https://github.com/YoungLee-coder/OpenTranslator#readme",
   },
+  nav: {
+    features: "Features",
+    principles: "Why",
+    followCta: "GitHub",
+  },
   hero: {
     readmeCta: "Read the README",
-    repoCta: "Open repository",
+    repoCta: "Open on GitHub",
+    meta: "GPL-3.0 · Self-hosted · Cloudflare Workers",
+    cloneHint: "Or clone it:",
+    cloneCommand: "git clone https://github.com/YoungLee-coder/OpenTranslator",
     langLabel: "Language",
     langZh: "中文",
     langEn: "EN",
   },
   gallery: {
-    sectionNum: "00 · Interface",
     sectionTitle: "Workbench",
-    sectionLede:
-      "Translate, Write, Dashboard, and Providers — presentational components driven by fixtures.",
     tabsAria: "Choose a screen",
+    chips: [
+      { key: "SSE", label: "Streaming" },
+      { key: "D1", label: "Encrypted keys" },
+    ],
     slides: [
       {
         id: "translate",
         tab: "Translate",
         title: "Translate",
-        line: "Side by side · tokens as they arrive",
-        windowTitle: "OpenTranslator · Translate",
+        line: "Side by side, tokens as they arrive",
+        windowTitle: "OpenTranslator",
       },
       {
         id: "write",
-        tab: "AI Write",
+        tab: "Write",
         title: "AI Write",
-        line: "Polish & rewrite · dual panes",
-        windowTitle: "OpenTranslator · Write",
+        line: "Polish and rewrite, dual panes",
+        windowTitle: "OpenTranslator",
       },
       {
         id: "overview",
         tab: "Usage",
         title: "Usage overview",
-        line: "Usage at a glance",
-        windowTitle: "OpenTranslator · Dashboard",
+        line: "Requests and characters at a glance",
+        windowTitle: "OpenTranslator",
       },
       {
         id: "providers",
         tab: "Providers",
         title: "Providers",
         line: "Wire them up one by one",
-        windowTitle: "OpenTranslator · Providers",
+        windowTitle: "OpenTranslator",
       },
     ],
   },
   featuresSection: {
-    sectionNum: "01 · Capabilities",
-    sectionTitle: "Built for self-hosted translation",
+    sectionTitle: "What it can do",
   },
   features: [
     {
       name: "Multi-provider switching",
       subtitle: "One key, many doors",
       description:
-        "Built-in adapters for OpenAI, Claude, Gemini, DeepSeek, OpenRouter, and more. Add a key in the Dashboard to switch models — no code changes, no redeploy.",
+        "OpenAI, Claude, Gemini, DeepSeek, and more. Add a key in the Dashboard to switch models.",
     },
     {
       name: "Streaming translation",
       subtitle: "Words as they come",
       description:
-        "Translations render token by token over SSE. Waiting becomes reading along — long text never sits behind a spinner.",
+        "Translations render token by token over SSE. Long text never sits behind a spinner.",
     },
     {
       name: "Plugin-style extension",
       subtitle: "One registry line",
       description:
-        "Providers go through a registry; feature modules use DB toggles. Add a vendor or glossary by touching an adapter and one registration — core routes stay put.",
+        "Providers go through a registry; feature modules use DB toggles. Core routes stay put.",
     },
     {
       name: "Single edge Worker",
       subtitle: "Frontend and API colocated",
       description:
-        "Vite SPA and Hono API ship in one Cloudflare Worker. One wrangler deploy, same origin, no CORS, pay-as-you-go.",
+        "Vite SPA and Hono API ship in one Cloudflare Worker. One deploy, same origin.",
     },
     {
       name: "Encrypted keys at rest",
       subtitle: "No plaintext in the DB",
       description:
-        "Provider API keys are encrypted with ENCRYPTION_KEY before D1. Flip a switch to close public access for a private deploy.",
+        "Provider API keys are encrypted before D1. Flip a switch for a private deploy.",
     },
   ],
   principlesSection: {
-    sectionNum: "02 · Principles",
-    sectionTitle: "Boundaries we keep",
+    sectionTitle: "Why it exists",
+    lead:
+      "Hosted translators are convenient, but the models, keys, and data are not yours. <mark>OpenTranslator</mark> keeps the DeepL feel while handing the keys back to whoever deploys it.",
+    sign: "- OpenTranslator",
   },
   principles: [
     {
       title: "Keys never land in plaintext",
       description:
-        "Encrypted with ENCRYPTION_KEY before D1. Lose the key and provider config is gone — back it up.",
+        "Encrypted with ENCRYPTION_KEY before D1. Lose the key and provider config is gone - back it up.",
     },
     {
       title: "One deploy covers both ends",
@@ -569,8 +612,8 @@ const en: Content = {
     },
   ],
   pricingSection: {
-    sectionNum: "03 · Get it",
     sectionTitle: "Open source is the whole product",
+    sectionLede: "No tiered plans. Clone the repo, add your keys, deploy yourself.",
     repoCta: "Open repository",
   },
   pricing: {
@@ -590,8 +633,7 @@ const en: Content = {
       "You bring model API keys and a Cloudflare account. Workers usage is billed separately from this license.",
   },
   faqSection: {
-    sectionNum: "04 · FAQ",
-    sectionTitle: "Clear the usual misconceptions",
+    sectionTitle: "FAQ",
     tailBefore: "Deployment details follow the",
     tailLink: "README deploy section",
     tailAfter: ".",
@@ -629,6 +671,14 @@ const en: Content = {
   footer: {
     tagline: "Self-hosted · Multi-provider · Edge deploy",
     ethos: "Words move at the edge. Keys stay in your hands.",
+    credit: "OpenTranslator · GPL-3.0 · © 2026",
+    links: {
+      github: "GitHub",
+      readme: "README",
+      contact: "Issues",
+      switchEn: "English",
+      switchZh: "中文",
+    },
   },
   product: {
     nav: {
@@ -664,18 +714,18 @@ const en: Content = {
       ],
       modeResults: {
         polish:
-          "This feature helps users polish drafts quickly — clearer wording, tighter rhythm.",
+          "This feature helps users polish drafts quickly: clearer wording, tighter rhythm.",
         style:
-          "This feature lets users refine drafts fast — steadier voice, sharper structure.",
+          "This feature lets users refine drafts fast: steadier voice, sharper structure.",
         tone:
-          "This feature helps users raise formality — more precise wording, clearer structure.",
+          "This feature helps users raise formality: more precise wording, clearer structure.",
         shorten: "Helps users polish drafts faster and write more clearly.",
       },
       model: "Default",
       sourceText:
         "This feature lets users quickly make their writing look a bit better.",
       resultText:
-        "This feature helps users polish drafts quickly — clearer wording, tighter rhythm.",
+        "This feature helps users polish drafts quickly: clearer wording, tighter rhythm.",
       sourceMeta: "68 chars",
       resultMetaLeft: "Replace source",
       resultMetaRight: "Copy",

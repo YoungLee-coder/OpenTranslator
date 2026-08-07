@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "OpenTranslator marketing landing — standalone Vite + React (Kami parchment)",
+  "description": "OpenTranslator marketing landing — standalone Vite + React (Apple-minimal)",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
@@ -14,6 +14,7 @@
     "node": ">=22.13"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

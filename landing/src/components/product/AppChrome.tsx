@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { NavKey } from "@/fixtures/types";
 import type { GallerySlideId } from "@/content";
+import { LogoMark } from "@/components/LogoMark";
 import { useContent } from "@/lib/i18n";
 import { useGalleryNav } from "./gallery-nav";
 
@@ -9,19 +10,6 @@ type AppChromeProps = {
   title: string;
   children: ReactNode;
 };
-
-function LanguagesIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="m5 8 6 6" />
-      <path d="m4 14 6-6 2-3" />
-      <path d="M2 5h12" />
-      <path d="M7 2h1" />
-      <path d="m22 22-5-10-5 10" />
-      <path d="M14 18h6" />
-    </svg>
-  );
-}
 
 function MoonIcon() {
   return (
@@ -50,7 +38,7 @@ export function AppChrome({ active, title, children }: AppChromeProps) {
         <div className="mock-nav-pill">
           <div className="mock-brand">
             <span className="mock-brand-mark">
-              <LanguagesIcon />
+              <LogoMark size={22} tile={false} decorative />
             </span>
             <span>{site.productName}</span>
           </div>

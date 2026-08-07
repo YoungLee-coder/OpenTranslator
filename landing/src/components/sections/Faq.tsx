@@ -4,9 +4,8 @@ export function Faq() {
   const { faqSection, faq, site } = useContent();
 
   return (
-    <section>
+    <section id="faq">
       <div className="section-head">
-        <p className="section-num">{faqSection.sectionNum}</p>
         <h2 className="section-title">{faqSection.sectionTitle}</h2>
       </div>
       <dl className="faq">

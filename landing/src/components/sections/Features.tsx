@@ -1,25 +1,44 @@
+import {
+  ArrowsLeftRightIcon,
+  CloudIcon,
+  LockKeyIcon,
+  PuzzlePieceIcon,
+  WaveSineIcon,
+} from "@phosphor-icons/react";
 import { useContent } from "@/lib/i18n";
+
+const FEATURE_ICONS = [
+  ArrowsLeftRightIcon,
+  WaveSineIcon,
+  PuzzlePieceIcon,
+  CloudIcon,
+  LockKeyIcon,
+] as const;
 
 export function Features() {
   const { featuresSection, features } = useContent();
 
   return (
-    <section>
+    <section id="features">
       <div className="section-head">
-        <p className="section-num">{featuresSection.sectionNum}</p>
         <h2 className="section-title">{featuresSection.sectionTitle}</h2>
       </div>
-      <ol className="features">
-        {features.map((f) => (
-          <li key={f.name}>
-            <p className="name">
-              {f.name}
-              <small>{f.subtitle}</small>
-            </p>
-            <p className="what">{f.description}</p>
-          </li>
-        ))}
-      </ol>
+      <ul className="features">
+        {features.map((f, i) => {
+          const Icon = FEATURE_ICONS[i % FEATURE_ICONS.length]!;
+          return (
+            <li key={f.name}>
+              <span className="feature-icon" aria-hidden>
+                <Icon size={18} weight="regular" />
+              </span>
+              <p className="feature-body">
+                <strong className="name">{f.name}</strong>
+                <span className="what">{f.description}</span>
+              </p>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

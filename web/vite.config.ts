@@ -15,6 +15,7 @@ export default defineConfig({
         import.meta.dirname,
         "../shared-types/index.ts",
       ),
+      "@opentranslator/brand": path.resolve(import.meta.dirname, "../brand"),
     },
   },
   // Production build output goes to the repo root ./dist so a single

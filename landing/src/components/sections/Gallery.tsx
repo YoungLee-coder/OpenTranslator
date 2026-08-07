@@ -88,7 +88,6 @@ export function Gallery() {
     };
   }, [start, stop]);
 
-  // Restart interval when index changes so dwell time stays consistent.
   useEffect(() => {
     stop();
     start();
@@ -108,13 +107,7 @@ export function Gallery() {
   }
 
   return (
-    <section>
-      <div className="section-head">
-        <p className="section-num">{gallery.sectionNum}</p>
-        <h2 className="section-title">{gallery.sectionTitle}</h2>
-        <p className="section-lede">{gallery.sectionLede}</p>
-      </div>
-
+    <section className="gallery-section" aria-label={gallery.sectionTitle}>
       <div
         className={switching ? "gallery is-switching" : "gallery"}
         data-gallery
@@ -137,48 +130,62 @@ export function Gallery() {
         }}
       >
         <GalleryNavProvider value={{ activeId, goTo }}>
-          <ProductWindow title={slide.windowTitle}>
-            <div className="gallery-frame-surface">
-              {slides.map((s, i) => {
-                const active = i === index;
-                const wasActive = i === prevIndex;
-                let className = "gallery-panel";
-                if (active) className += " is-active";
-                if (wasActive) className += " was-active";
-                return (
-                  <div
-                    key={s.id}
-                    className={className}
-                    aria-hidden={active ? false : true}
-                    inert={!active}
-                  >
-                    <SlideView id={s.id} />
-                  </div>
-                );
-              })}
-            </div>
-          </ProductWindow>
+          <div className="product-stage">
+            <ProductWindow title={slide.windowTitle}>
+              <div className="gallery-frame-surface">
+                {slides.map((s, i) => {
+                  const active = i === index;
+                  const wasActive = i === prevIndex;
+                  let className = "gallery-panel";
+                  if (active) className += " is-active";
+                  if (wasActive) className += " was-active";
+                  return (
+                    <div
+                      key={s.id}
+                      className={className}
+                      aria-hidden={active ? false : true}
+                      inert={!active}
+                    >
+                      <SlideView id={s.id} />
+                    </div>
+                  );
+                })}
+              </div>
+            </ProductWindow>
+            {gallery.chips?.map((chip, i) => (
+              <div
+                key={chip.label}
+                className={`gallery-chip gallery-chip-${i + 1}`}
+                aria-hidden
+              >
+                <kbd>{chip.key}</kbd>
+                <span>{chip.label}</span>
+              </div>
+            ))}
+          </div>
         </GalleryNavProvider>
 
-        <div className="gallery-caption">
-          <p className="title">{slide.title}</p>
-          <p className="line">{slide.line}</p>
-        </div>
-        <div className="gallery-tabs" aria-label={gallery.tabsAria}>
-          {slides.map((s, i) => (
-            <button
-              key={s.id}
-              type="button"
-              className={i === index ? "is-active" : undefined}
-              aria-pressed={i === index}
-              onClick={() => {
-                setPaused(true);
-                go(i);
-              }}
-            >
-              {s.tab}
-            </button>
-          ))}
+        <div className="gallery-footer">
+          <div className="gallery-caption">
+            <p className="title">{slide.title}</p>
+            <p className="line">{slide.line}</p>
+          </div>
+          <div className="gallery-tabs" aria-label={gallery.tabsAria}>
+            {slides.map((s, i) => (
+              <button
+                key={s.id}
+                type="button"
+                className={i === index ? "is-active" : undefined}
+                aria-pressed={i === index}
+                onClick={() => {
+                  setPaused(true);
+                  go(i);
+                }}
+              >
+                {s.tab}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </section>
