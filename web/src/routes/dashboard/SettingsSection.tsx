@@ -37,7 +37,7 @@ export function SettingsSection() {
   const [ready, setReady] = useState(() => !!initial);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const formEnter = useOnceAnimation(ready, 700);
+  const formEnter = useOnceAnimation(ready, 400);
   const interactive = ready && !saving;
 
   useEffect(() => {
@@ -98,8 +98,8 @@ export function SettingsSection() {
 
         <div
           className={cn(
-            "divide-y divide-rule transition-[opacity,transform] duration-300 motion-reduce:transition-none",
-            formEnter && "animate-settle motion-reduce:animate-none",
+            "divide-y divide-rule transition-opacity duration-300 motion-reduce:transition-none",
+            formEnter && "animate-soft-in motion-reduce:animate-none",
             ready ? "opacity-100" : "opacity-70",
           )}
         >

@@ -153,7 +153,7 @@ export function ProvidersSection() {
     () => initial?.defaultModelKey ?? null,
   );
   const [savingDefault, setSavingDefault] = useState(false);
-  const tableEnter = useOnceAnimation(ready && providers.length > 0, 900);
+  const tableEnter = useOnceAnimation(ready && providers.length > 0, 400);
 
   async function load(opts?: { force?: boolean }) {
     try {
@@ -545,15 +545,14 @@ export function ProvidersSection() {
             </Button>
           </div>
         ) : providers.length > 0 || !ready ? (
-          <>
+          <div
+            className={cn(
+              "flex flex-col gap-4",
+              tableEnter && "animate-soft-in motion-reduce:animate-none",
+            )}
+          >
             {ready && (
-              <div
-                className={cn(
-                  "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4",
-                  tableEnter &&
-                    "animate-settle motion-reduce:animate-none [animation-delay:40ms]",
-                )}
-              >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <div className="text-sm font-medium">{t("providers.defaultModel")}</div>
                 {defaultModelOptions.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
@@ -587,12 +586,7 @@ export function ProvidersSection() {
             >
               <Table className="min-w-[640px] lg:table-fixed">
                 <TableHeader>
-                  <TableRow
-                    className={cn(
-                      tableEnter &&
-                        "animate-settle motion-reduce:animate-none [animation-delay:80ms]",
-                    )}
-                  >
+                  <TableRow>
                     <TableHead className="lg:w-40">{t("providers.name")}</TableHead>
                     <TableHead className="lg:w-28">{t("providers.type")}</TableHead>
                     <TableHead className="lg:w-48">{t("providers.models")}</TableHead>
@@ -601,19 +595,8 @@ export function ProvidersSection() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {providers.map((p, i) => (
-                    <TableRow
-                      key={p.id}
-                      className={cn(
-                        tableEnter &&
-                          "animate-settle motion-reduce:animate-none",
-                      )}
-                      style={
-                        tableEnter
-                          ? { animationDelay: `${140 + i * 70}ms` }
-                          : undefined
-                      }
-                    >
+                  {providers.map((p) => (
+                    <TableRow key={p.id}>
                       <TableCell className="max-w-0 font-medium">
                         <span className="block truncate" title={p.displayName}>
                           {p.displayName}
@@ -668,7 +651,7 @@ export function ProvidersSection() {
                 </TableBody>
               </Table>
             </div>
-          </>
+          </div>
         ) : null}
       </CardContent>
 

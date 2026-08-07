@@ -58,8 +58,8 @@ export function OverviewSection() {
   );
 
   const rise = useOnceAnimation(true, 650);
-  // 数据就绪后触发行入场；加载中先露出空表头
-  const tableEnter = useOnceAnimation(ready && visibleByProvider.length > 0, 900);
+  // 数据就绪后整块淡入；加载中先露出空表头
+  const tableEnter = useOnceAnimation(ready && visibleByProvider.length > 0, 400);
   const showTable = !ready || visibleByProvider.length > 0;
 
   useEffect(() => {
@@ -122,46 +122,30 @@ export function OverviewSection() {
                 className={cn(
                   "overflow-hidden rounded-md border border-rule transition-opacity duration-300 motion-reduce:transition-none",
                   ready ? "opacity-100" : "opacity-70",
+                  tableEnter && "animate-soft-in motion-reduce:animate-none",
                 )}
               >
                 <Table className="min-w-[360px]">
                   <TableHeader>
-                    <TableRow
-                      className={cn(
-                        tableEnter &&
-                          "animate-settle motion-reduce:animate-none [animation-delay:80ms]",
-                      )}
-                    >
+                    <TableRow>
                       <TableHead>{t("overview.provider")}</TableHead>
                       <TableHead className="text-right">{t("overview.requests")}</TableHead>
                       <TableHead className="text-right">{t("overview.chars")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {visibleByProvider.map((p, i) => (
-                      <TableRow
-                        key={p.providerId}
-                        className={cn(
-                          tableEnter &&
-                            "animate-settle motion-reduce:animate-none",
-                        )}
-                        style={
-                          tableEnter
-                            ? { animationDelay: `${140 + i * 70}ms` }
-                            : undefined
-                        }
-                      >
+                    {visibleByProvider.map((p) => (
+                      <TableRow key={p.providerId}>
                         <TableCell>
                           {providerNames.get(p.providerId) ?? p.providerId}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
-                          <CountCell value={p.requests} delayMs={140 + i * 70} />
+                          <CountCell value={p.requests} />
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           <CountCell
                             value={p.chars}
                             format={(n) => n.toLocaleString()}
-                            delayMs={160 + i * 70}
                           />
                         </TableCell>
                       </TableRow>
@@ -209,12 +193,10 @@ function StatTile({
 function CountCell({
   value,
   format,
-  delayMs = 0,
 }: {
   value: number;
   format?: (n: number) => string;
-  delayMs?: number;
 }) {
-  const display = useCountUp(value, { delayMs, durationMs: 640 });
+  const display = useCountUp(value, { durationMs: 520 });
   return <>{format ? format(display) : display}</>;
 }
