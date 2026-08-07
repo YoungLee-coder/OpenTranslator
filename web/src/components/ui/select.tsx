@@ -30,7 +30,7 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       className={cn(
-        "flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus-visible:border-primary/40 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+        "flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus-visible:border-primary/40 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
         className,
       )}
       {...props}
@@ -49,6 +49,57 @@ function SelectContent({
   position = "popper",
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
+  const viewportRef = React.useRef<HTMLDivElement>(null);
+  const holdRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const [canScrollUp, setCanScrollUp] = React.useState(false);
+  const [canScrollDown, setCanScrollDown] = React.useState(false);
+
+  const updateScrollState = () => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollHeight - el.clientHeight;
+    setCanScrollUp(el.scrollTop > 0.5);
+    setCanScrollDown(maxScroll > 1 && el.scrollTop < maxScroll - 0.5);
+  };
+
+  const stopHold = () => {
+    if (holdRef.current != null) {
+      clearInterval(holdRef.current);
+      holdRef.current = null;
+    }
+  };
+
+  const scrollByDir = (dir: 1 | -1) => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const item = el.querySelector<HTMLElement>('[data-slot="select-item"]');
+    const step = item?.offsetHeight ?? 28;
+    el.scrollTop += dir * step;
+    updateScrollState();
+  };
+
+  const startHold = (dir: 1 | -1) => {
+    stopHold();
+    scrollByDir(dir);
+    holdRef.current = setInterval(() => scrollByDir(dir), 50);
+  };
+
+  React.useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+
+    updateScrollState();
+    const frame = requestAnimationFrame(updateScrollState);
+    const observer = new ResizeObserver(updateScrollState);
+    observer.observe(el);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      stopHold();
+    };
+  }, []);
+
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
@@ -62,11 +113,73 @@ function SelectContent({
         position={position}
         {...props}
       >
-        <SelectScrollUpButton />
-        {children}
-        <SelectScrollDownButton />
+        <SelectPrimitive.Viewport
+          ref={viewportRef}
+          onScroll={updateScrollState}
+          className={cn(
+            "p-1",
+            position === "popper" &&
+              "w-full min-w-[var(--radix-select-trigger-width)]",
+          )}
+        >
+          {children}
+        </SelectPrimitive.Viewport>
+        <SelectEdgeFade
+          side="up"
+          visible={canScrollUp}
+          onHoldStart={() => startHold(-1)}
+          onHoldEnd={stopHold}
+        />
+        <SelectEdgeFade
+          side="down"
+          visible={canScrollDown}
+          onHoldStart={() => startHold(1)}
+          onHoldEnd={stopHold}
+        />
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
+  );
+}
+
+function SelectEdgeFade({
+  side,
+  visible,
+  onHoldStart,
+  onHoldEnd,
+}: {
+  side: "up" | "down";
+  visible: boolean;
+  onHoldStart: () => void;
+  onHoldEnd: () => void;
+}) {
+  return (
+    <div
+      data-slot={
+        side === "up" ? "select-scroll-up-button" : "select-scroll-down-button"
+      }
+      aria-hidden={!visible}
+      className={cn(
+        "absolute inset-x-0 z-10 flex items-center justify-center py-1.5",
+        "text-muted-foreground/70 transition-opacity duration-200 ease-out",
+        side === "up"
+          ? "top-0 bg-gradient-to-b from-popover from-45% to-popover/0"
+          : "bottom-0 bg-gradient-to-t from-popover from-45% to-popover/0",
+        visible ? "opacity-100" : "pointer-events-none opacity-0",
+      )}
+      onPointerDown={(event) => {
+        event.preventDefault();
+        onHoldStart();
+      }}
+      onPointerUp={onHoldEnd}
+      onPointerCancel={onHoldEnd}
+      onPointerLeave={onHoldEnd}
+    >
+      {side === "up" ? (
+        <ChevronUp className="size-3.5" />
+      ) : (
+        <ChevronDown className="size-3.5" />
+      )}
+    </div>
   );
 }
 

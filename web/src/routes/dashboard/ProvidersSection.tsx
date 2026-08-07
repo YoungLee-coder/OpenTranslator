@@ -54,6 +54,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Gauge, Plus, RotateCw, Server, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useTranslation } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import type { MessageKey } from "@/locales/zh-CN";
 
 interface FormState {
@@ -63,6 +64,26 @@ interface FormState {
   fields: Record<string, string>;
   enabled: boolean;
 }
+
+/** 延迟测速结果色档：绿 / 黄 / 红（失败恒为红） */
+type LatencyTone = "success" | "warning" | "destructive";
+
+type LatencyFeedback = {
+  tone: LatencyTone;
+  message: string;
+};
+
+function latencyToneFromMs(ms: number): LatencyTone {
+  if (ms < 2000) return "success";
+  if (ms < 5000) return "warning";
+  return "destructive";
+}
+
+const LATENCY_TONE_CLASS: Record<LatencyTone, string> = {
+  success: "border-success/25 bg-success/5 text-success",
+  warning: "border-warning/30 bg-warning/10 text-warning-foreground",
+  destructive: "border-destructive/25 bg-destructive/5 text-destructive",
+};
 
 const EMPTY_FORM: FormState = {
   type: "openai",
@@ -122,8 +143,9 @@ export function ProvidersSection() {
   const [deleteTarget, setDeleteTarget] = useState<ProviderRecord | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [latencyTesting, setLatencyTesting] = useState(false);
-  const [latencyResult, setLatencyResult] = useState<string | null>(null);
-  const [latencyError, setLatencyError] = useState<string | null>(null);
+  const [latencyFeedback, setLatencyFeedback] = useState<LatencyFeedback | null>(
+    null,
+  );
   // 站点默认模型：「providerId|model」；不依赖公开访问模块
   const [defaultModelKey, setDefaultModelKey] = useState<string | null>(null);
   const [savingDefault, setSavingDefault] = useState(false);
@@ -157,8 +179,7 @@ export function ProvidersSection() {
   }, []);
 
   function clearLatencyFeedback() {
-    setLatencyResult(null);
-    setLatencyError(null);
+    setLatencyFeedback(null);
   }
 
   function startCreate() {
@@ -358,19 +379,22 @@ export function ProvidersSection() {
     const built = buildRequest();
     if (!built) return;
     if (!built.apiKey && !editing?.id) {
-      setLatencyResult(null);
-      setLatencyError(t("providers.testLatencyNeedKey"));
+      setLatencyFeedback({
+        tone: "destructive",
+        message: t("providers.testLatencyNeedKey"),
+      });
       return;
     }
     const model = built.models?.[0];
     if (!model) {
-      setLatencyResult(null);
-      setLatencyError(t("providers.testLatencyNeedModel"));
+      setLatencyFeedback({
+        tone: "destructive",
+        message: t("providers.testLatencyNeedModel"),
+      });
       return;
     }
     setLatencyTesting(true);
-    setLatencyResult(null);
-    setLatencyError(null);
+    setLatencyFeedback(null);
     try {
       const body: TestProviderLatencyRequest = {
         type: built.type,
@@ -386,20 +410,27 @@ export function ProvidersSection() {
         body,
       );
       if (res.ok && res.latencyMs != null) {
-        setLatencyResult(
-          t("providers.testLatencyOk", {
+        setLatencyFeedback({
+          tone: latencyToneFromMs(res.latencyMs),
+          message: t("providers.testLatencyOk", {
             ms: res.latencyMs,
             preview: res.replyPreview ?? "—",
           }),
-        );
+        });
       } else {
         const detail = mapLatencyError(res.error);
-        setLatencyError(t("providers.testLatencyFail", { error: detail }));
+        setLatencyFeedback({
+          tone: "destructive",
+          message: t("providers.testLatencyFail", { error: detail }),
+        });
       }
     } catch (e) {
       const raw = e instanceof ApiError ? e.message : String(e);
       const detail = mapLatencyError(raw);
-      setLatencyError(t("providers.testLatencyFail", { error: detail }));
+      setLatencyFeedback({
+        tone: "destructive",
+        message: t("providers.testLatencyFail", { error: detail }),
+      });
     } finally {
       setLatencyTesting(false);
     }
@@ -587,9 +618,9 @@ export function ProvidersSection() {
             <DialogDescription>{t("providers.formDesc")}</DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={submit} className="flex flex-col gap-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-2">
+          <form onSubmit={submit} className="flex min-w-0 flex-col gap-4">
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+              <div className="flex min-w-0 flex-col gap-2">
                 <Label>{t("providers.type")}</Label>
                 <Select
                   value={form.type}
@@ -609,7 +640,7 @@ export function ProvidersSection() {
                 </Select>
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex min-w-0 flex-col gap-2">
                 <Label htmlFor="display-name">{t("providers.displayName")}</Label>
                 <Input
                   id="display-name"
@@ -623,7 +654,7 @@ export function ProvidersSection() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <Label htmlFor="api-key">
                 {t("providers.apiKey")}
                 {editing?.id ? t("providers.apiKeyOptional") : ""}
@@ -642,7 +673,7 @@ export function ProvidersSection() {
             </div>
 
             {schemas[form.type]?.map((f) => (
-              <div className="flex flex-col gap-2" key={f.key}>
+              <div className="flex min-w-0 flex-col gap-2" key={f.key}>
                 <Label
                   htmlFor={`field-${f.key}`}
                   className="flex items-center gap-1.5"
@@ -771,11 +802,18 @@ export function ProvidersSection() {
                     ? t("providers.testLatencyTesting")
                     : t("providers.testLatency")}
                 </Button>
-                {latencyResult && (
-                  <p className="text-xs text-muted-foreground">{latencyResult}</p>
-                )}
-                {latencyError && (
-                  <p className="text-xs text-destructive">{latencyError}</p>
+                {latencyFeedback && (
+                  <div
+                    key={latencyFeedback.message}
+                    role="status"
+                    className={cn(
+                      "max-w-full rounded-md border px-2.5 py-1.5 text-xs leading-relaxed break-all",
+                      "animate-rise motion-reduce:animate-none",
+                      LATENCY_TONE_CLASS[latencyFeedback.tone],
+                    )}
+                  >
+                    {latencyFeedback.message}
+                  </div>
                 )}
               </div>
               <div className="flex shrink-0 gap-2 self-end">

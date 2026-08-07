@@ -103,6 +103,20 @@ export function WritePage() {
   const canWrite =
     sourceText.trim().length > 0 && !streaming && !noModel;
 
+  const activeSub = mode === "style" || mode === "formality" ? mode : null;
+  const [heldSub, setHeldSub] = useState<"style" | "formality" | null>(null);
+  const renderedSub = activeSub ?? heldSub;
+  const subExpanded = activeSub !== null;
+
+  useEffect(() => {
+    if (activeSub) {
+      setHeldSub(activeSub);
+      return;
+    }
+    const id = window.setTimeout(() => setHeldSub(null), 250);
+    return () => window.clearTimeout(id);
+  }, [activeSub]);
+
   async function handleWrite() {
     if (!canWrite) return;
     setStatus("streaming");
@@ -186,7 +200,7 @@ export function WritePage() {
 
         {/* 工具栏 */}
         <div className="flex flex-col gap-3 border-b border-rule bg-muted/20 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
-          <div className="flex min-w-0 flex-col gap-2.5">
+          <div className="flex min-w-0 flex-col">
             <ModeSegment
               value={mode}
               onChange={setMode}
@@ -195,25 +209,44 @@ export function WritePage() {
               ariaLabel={t("write.modeAria")}
             />
 
-            {mode === "style" && (
-              <SubSegment
-                value={style}
-                onChange={setStyle}
-                options={writeStyles}
-                disabled={streaming}
-                label={t("write.styleLabel")}
-              />
-            )}
-
-            {mode === "formality" && (
-              <SubSegment
-                value={formality}
-                onChange={setFormality}
-                options={writeFormalities}
-                disabled={streaming}
-                label={t("write.toneLabel")}
-              />
-            )}
+            <div
+              className={cn(
+                "grid transition-[grid-template-rows] duration-250 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
+                subExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+              )}
+              aria-hidden={!subExpanded}
+            >
+              <div className="min-h-0 overflow-hidden">
+                <div
+                  className={cn(
+                    "pt-2.5 transition-[opacity,transform] duration-250 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
+                    subExpanded
+                      ? "translate-y-0 opacity-100"
+                      : "-translate-y-1 opacity-0",
+                    !subExpanded && "pointer-events-none",
+                  )}
+                >
+                  {renderedSub === "style" && (
+                    <SubSegment
+                      value={style}
+                      onChange={setStyle}
+                      options={writeStyles}
+                      disabled={streaming}
+                      label={t("write.styleLabel")}
+                    />
+                  )}
+                  {renderedSub === "formality" && (
+                    <SubSegment
+                      value={formality}
+                      onChange={setFormality}
+                      options={writeFormalities}
+                      disabled={streaming}
+                      label={t("write.toneLabel")}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
