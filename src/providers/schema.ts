@@ -80,10 +80,6 @@ export const providerSchemas: Record<ProviderType, ProviderField[]> = {
       ],
     },
   ],
-  custom: [
-    { key: "baseUrl", label: "Base URL", type: "text", required: true, placeholder: "https://your-endpoint/v1" },
-    { key: "models", label: "模型", type: "models" },
-  ],
 };
 
 /** select 型 models 字段的 value → 展示 label；无映射时回落到原始 model 值。 */

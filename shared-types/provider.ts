@@ -5,7 +5,6 @@ export type ProviderType =
   | "claude"
   | "gemini"
   | "aihubmix"
-  | "custom"
   | "cloudflare"
   | "deepl";
 

@@ -60,7 +60,6 @@ import { toast } from "@/components/ui/sonner";
 import { useOnceAnimation } from "@/lib/useOnceAnimation";
 import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import type { MessageKey } from "@/locales/zh-CN";
 
 interface FormState {
   type: ProviderType;
@@ -98,8 +97,8 @@ const EMPTY_FORM: FormState = {
   enabled: true,
 };
 
-// 技术类型 ID → 展示名，表格与下拉均用此映射（custom 走 i18n）
-const PROVIDER_LABELS: Record<Exclude<ProviderType, "custom">, string> = {
+// 技术类型 ID → 展示名，表格与下拉均用此映射
+const PROVIDER_LABELS: Record<ProviderType, string> = {
   openai: "OpenAI",
   claude: "Claude",
   gemini: "Gemini",
@@ -108,11 +107,7 @@ const PROVIDER_LABELS: Record<Exclude<ProviderType, "custom">, string> = {
   deepl: "DeepL",
 };
 
-function providerLabel(
-  type: ProviderType,
-  t: (key: MessageKey, params?: Record<string, string | number>) => string,
-): string {
-  if (type === "custom") return t("providers.typeCustom");
+function providerLabel(type: ProviderType): string {
   return PROVIDER_LABELS[type] ?? type;
 }
 
@@ -285,8 +280,8 @@ export function ProvidersSection() {
       displayName: form.displayName.trim(),
       apiKey: form.apiKey,
       baseUrl,
-      models: models.length ? models : undefined,
-      configJson: Object.keys(configJson).length ? configJson : undefined,
+      models,
+      configJson,
       enabled: form.enabled,
     };
   }
@@ -303,12 +298,25 @@ export function ProvidersSection() {
     setError(null);
     try {
       if (editing?.id) {
-        const body: Partial<CreateProviderRequest> = { ...built };
+        // Always send type-scoped fields so switching type clears stale baseUrl /
+        // models / configJson from the previous adapter schema.
+        const body: Partial<CreateProviderRequest> = {
+          ...built,
+          baseUrl: built.baseUrl ?? "",
+          models: built.models ?? [],
+          configJson: built.configJson ?? {},
+        };
         if (!body.apiKey) delete body.apiKey;
         await apiPut(`/api/admin/providers/${editing.id}`, body);
         toast.success(t("providers.updated"));
       } else {
-        await apiPost("/api/admin/providers", built);
+        await apiPost("/api/admin/providers", {
+          ...built,
+          models: built.models?.length ? built.models : undefined,
+          configJson: Object.keys(built.configJson ?? {}).length
+            ? built.configJson
+            : undefined,
+        });
         toast.success(t("providers.added"));
       }
       closeDialog();
@@ -607,7 +615,7 @@ export function ProvidersSection() {
                         </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {providerLabel(p.type, t)}
+                        {providerLabel(p.type)}
                       </TableCell>
                       <TableCell className="max-w-0">
                         <span
@@ -674,7 +682,6 @@ export function ProvidersSection() {
                 <Select
                   value={form.type}
                   onValueChange={(v) => onTypeChange(v as ProviderType)}
-                  disabled={!!editing?.id}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -682,7 +689,7 @@ export function ProvidersSection() {
                   <SelectContent>
                     {types.map((type) => (
                       <SelectItem key={type} value={type}>
-                        {providerLabel(type, t)}
+                        {providerLabel(type)}
                       </SelectItem>
                     ))}
                   </SelectContent>

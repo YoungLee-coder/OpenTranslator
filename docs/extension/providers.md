@@ -75,7 +75,7 @@ export const yourVendorProvider = makeOpenAICompat(
 );
 ```
 
-参考：`src/providers/openai.ts`（`openai`、`aihubmix`、`custom` 均由此工厂生成）。
+参考：`src/providers/openai.ts`（`openai`、`aihubmix` 均由此工厂生成）。
 
 **独立 API 格式** — 参考：
 
@@ -150,7 +150,7 @@ pnpm typecheck:api
 
 | 类型 | 示例 |
 |---|---|
-| OpenAI / 兼容 / custom | `https://api.openai.com/v1` |
+| OpenAI / 兼容 | `https://api.openai.com/v1` |
 | Claude | `https://api.anthropic.com` |
 | Gemini | `https://generativelanguage.googleapis.com`（schema 默认即可） |
 | Cloudflare | 由 `accountId` 拼出，无需手填 baseUrl |

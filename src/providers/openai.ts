@@ -13,7 +13,7 @@ import { streamFromDeltas } from "./sse";
 /**
  * OpenAI-compatible chat completions via the official `openai` SDK.
  * `baseUrl` is the SDK root (e.g. https://api.openai.com/v1); the SDK appends
- * /chat/completions. custom / aihubmix share the same wire format.
+ * /chat/completions. aihubmix / Cloudflare share the same wire format.
  */
 
 function createClient(
@@ -130,5 +130,3 @@ export const aihubmixProvider = makeOpenAICompat(
   "gpt-4o-mini",
   { "APP-Code": "JFRG5263" },
 );
-/** Generic OpenAI-compatible root — baseUrl (SDK root) is required on the provider row. */
-export const customProvider = makeOpenAICompat("custom", "", "");

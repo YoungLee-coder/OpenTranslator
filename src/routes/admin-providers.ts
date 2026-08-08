@@ -128,6 +128,9 @@ adminProvidersRoute.put("/:id", async (c) => {
   if (!existing) return c.json({ error: "not found" }, 404);
   const body = (await c.req.json().catch(() => null)) as Partial<CreateProviderRequest> | null;
   if (!body) return c.json({ error: "invalid body" }, 400);
+  if (body.type !== undefined && !providerSchemas[body.type]) {
+    return c.json({ error: `unknown provider type "${body.type}"` }, 400);
+  }
 
   const patch: ProviderPatch = {};
   if (body.type !== undefined) patch.type = body.type;
@@ -144,7 +147,10 @@ adminProvidersRoute.put("/:id", async (c) => {
     patch.default_model = body.defaultModel || null;
   }
   if (body.configJson !== undefined) {
-    patch.config_json = body.configJson ? JSON.stringify(body.configJson) : null;
+    patch.config_json =
+      body.configJson && Object.keys(body.configJson).length > 0
+        ? JSON.stringify(body.configJson)
+        : null;
   }
   if (body.enabled !== undefined) patch.enabled = body.enabled ? 1 : 0;
   if (body.isPublicDefault !== undefined) {

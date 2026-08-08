@@ -253,8 +253,7 @@ export async function probeProviderLatency(
   const model = resolveModel(type, ctx);
 
   switch (type) {
-    case "openai":
-    case "custom": {
+    case "openai": {
       const baseUrl = resolveBaseUrl(type, ctx);
       if (!baseUrl) return { ok: false, latencyMs: 0, error: "baseUrl is required" };
       if (!model) return { ok: false, latencyMs: 0, error: "model is required" };

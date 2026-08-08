@@ -176,7 +176,6 @@ export const en: Messages = {
   "modules.disabledToast": "Disabled \"{{name}}\"",
 
   "providers.title": "Providers",
-  "providers.typeCustom": "Custom",
   "providers.fieldRequired": "\"{{label}}\" is required",
   "providers.baseUrlInvalid":
     "Base URL must be an SDK root starting with http:// or https:// (no /chat/completions path)",
