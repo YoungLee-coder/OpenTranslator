@@ -96,9 +96,11 @@ a {
 .page-shell {
   /* Radix: .rt-Container.rt-r-px-5 */
   width: 100%;
-  padding-inline: var(--page-pad-x);
-  padding-bottom: 96px;
+  padding-left: max(var(--page-pad-x), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--page-pad-x), env(safe-area-inset-right, 0px));
+  padding-bottom: max(96px, calc(64px + env(safe-area-inset-bottom, 0px)));
   box-sizing: border-box;
+  overflow-x: clip;
 }
 .page-inner {
   /* Radix: .rt-ContainerInner with --container-3 */
@@ -300,11 +302,16 @@ html[lang="en"] .hero h1 {
   color: var(--ink-tertiary);
   margin: 0;
   line-height: 1.5;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .hero-code code {
   font-family: var(--mono);
   font-size: 12px;
   color: var(--sand-10);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* ========== Section primitives ========== */
@@ -905,37 +912,57 @@ footer.foot {
 
 @media (max-width: 640px) {
   :root {
-    --page-pad-x: 20px;
+    --page-pad-x: 16px;
     --section-gap: 48px;
   }
 
   .site-nav {
-    padding-top: 20px;
+    padding-top: 16px;
+    gap: 12px;
   }
   .site-nav-links {
-    gap: 16px;
+    gap: 12px;
   }
   .site-nav-links a.nav-text {
     display: none;
   }
+  .site-nav-brand span {
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
   .hero {
-    padding-top: 24px;
+    padding-top: 20px;
+    gap: 14px;
   }
   .hero h1 {
     font-size: 24px;
+    max-width: none;
   }
   html[lang="en"] .hero h1 {
     font-size: 26px;
   }
+  .hero .tagline {
+    max-width: none;
+  }
 
   .product-stage {
-    padding: 28px 12px 32px;
-    margin-inline: calc(-1 * var(--page-pad-x));
+    padding: 8px 0 20px;
+    margin-left: 0;
+    margin-right: 0;
     border-radius: 0;
+    background: none;
   }
   .product-window {
     border-radius: 14px;
+    max-width: none;
+  }
+  .gallery-frame {
+    aspect-ratio: auto;
+    height: clamp(400px, 62dvh, 540px);
+    min-height: 400px;
   }
   .gallery-chip {
     display: none;
@@ -943,16 +970,25 @@ footer.foot {
 
   .gallery-footer {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+    gap: 14px;
   }
   .gallery-tabs {
     width: 100%;
+    max-width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+  .gallery-tabs::-webkit-scrollbar {
+    display: none;
   }
   .gallery-tabs button {
-    flex: 0 0 auto;
+    flex: 1 0 auto;
+    min-height: 36px;
+    padding: 9px 12px;
+    font-size: 13px;
   }
   .gallery-caption {
     flex-direction: column;
@@ -963,7 +999,9 @@ footer.foot {
   .features .name {
     display: block;
   }
-  .features .name::after {
+  .features .name::after,
+  html[lang="zh-CN"] .features .name::after,
+  html[lang="en"] .features .name::after {
     content: none;
   }
   .features .what {
@@ -973,15 +1011,19 @@ footer.foot {
 
   .principles-card,
   .price-card {
-    padding: 22px 20px;
-    margin-inline: calc(-1 * var(--page-pad-x));
+    padding: 0;
+    margin-left: 0;
+    margin-right: 0;
     border-radius: 0;
+    background: none;
   }
   .principles .body b {
     display: block;
     margin-bottom: 2px;
   }
-  .principles .body b::after {
+  .principles .body b::after,
+  html[lang="zh-CN"] .principles .body b::after,
+  html[lang="en"] .principles .body b::after {
     content: none;
   }
 
@@ -994,11 +1036,46 @@ footer.foot {
   }
 
   .window-chrome {
-    height: 36px;
-    padding: 0 12px;
-    grid-template-columns: 64px 1fr 72px;
+    height: 34px;
+    padding: 0 10px;
+    grid-template-columns: 56px 1fr minmax(0, auto);
+  }
+  .window-traffic .dot {
+    width: 8px;
+    height: 8px;
   }
   .window-title { font-size: 12px; }
+  .window-chrome-end {
+    font-size: 10px;
+    padding: 2px 7px;
+  }
+
+  .faq-pair {
+    padding: 14px 0;
+  }
+}
+
+@media (max-width: 380px) {
+  :root {
+    --page-pad-x: 14px;
+  }
+
+  .hero h1 {
+    font-size: 22px;
+  }
+  html[lang="en"] .hero h1 {
+    font-size: 24px;
+  }
+
+  .gallery-frame {
+    height: clamp(380px, 68dvh, 500px);
+    min-height: 380px;
+  }
+
+  .gallery-tabs button {
+    padding: 9px 10px;
+    font-size: 12px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

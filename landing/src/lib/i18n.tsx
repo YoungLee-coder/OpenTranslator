@@ -9,14 +9,31 @@ import {
 } from "react";
 import { catalogs, type Content, type Locale } from "@/content";
 
-const STORAGE_KEY = "opentranslator-locale";
+/** Landing-only preference; unset → follow browser language. */
+const STORAGE_KEY = "opentranslator-landing-locale";
+
+/** Prefer the first supported tag in the browser language list. */
+export function localeFromBrowser(): Locale {
+  if (typeof navigator === "undefined") return "zh-CN";
+  const candidates = [
+    ...(navigator.languages ?? []),
+    navigator.language,
+  ]
+    .filter(Boolean)
+    .map((tag) => tag.toLowerCase());
+
+  for (const tag of candidates) {
+    if (tag === "zh" || tag.startsWith("zh-")) return "zh-CN";
+    if (tag === "en" || tag.startsWith("en-")) return "en";
+  }
+  return "zh-CN";
+}
 
 export function resolveInitialLocale(): Locale {
   if (typeof window === "undefined") return "zh-CN";
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored === "zh-CN" || stored === "en") return stored;
-  if (navigator.language.toLowerCase().startsWith("en")) return "en";
-  return "zh-CN";
+  return localeFromBrowser();
 }
 
 interface LocaleContextValue {
@@ -57,11 +74,11 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     applyDocumentMeta(locale, content);
-    localStorage.setItem(STORAGE_KEY, locale);
   }, [locale, content]);
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
+    localStorage.setItem(STORAGE_KEY, next);
   }, []);
 
   const value = useMemo(

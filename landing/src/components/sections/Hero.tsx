@@ -1,4 +1,4 @@
-import { DownloadSimpleIcon } from "@phosphor-icons/react";
+import { GitHubIcon } from "@/components/GitHubIcon";
 import { LogoMark } from "@/components/LogoMark";
 import { useContent } from "@/lib/i18n";
 
@@ -31,7 +31,7 @@ export function Hero() {
 
         <div className="hero-cta">
           <a className="btn-primary" href={site.repoUrl}>
-            <DownloadSimpleIcon size={16} weight="regular" aria-hidden />
+            <GitHubIcon size={16} />
             {hero.repoCta}
           </a>
         </div>
