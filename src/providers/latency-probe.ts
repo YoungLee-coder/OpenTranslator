@@ -1,5 +1,11 @@
 import type { ProviderContext, ProviderType } from "@opentranslator/shared-types";
 import { assertPublicHttpUrl } from "../lib/url-safety";
+import {
+  anthropicMessagesURL,
+  normalizeGeminiBaseURL,
+  openAIChatCompletionsURL,
+} from "./base-url";
+import { cloudflareBaseURL } from "./cloudflare";
 import { deeplProvider } from "./deepl";
 import { safeText } from "./sse";
 
@@ -8,19 +14,19 @@ const PROBE_USER = "say hi";
 const PROBE_MAX_TOKENS = 16;
 const PREVIEW_MAX = 48;
 
-const OPENAI_DEFAULTS: Partial<
+const PROVIDER_DEFAULTS: Partial<
   Record<ProviderType, { baseUrl: string; model: string }>
 > = {
   openai: {
-    baseUrl: "https://api.openai.com/v1/chat/completions",
+    baseUrl: "https://api.openai.com/v1",
     model: "gpt-4o-mini",
   },
   aihubmix: {
-    baseUrl: "https://aihubmix.com/v1/chat/completions",
+    baseUrl: "https://aihubmix.com/v1",
     model: "gpt-4o-mini",
   },
   claude: {
-    baseUrl: "https://api.anthropic.com/v1/messages",
+    baseUrl: "https://api.anthropic.com",
     model: "claude-sonnet-4-5",
   },
   gemini: {
@@ -56,10 +62,6 @@ function preview(text: string): string {
 
 function timedOut(message: string): boolean {
   return /timeout|timed out|aborted|AbortError/i.test(message);
-}
-
-function endpoint(url: string): string {
-  return url.replace(/\/$/, "");
 }
 
 async function timedProbe(
@@ -102,12 +104,12 @@ async function timedProbe(
 }
 
 async function probeOpenAICompat(
-  url: string,
+  baseURL: string,
   apiKey: string,
   model: string,
   extraHeaders?: Record<string, string>,
 ): Promise<LatencyProbeResult> {
-  return timedProbe(url, {
+  return timedProbe(openAIChatCompletionsURL(baseURL), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -134,7 +136,7 @@ async function probeClaude(
   apiKey: string,
   model: string,
 ): Promise<LatencyProbeResult> {
-  return timedProbe(endpoint(baseUrl), {
+  return timedProbe(anthropicMessagesURL(baseUrl), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -161,7 +163,8 @@ async function probeGemini(
   apiKey: string,
   model: string,
 ): Promise<LatencyProbeResult> {
-  const url = `${endpoint(baseUrl)}/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const root = normalizeGeminiBaseURL(baseUrl);
+  const url = `${root}/v1beta/models/${model}:generateContent?key=${apiKey}`;
   return timedProbe(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -212,20 +215,16 @@ async function probeDeepL(ctx: ProviderContext): Promise<LatencyProbeResult> {
   }
 }
 
-function cloudflareEndpoint(accountId: string): string {
-  return `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/v1/chat/completions`;
-}
-
 function resolveModel(type: ProviderType, ctx: ProviderContext): string {
   const fromCtx = ctx.defaultModel?.trim();
   if (fromCtx) return fromCtx;
-  return OPENAI_DEFAULTS[type]?.model ?? "";
+  return PROVIDER_DEFAULTS[type]?.model ?? "";
 }
 
 function resolveBaseUrl(type: ProviderType, ctx: ProviderContext): string | null {
   const fromCtx = ctx.baseUrl?.trim();
   if (fromCtx) return fromCtx;
-  const def = OPENAI_DEFAULTS[type]?.baseUrl;
+  const def = PROVIDER_DEFAULTS[type]?.baseUrl;
   return def || null;
 }
 
@@ -259,13 +258,13 @@ export async function probeProviderLatency(
       const baseUrl = resolveBaseUrl(type, ctx);
       if (!baseUrl) return { ok: false, latencyMs: 0, error: "baseUrl is required" };
       if (!model) return { ok: false, latencyMs: 0, error: "model is required" };
-      return probeOpenAICompat(endpoint(baseUrl), apiKey, model);
+      return probeOpenAICompat(baseUrl, apiKey, model);
     }
     case "aihubmix": {
       const baseUrl = resolveBaseUrl(type, ctx);
       if (!baseUrl) return { ok: false, latencyMs: 0, error: "baseUrl is required" };
       if (!model) return { ok: false, latencyMs: 0, error: "model is required" };
-      return probeOpenAICompat(endpoint(baseUrl), apiKey, model, AIHUBMIX_HEADERS);
+      return probeOpenAICompat(baseUrl, apiKey, model, AIHUBMIX_HEADERS);
     }
     case "claude": {
       const baseUrl = resolveBaseUrl(type, ctx);
@@ -288,7 +287,7 @@ export async function probeProviderLatency(
         return { ok: false, latencyMs: 0, error: "accountId is required" };
       }
       if (!model) return { ok: false, latencyMs: 0, error: "model is required" };
-      return probeOpenAICompat(cloudflareEndpoint(accountId), apiKey, model);
+      return probeOpenAICompat(cloudflareBaseURL(accountId), apiKey, model);
     }
     case "deepl": {
       if (!model) return { ok: false, latencyMs: 0, error: "model is required" };

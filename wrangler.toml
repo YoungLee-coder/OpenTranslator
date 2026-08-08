@@ -1,6 +1,8 @@
 name = "opentranslator"
 main = "src/index.ts"
 compatibility_date = "2025-11-01"
+# Anthropic / OpenAI / Gemini 官方 SDK 会引用 node:fs 等内置模块
+compatibility_flags = ["nodejs_compat"]
 
 # Static assets — 前端打包产物（pnpm build 输出到 ./dist）。
 # 同一个 Worker 既服务 SPA 又处理 /api/*，一次部署全搞定，同源无需 CORS。

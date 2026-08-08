@@ -16,6 +16,12 @@ export type ProviderType =
  */
 export interface ProviderContext {
   apiKey: string;
+  /**
+   * Official SDK root URL (not a full endpoint path).
+   * OpenAI: https://api.openai.com/v1
+   * Anthropic: https://api.anthropic.com
+   * Gemini: https://generativelanguage.googleapis.com
+   */
   baseUrl?: string;
   defaultModel?: string;
   configJson?: Record<string, unknown>;

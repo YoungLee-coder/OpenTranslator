@@ -7,6 +7,7 @@ import type {
 } from "@opentranslator/shared-types";
 import type { AppBindings, AppVariables } from "../types";
 import { providerSchemas } from "../providers/schema";
+import { normalizeStoredProviderBaseUrl } from "../providers/base-url";
 import {
   clearPublicDefaultFlag,
   deleteProvider,
@@ -64,7 +65,7 @@ adminProvidersRoute.post("/test-latency", async (c) => {
 
   const result = await probeProviderLatency(body.type, {
     apiKey,
-    baseUrl: body.baseUrl?.trim() || undefined,
+    baseUrl: normalizeStoredProviderBaseUrl(body.type, body.baseUrl?.trim()),
     defaultModel: body.model?.trim() || undefined,
     configJson: body.configJson,
   });
@@ -109,7 +110,7 @@ adminProvidersRoute.post("/", async (c) => {
     type: body.type,
     display_name: body.displayName,
     encrypted_api_key: encrypted,
-    base_url: body.baseUrl ?? null,
+    base_url: normalizeStoredProviderBaseUrl(body.type, body.baseUrl) ?? null,
     default_model: defaultModel,
     models: modelsJson,
     config_json: body.configJson ? JSON.stringify(body.configJson) : null,
@@ -131,7 +132,10 @@ adminProvidersRoute.put("/:id", async (c) => {
   const patch: ProviderPatch = {};
   if (body.type !== undefined) patch.type = body.type;
   if (body.displayName !== undefined) patch.display_name = body.displayName;
-  if (body.baseUrl !== undefined) patch.base_url = body.baseUrl || null;
+  if (body.baseUrl !== undefined) {
+    const type = (body.type ?? existing.type) as ProviderType;
+    patch.base_url = normalizeStoredProviderBaseUrl(type, body.baseUrl) ?? null;
+  }
   // models 与 default_model 联动：传了 models 就从首项派生默认模型。
   if (body.models !== undefined) {
     patch.models = body.models.length ? JSON.stringify(body.models) : null;

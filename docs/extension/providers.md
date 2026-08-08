@@ -36,7 +36,7 @@ export interface TranslationProvider {
 | `translate` | 非流式翻译，返回完整 `TranslateResponse` |
 | `translateStream?` | 可选；发出 UTF-8 译文增量，路由层包装为 SSE `delta` 事件 |
 | `ProviderContext.apiKey` | 服务端解密后的明文 Key |
-| `ProviderContext.baseUrl` | Dashboard 填写的完整端点 URL |
+| `ProviderContext.baseUrl` | Dashboard 填写的官方 SDK 根 URL |
 | `ProviderContext.defaultModel` | 本次请求解析出的模型名 |
 | `ProviderContext.configJson` | schema 中 select 等字段的额外配置 |
 
@@ -62,14 +62,14 @@ export type ProviderType =
 
 在 `src/providers/your-vendor.ts` 新建文件。
 
-**OpenAI 兼容端点**（最常见）— 复用 `makeOpenAICompat`：
+**OpenAI 兼容端点**（最常见）— 复用 `makeOpenAICompat`（底层为官方 `openai` SDK）：
 
 ```typescript
 import { makeOpenAICompat } from "./openai";
 
 export const yourVendorProvider = makeOpenAICompat(
   "your-vendor",
-  "https://api.example.com/v1/chat/completions",  // 默认 baseUrl
+  "https://api.example.com/v1",  // SDK 根 baseURL，勿含 /chat/completions
   "default-model-name",
   { "X-Custom-Header": "value" },  // 可选额外请求头
 );
@@ -81,10 +81,10 @@ export const yourVendorProvider = makeOpenAICompat(
 
 | 文件 | 特点 |
 |---|---|
-| `src/providers/claude.ts` | Anthropic Messages API，`x-api-key` 鉴权 |
-| `src/providers/gemini.ts` | Google Generative Language API |
+| `src/providers/claude.ts` | 官方 `@anthropic-ai/sdk`，`baseURL` 如 `https://api.anthropic.com` |
+| `src/providers/gemini.ts` | 官方 `@google/genai/web`，`httpOptions.baseUrl` 如 `https://generativelanguage.googleapis.com` |
 | `src/providers/deepl.ts` | 专用翻译 API，无流式、无自定义 prompt |
-| `src/providers/cloudflare.ts` | Workers AI REST，需 `accountId` |
+| `src/providers/cloudflare.ts` | Workers AI，OpenAI SDK + `accountId` 拼出 `/ai/v1` 根 |
 
 ### 3. 注册 adapter
 
@@ -109,7 +109,7 @@ your-vendor: [
     label: "Base URL",
     type: "text",
     required: true,
-    placeholder: "https://api.example.com/v1/chat/completions",
+    placeholder: "https://api.example.com/v1",
   },
   {
     key: "models",
@@ -146,10 +146,16 @@ pnpm typecheck:api
 
 ## baseUrl 约定
 
-- **必须**以 `http://` 或 `https://` 开头的**完整端点 URL**。
-- OpenAI 兼容：含 `/v1/chat/completions`。
-- Claude：含 `/v1/messages`。
-- adapter **不再拼接路径**，只去掉末尾 `/` 后直接使用。
+与官方 SDK 一致，填**根地址**，不要带具体 API path：
+
+| 类型 | 示例 |
+|---|---|
+| OpenAI / 兼容 / custom | `https://api.openai.com/v1` |
+| Claude | `https://api.anthropic.com` |
+| Gemini | `https://generativelanguage.googleapis.com`（schema 默认即可） |
+| Cloudflare | 由 `accountId` 拼出，无需手填 baseUrl |
+
+旧配置若仍存 `…/chat/completions` 或 `…/v1/messages`，`src/providers/base-url.ts` 会剥离已知后缀以保持兼容。
 
 ## models 字段语义
 
@@ -169,8 +175,8 @@ pnpm typecheck:api
 ## 常见陷阱
 
 1. **忘记改 `ProviderType`** — typecheck 会在 registry / schema / DB 多处报错。
-2. **baseUrl 只填域名** — 必须填完整 path，否则 404。
-3. **流式解析错误** — OpenAI 兼容流用 `src/providers/sse.ts` 的 `parseSSEEvents`；不要自己猜 SSE 格式。
+2. **baseUrl 填成完整端点** — 新配置应填 SDK 根；完整 path 仅作遗留兼容。
+3. **自造 SSE 解析** — OpenAI / Claude / Gemini 已走官方 SDK 流式；不要再手写上游 SSE。
 4. **在核心路由硬编码** — 一律走 `providerRegistry`，保持 `translate/handler.ts` 不变。
 
 ## 参考文件
@@ -180,6 +186,7 @@ pnpm typecheck:api
 | 注册表 | `src/providers/registry.ts` |
 | 注册入口 | `src/providers/index.ts` |
 | OpenAI 兼容工厂 | `src/providers/openai.ts` |
+| baseUrl 规范化 | `src/providers/base-url.ts` |
 | 表单 schema | `src/providers/schema.ts` |
 | 翻译分发 | `src/features/translate/handler.ts` |
 | 共享类型 | `shared-types/provider.ts` |

@@ -1,6 +1,7 @@
 /**
- * Tiny SSE parser shared by adapters whose upstream speaks the
- * `data: {json}\n\n` dialect (OpenAI-compatible, Anthropic, Gemini alt=sse).
+ * Tiny SSE parser for raw upstream streams that speak `data: {json}\n\n`.
+ * LLM adapters now use official SDKs; this remains for any raw-fetch callers
+ * (e.g. probes) that still parse SSE by hand.
  * Lines that don't start with `data:` (event names, comments) are ignored.
  */
 export async function* parseSSEEvents(

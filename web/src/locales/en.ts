@@ -179,7 +179,7 @@ export const en: Messages = {
   "providers.typeCustom": "Custom",
   "providers.fieldRequired": "\"{{label}}\" is required",
   "providers.baseUrlInvalid":
-    "Base URL must be a full address starting with http:// or https://",
+    "Base URL must be an SDK root starting with http:// or https:// (no /chat/completions path)",
   "providers.nameKeyRequired": "Display name and API key are required",
   "providers.updated": "Provider updated",
   "providers.added": "Provider added",

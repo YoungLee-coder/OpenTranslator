@@ -19,6 +19,7 @@ import {
 import { decryptSecret } from "../../lib/crypto";
 import { buildWritePrompt } from "./prompt";
 import { providerRegistry } from "../../providers/registry";
+import { normalizeStoredProviderBaseUrl } from "../../providers/base-url";
 import { getClientIp, enforceRateLimit } from "../../middleware/rate-limit";
 import { publicProviderError } from "../../lib/errors";
 
@@ -190,7 +191,7 @@ export async function handleWrite(c: C): Promise<Response> {
 
   const ctx: ProviderContext = {
     apiKey,
-    baseUrl: row.base_url ?? undefined,
+    baseUrl: normalizeStoredProviderBaseUrl(providerType, row.base_url),
     defaultModel: resolvedModel,
     configJson: row.config_json
       ? (JSON.parse(row.config_json) as Record<string, unknown>)

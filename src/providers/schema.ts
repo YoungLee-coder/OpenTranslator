@@ -5,18 +5,19 @@ import type {
 
 // Drives the dynamic provider form in the Dashboard.
 // Add a vendor here + an adapter file = new provider, no core logic changes.
-// baseUrl 填写完整端点 URL（OpenAI 兼容含 /chat/completions，Claude 含
-// /v1/messages），需以 http(s):// 开头，adapter 不再拼接路径；
+// baseUrl 填写官方 SDK 根地址（OpenAI: …/v1，Anthropic: 主机根，Gemini: 主机根），
+// 需以 http(s):// 开头；SDK 负责拼接 /chat/completions、/v1/messages 等路径。
+// 旧配置若仍存完整端点 URL，adapter 会剥离已知后缀以保持兼容。
 // preset 字段由 schema 锁定为完整预设值，前端不可编辑；
 // select + defaultValue 用于可选预设（如 aihubmix 主站/备用 Base URL）。
 // models 字段一行一个模型名，首项视为该供应商的默认模型。
 export const providerSchemas: Record<ProviderType, ProviderField[]> = {
   openai: [
-    { key: "baseUrl", label: "Base URL", type: "text", required: true, placeholder: "https://api.openai.com/v1/chat/completions" },
+    { key: "baseUrl", label: "Base URL", type: "text", required: true, placeholder: "https://api.openai.com/v1" },
     { key: "models", label: "模型", type: "models", placeholder: "gpt-4o-mini\ngpt-4o" },
   ],
   claude: [
-    { key: "baseUrl", label: "Base URL", type: "text", required: true, placeholder: "https://api.anthropic.com/v1/messages" },
+    { key: "baseUrl", label: "Base URL", type: "text", required: true, placeholder: "https://api.anthropic.com" },
     { key: "models", label: "模型", type: "models", placeholder: "claude-sonnet-4-5\nclaude-opus-4-1" },
   ],
   gemini: [
@@ -27,14 +28,14 @@ export const providerSchemas: Record<ProviderType, ProviderField[]> = {
       key: "baseUrl",
       label: "Base URL",
       type: "select",
-      defaultValue: "https://aihubmix.com/v1/chat/completions",
+      defaultValue: "https://aihubmix.com/v1",
       options: [
         {
-          value: "https://aihubmix.com/v1/chat/completions",
+          value: "https://aihubmix.com/v1",
           label: "aihubmix.com（主站）",
         },
         {
-          value: "https://api.inferera.com/v1/chat/completions",
+          value: "https://api.inferera.com/v1",
           label: "api.inferera.com（备用）",
         },
       ],
@@ -80,7 +81,7 @@ export const providerSchemas: Record<ProviderType, ProviderField[]> = {
     },
   ],
   custom: [
-    { key: "baseUrl", label: "Base URL", type: "text", required: true, placeholder: "https://your-endpoint/v1/chat/completions" },
+    { key: "baseUrl", label: "Base URL", type: "text", required: true, placeholder: "https://your-endpoint/v1" },
     { key: "models", label: "模型", type: "models" },
   ],
 };

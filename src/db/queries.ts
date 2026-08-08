@@ -4,6 +4,7 @@ import type {
   PublicModelRef,
   SiteSettings,
 } from "@opentranslator/shared-types";
+import { normalizeStoredProviderBaseUrl } from "../providers/base-url";
 
 interface ProviderRow {
   id: string;
@@ -41,11 +42,12 @@ function toProviderRecord(row: ProviderRow): ProviderRecord {
       // 损坏的 JSON 忽略，回落到 defaultModel
     }
   }
+  const type = row.type as ProviderType;
   return {
     id: row.id,
-    type: row.type as ProviderType,
+    type,
     displayName: row.display_name,
-    baseUrl: row.base_url ?? undefined,
+    baseUrl: normalizeStoredProviderBaseUrl(type, row.base_url),
     defaultModel: row.default_model ?? undefined,
     models,
     configJson: row.config_json ? (JSON.parse(row.config_json) as Record<string, unknown>) : undefined,

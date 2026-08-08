@@ -176,7 +176,7 @@ export const zhCN = {
   "providers.title": "供应商",
   "providers.typeCustom": "自定义",
   "providers.fieldRequired": "「{{label}}」为必填项",
-  "providers.baseUrlInvalid": "Base URL 需填写完整地址（以 http:// 或 https:// 开头）",
+  "providers.baseUrlInvalid": "Base URL 需填写 SDK 根地址（以 http:// 或 https:// 开头，勿含 /chat/completions 等路径）",
   "providers.nameKeyRequired": "显示名称和 API Key 为必填项",
   "providers.updated": "供应商已更新",
   "providers.added": "供应商已添加",
