@@ -167,6 +167,9 @@ export const en: Messages = {
   "settings.organizeFormat": "Organize format",
   "settings.organizeFormatDesc":
     "When translating, infer paragraph and list structure from messy source text and output a clean translation. Applies to general translation only; AI experts and DeepL are unaffected.",
+  "settings.disableModelReasoning": "Disable model reasoning",
+  "settings.disableModelReasoningDesc":
+    "When on, request params turn off chain-of-thought / thinking (e.g. reasoning, thinking) to cut latency and token use. DeepL is unaffected; some models may reject these params.",
 
   "modules.title": "Feature modules",
   "modules.module": "Module",

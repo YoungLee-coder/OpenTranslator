@@ -8,6 +8,7 @@ import type {
 } from "@opentranslator/shared-types";
 import { normalizeOpenAIBaseURL } from "./base-url";
 import { buildPrompt } from "./prompt";
+import { openAICompatDisableReasoning } from "./reasoning";
 import { streamFromDeltas } from "./sse";
 
 /**
@@ -59,6 +60,7 @@ export function makeOpenAICompat(
             { role: "user", content: user },
           ],
           stream: false,
+          ...openAICompatDisableReasoning(ctx, name),
         });
         const content = completion.choices[0]?.message?.content ?? "";
         return {
@@ -101,6 +103,7 @@ async function* openaiDeltas(
         { role: "user", content: user },
       ],
       stream: true,
+      ...openAICompatDisableReasoning(ctx, name),
     });
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta?.content;

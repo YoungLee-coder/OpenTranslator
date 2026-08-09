@@ -165,6 +165,9 @@ export const zhCN = {
   "settings.organizeFormat": "整理格式",
   "settings.organizeFormatDesc":
     "翻译时根据杂乱原文推断段落与列表结构，输出整洁译文。仅对通用翻译生效；AI 专家与 DeepL 不受影响。",
+  "settings.disableModelReasoning": "关闭模型推理",
+  "settings.disableModelReasoningDesc":
+    "开启后在请求侧关闭思考链 / 推理（如 reasoning、thinking），降低延迟与用量。DeepL 不受影响；部分模型可能不支持此参数。",
 
   "modules.title": "功能模块",
   "modules.module": "模块",

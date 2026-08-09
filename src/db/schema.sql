@@ -57,7 +57,8 @@ INSERT OR IGNORE INTO site_settings (key, value, updated_at) VALUES
   ('authed_rate_limit_per_minute', '60', CAST(strftime('%s','now') AS INTEGER)),
   ('translation_cache_enabled', 'true', CAST(strftime('%s','now') AS INTEGER)),
   ('translation_cache_ttl_hours', '720', CAST(strftime('%s','now') AS INTEGER)),
-  ('organize_format_enabled', 'false', CAST(strftime('%s','now') AS INTEGER));
+  ('organize_format_enabled', 'false', CAST(strftime('%s','now') AS INTEGER)),
+  ('disable_model_reasoning', 'false', CAST(strftime('%s','now') AS INTEGER));
 
 -- Seed feature module registry: grey release + dynamic dashboard nav.
 INSERT OR IGNORE INTO feature_modules (key, name, enabled, config_json, created_at) VALUES

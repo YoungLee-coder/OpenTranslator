@@ -6,6 +6,7 @@ import type {
   TranslationProvider,
 } from "@opentranslator/shared-types";
 import { buildPrompt } from "./prompt";
+import { openAICompatDisableReasoning } from "./reasoning";
 import { streamFromDeltas } from "./sse";
 
 /**
@@ -60,6 +61,7 @@ export const cloudflareProvider: TranslationProvider = {
           { role: "user", content: user },
         ],
         stream: false,
+        ...openAICompatDisableReasoning(ctx, "cloudflare"),
       });
       const content = completion.choices[0]?.message?.content ?? "";
       return {
@@ -97,6 +99,7 @@ async function* cloudflareDeltas(
         { role: "user", content: user },
       ],
       stream: true,
+      ...openAICompatDisableReasoning(ctx, "cloudflare"),
     });
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta?.content;

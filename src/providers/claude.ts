@@ -7,6 +7,7 @@ import type {
 } from "@opentranslator/shared-types";
 import { normalizeAnthropicBaseURL } from "./base-url";
 import { buildPrompt } from "./prompt";
+import { claudeDisableReasoning } from "./reasoning";
 import { streamFromDeltas } from "./sse";
 
 /**
@@ -52,6 +53,7 @@ export const claudeProvider: TranslationProvider = {
         max_tokens: MAX_TOKENS,
         system,
         messages: [{ role: "user", content: user }],
+        ...claudeDisableReasoning(ctx),
       });
       const text = message.content
         .map((block) => (block.type === "text" ? block.text : ""))
@@ -84,6 +86,7 @@ async function* claudeDeltas(req: TranslateRequest, ctx: ProviderContext): Async
       system,
       messages: [{ role: "user", content: user }],
       stream: true,
+      ...claudeDisableReasoning(ctx),
     });
     for await (const event of stream) {
       if (

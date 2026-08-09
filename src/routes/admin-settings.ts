@@ -81,6 +81,14 @@ adminSettingsRoute.put("/", async (c) => {
       body.organizeFormatEnabled,
     );
   }
+  if (body.disableModelReasoning !== undefined) {
+    await updateSetting(
+      c.env.SETTINGS_KV,
+      c.env.DB,
+      "disable_model_reasoning",
+      body.disableModelReasoning,
+    );
+  }
   if (body.publicDefaultProviderId !== undefined) {
     await updateSetting(
       c.env.SETTINGS_KV,

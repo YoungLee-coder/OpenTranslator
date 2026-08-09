@@ -468,6 +468,7 @@ export async function handleTranslate(c: C): Promise<Response> {
     configJson: row.config_json
       ? (JSON.parse(row.config_json) as Record<string, unknown>)
       : undefined,
+    disableModelReasoning: settings.disableModelReasoning === true,
   };
 
   let adapter: TranslationProvider;
@@ -497,7 +498,9 @@ export async function handleTranslate(c: C): Promise<Response> {
   // Translation cache: serve identical repeats without hitting the upstream.
   // Key uses normalized text so paste-repair still hits cache.
   const cacheKey = settings.translationCacheEnabled
-    ? await translationCacheKey(req, row.id)
+    ? await translationCacheKey(req, row.id, {
+        disableModelReasoning: settings.disableModelReasoning === true,
+      })
     : null;
   const cacheTtlSeconds = settings.translationCacheTtlHours * 3600;
   if (cacheKey) {

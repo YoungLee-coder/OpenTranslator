@@ -171,6 +171,19 @@ export function SettingsSection() {
               }
             />
           </SettingRow>
+
+          <SettingRow
+            title={t("settings.disableModelReasoning")}
+            desc={t("settings.disableModelReasoningDesc")}
+          >
+            <Switch
+              checked={!!settings.disableModelReasoning}
+              disabled={!interactive}
+              onCheckedChange={(v) =>
+                setSettings({ ...settings, disableModelReasoning: v })
+              }
+            />
+          </SettingRow>
         </div>
 
         <div className="pt-3">
@@ -183,6 +196,7 @@ export function SettingsSection() {
                 translationCacheEnabled: settings.translationCacheEnabled,
                 translationCacheTtlHours: settings.translationCacheTtlHours,
                 organizeFormatEnabled: settings.organizeFormatEnabled,
+                disableModelReasoning: settings.disableModelReasoning,
               })
             }
             className="gap-1.5"

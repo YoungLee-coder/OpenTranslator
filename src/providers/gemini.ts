@@ -7,6 +7,7 @@ import type {
 } from "@opentranslator/shared-types";
 import { normalizeGeminiBaseURL } from "./base-url";
 import { buildPrompt } from "./prompt";
+import { geminiDisableReasoningConfig } from "./reasoning";
 import { streamFromDeltas } from "./sse";
 
 /**
@@ -45,6 +46,7 @@ export const geminiProvider: TranslationProvider = {
         contents: user,
         config: {
           systemInstruction: system,
+          ...geminiDisableReasoningConfig(ctx),
         },
       });
       return {
@@ -75,6 +77,7 @@ async function* geminiDeltas(req: TranslateRequest, ctx: ProviderContext): Async
       contents: user,
       config: {
         systemInstruction: system,
+        ...geminiDisableReasoningConfig(ctx),
       },
     });
     for await (const chunk of stream) {

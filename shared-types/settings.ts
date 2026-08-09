@@ -26,6 +26,12 @@ export interface SiteSettings {
    * 默认关闭。
    */
   organizeFormatEnabled: boolean;
+  /**
+   * 关闭模型推理 / 思考链（reasoning / thinking）。
+   * 开启后由各 LLM adapter 在请求侧传供应商对应参数；DeepL 不受影响。
+   * 默认关闭（保持供应商默认行为）。
+   */
+  disableModelReasoning: boolean;
   [key: string]: unknown;
 }
 

@@ -24,6 +24,11 @@ export interface ProviderContext {
   baseUrl?: string;
   defaultModel?: string;
   configJson?: Record<string, unknown>;
+  /**
+   * 站点设置：为 true 时 adapter 在请求中关闭推理 / 思考链。
+   * 由 translate / write / email 等 handler 从 SiteSettings 注入。
+   */
+  disableModelReasoning?: boolean;
 }
 
 /**

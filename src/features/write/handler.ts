@@ -196,6 +196,7 @@ export async function handleWrite(c: C): Promise<Response> {
     configJson: row.config_json
       ? (JSON.parse(row.config_json) as Record<string, unknown>)
       : undefined,
+    disableModelReasoning: settings.disableModelReasoning === true,
   };
 
   let adapter;

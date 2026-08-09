@@ -20,6 +20,7 @@ export const PLACEHOLDER_SETTINGS: SiteSettings = {
   translationCacheEnabled: true,
   translationCacheTtlHours: TRANSLATION_CACHE_TTL_HOURS_DEFAULT,
   organizeFormatEnabled: false,
+  disableModelReasoning: false,
 };
 
 function isSettingsSnapshot(value: unknown): value is SettingsSnapshot {

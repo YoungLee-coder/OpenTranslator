@@ -3,7 +3,7 @@ import { utf8Encode } from "./bytes";
 
 /**
  * Translation result cache backed by the SETTINGS_KV namespace. Keyed by
- * provider + model + language pair + expert + organizeFormat + text hash.
+ * provider + model + language pair + expert + organizeFormat + reasoning + text hash.
  */
 
 const PREFIX = "tr:";
@@ -21,12 +21,14 @@ async function sha256Hex(s: string): Promise<string> {
 export async function translationCacheKey(
   req: TranslateRequest,
   providerId: string,
+  opts?: { disableModelReasoning?: boolean },
 ): Promise<string> {
   const expert = req.expertId ?? "general";
   const text = await sha256Hex(req.text);
   const model = req.model ?? "";
   const organize = req.organizeFormat ? "org1" : "org0";
-  return `${PREFIX}${providerId}:${model}:${req.sourceLang}:${req.targetLang}:${expert}:${organize}:${text}`;
+  const reasoning = opts?.disableModelReasoning ? "rsn0" : "rsn1";
+  return `${PREFIX}${providerId}:${model}:${req.sourceLang}:${req.targetLang}:${expert}:${organize}:${reasoning}:${text}`;
 }
 
 export async function getTranslationCache(
