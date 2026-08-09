@@ -19,8 +19,8 @@ translateRoute.get("/experts", handleListExperts);
 // -> JSON { translatedText, provider, usage? } or SSE stream of deltas.
 translateRoute.post("/", handleTranslate);
 
-// POST /api/translate/email { html, sourceLang, targetLang, stream?, providerId?, model?, preserveQuotes? }
-// Whole-email HTML translation for the browser extension (layout-preserving).
+// POST /api/translate/email { html, sourceLang, targetLang, stream?, providerId?, model?, preserveQuotes?, display? }
+// Whole-email HTML translation for the browser extension (layout-preserving; display=bilingual for side-by-side).
 translateRoute.post("/email", handleTranslateEmail);
 
 export default translateRoute;

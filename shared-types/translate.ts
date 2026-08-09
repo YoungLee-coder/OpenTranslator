@@ -38,6 +38,9 @@ export interface TranslateRequest {
   previousContext?: { sourceTail: string; translationTail: string };
 }
 
+/** How the email HTML translation should be rendered. */
+export type TranslateEmailDisplay = "replace" | "bilingual";
+
 /**
  * POST /api/translate/email — whole-email HTML translation for the browser extension.
  * Uses a fixed HTML-preserving system prompt (not AI experts).
@@ -54,6 +57,11 @@ export interface TranslateEmailRequest {
    * by stripping them from the model input and appending them back after.
    */
   preserveQuotes?: boolean;
+  /**
+   * `replace` (default): monolingual translated HTML.
+   * `bilingual`: interleaved source + translation HTML for side-by-side reading.
+   */
+  display?: TranslateEmailDisplay;
 }
 
 /** 首页模型选择下拉里的一项。 */

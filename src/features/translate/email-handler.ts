@@ -74,6 +74,7 @@ function toTranslateRequest(req: TranslateEmailRequest, html: string): Translate
 /**
  * POST /api/translate/email
  * Whole-email HTML translation with a fixed layout-preserving prompt.
+ * `display: "bilingual"` interleaves source + translation in one HTML response.
  */
 export async function handleTranslateEmail(c: C): Promise<Response> {
   let req: TranslateEmailRequest;
