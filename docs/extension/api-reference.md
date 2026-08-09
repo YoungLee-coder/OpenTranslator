@@ -1,8 +1,8 @@
 # 外部客户端 API 参考
 
-供 Chrome 扩展、移动端、脚本等**非主站 SPA** 调用自托管 OpenTranslator 实例。
+供 Chrome 扩展、移动端、脚本等**独立客户端**调用用户自托管的 OpenTranslator 实例。
 
-**契约单一来源：** `shared-types/`（类型与常量）+ 本文档。主站参考实现见 `web/src/lib/api-client.ts`。附属插件升级时，应优先 diff 上述路径，而非猜测 API 行为。
+**契约单一来源：** `shared-types/`（类型与常量）+ 本文档。插件只对接 OpenTranslator 后端，不直接调用第三方翻译 API。升级时优先 diff `shared-types/` 与本文档，而非猜测 API 行为。
 
 ## 基础信息
 
@@ -187,6 +187,7 @@ GET /api/translate/models
 - 登录用户：所有已启用供应商的模型；`default` 为站点 `defaultModel` 或第一项。
 - 匿名用户（仅公开站）：`publicModels` 白名单内的模型 + `publicDefaultModel`。
 - 私站未登录：`{ models: [], default: null }`。
+
 ### 模型选择（客户端示例）
 
 主站用 `providerId|model` 编码选中项（模型名不含 `|`）。扩展可复用同一约定：
@@ -214,7 +215,7 @@ async function fetchModels(apiFetch: typeof fetch): Promise<TranslateModelsRespo
 }
 ```
 
-下拉展示建议用 `providerName · modelLabel`（见主站 `TranslatorPage.tsx`）。
+下拉展示建议用 `providerName · modelLabel`。
 
 翻译时解析 `modelKey` 并传入请求体；**省略 `providerId` / `model`** 时服务端走账号默认供应商：
 
@@ -319,10 +320,20 @@ idle → streaming → done | error
 - `streaming` 时禁用输入/重复提交；主按钮可变为「停止」。
 - 收到 `done` 后用 `translatedText` 覆盖 UI，避免 delta 拼接误差。
 
-**SSE 解析参考**（`web/src/lib/api-client.ts` 的 `streamTranslate`）：
+**SSE 解析参考**（客户端自包含实现）：
 
 ```typescript
-async function* parseSSE(body: ReadableStream<Uint8Array>) {
+class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+async function* parseSSE<T>(body: ReadableStream<Uint8Array>): AsyncGenerator<T> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -334,14 +345,61 @@ async function* parseSSE(body: ReadableStream<Uint8Array>) {
     while ((sep = buffer.indexOf("\n\n")) !== -1) {
       const block = buffer.slice(0, sep);
       buffer = buffer.slice(sep + 2);
-      const data = block
-        .split("\n")
-        .filter((l) => l.startsWith("data:"))
-        .map((l) => l.slice(5).replace(/^ /, ""))
-        .join("\n");
-      if (data) yield JSON.parse(data);
+      const dataParts: string[] = [];
+      for (const line of block.split("\n")) {
+        if (line.startsWith("data:")) {
+          dataParts.push(line.slice(5).replace(/^ /, ""));
+        }
+      }
+      if (dataParts.length === 0) continue;
+      try {
+        yield JSON.parse(dataParts.join("\n")) as T;
+      } catch {
+        // skip malformed keepalives
+      }
     }
   }
+}
+
+async function apiFetch(
+  baseUrl: string,
+  token: string | undefined,
+  path: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const headers = new Headers(init.headers);
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (init.body) headers.set("Content-Type", "application/json");
+  const res = await fetch(`${baseUrl.replace(/\/$/, "")}${path}`, {
+    ...init,
+    headers,
+  });
+  if (!res.ok) {
+    let msg = `${init.method ?? "GET"} ${path} -> ${res.status}`;
+    try {
+      const data = (await res.json()) as { error?: string };
+      if (data?.error) msg = data.error;
+    } catch {
+      // ignore
+    }
+    throw new ApiError(res.status, msg);
+  }
+  return res;
+}
+
+export async function* streamTranslate(
+  baseUrl: string,
+  token: string | undefined,
+  req: TranslateRequest,
+  signal?: AbortSignal,
+): AsyncGenerator<TranslateStreamEvent> {
+  const res = await apiFetch(baseUrl, token, "/api/translate", {
+    method: "POST",
+    body: JSON.stringify({ ...req, stream: true }),
+    signal,
+  });
+  if (!res.body) throw new ApiError(502, "empty response body");
+  yield* parseSSE<TranslateStreamEvent>(res.body);
 }
 ```
 
@@ -357,6 +415,39 @@ async function* parseSSE(body: ReadableStream<Uint8Array>) {
   usage?: { inputTokens: number; outputTokens: number };
 }
 ```
+
+### 邮件 HTML 翻译（可选）
+
+供邮件类扩展使用；不使用 AI 专家，固定 HTML 保留式 prompt。
+
+```
+POST /api/translate/email
+Content-Type: application/json
+```
+
+请求 `TranslateEmailRequest`（`shared-types/translate.ts`）：
+
+```typescript
+{
+  html: string;              // 必填
+  sourceLang: string;        // 默认 "auto"
+  targetLang: string;        // 必填
+  stream?: boolean;
+  providerId?: string;
+  model?: string;
+  preserveQuotes?: boolean;  // 默认 true：引用块/签名不翻译
+  display?: "replace" | "bilingual";  // 默认 "replace"
+}
+```
+
+| 约束 | 说明 |
+|---|---|
+| 长度上限 | `html` 最长 `MAX_EMAIL_HTML_CHARS`（80 000）；超出 → `400` |
+| DeepL | 不支持 → `400` |
+| 私站匿名 | 同翻译 → `403 site is private` |
+| 流式 | 服务端缓冲完整 HTML 后一次发出 `delta` + `done`（避免半截标签破坏页面） |
+
+非流式响应与 `TranslateResponse` 相同。流式 SSE 事件类型同 `TranslateStreamEvent`（`delta` / `done` / `error`），解析逻辑与上文 `streamTranslate` 相同。
 
 ## 写作 API（可选）
 
@@ -405,7 +496,7 @@ Content-Type: application/json
 | `done` | `revisedText`, `provider`, `usage?` | 最终结果，用此字段覆盖拼接 |
 | `error` | `error` | 上游或解析错误 |
 
-解析逻辑与翻译相同（见上文 `parseSSE`）；主站参考 `streamWrite`（`web/src/lib/api-client.ts`）。UI 选择模型时可用 `providerType !== "deepl"` 过滤。
+解析逻辑与翻译相同（见上文 `parseSSE` / `streamTranslate`）；可复用 `parseSSE<WriteStreamEvent>`，请求体为 `POST /api/write` + `{ ...req, stream: true }`。UI 选择模型时可用 `providerType !== "deepl"` 过滤。
 
 ## HTTP 错误码
 
@@ -423,7 +514,28 @@ Content-Type: application/json
 
 ## 语言代码
 
-与 `web/src/lib/languages.ts` 一致：
+客户端自行维护语言列表；`code` 须与 API 请求体一致：
+
+| code | 展示名（建议） |
+|---|---|
+| `auto` | 自动检测（仅作 source） |
+| `zh-CN` | 简体中文 |
+| `zh-TW` | 繁体中文（台湾） |
+| `zh-HK` | 繁体中文（香港） |
+| `en` | English |
+| `ja` | 日本語 |
+| `ko` | 한국어 |
+| `fr` | Français |
+| `de` | Deutsch |
+| `es` | Español |
+| `it` | Italiano |
+| `pt` | Português |
+| `ru` | Русский |
+| `ar` | العربية |
+| `vi` | Tiếng Việt |
+| `th` | ไทย |
+
+约定：
 
 - 源语言默认 `auto`（仅作 source）
 - 目标语言常用 `zh-CN`、`en`、`ja` 等
@@ -448,7 +560,8 @@ Content-Type: application/json
 | 模型选择 | `GET /api/translate/models` + 下拉 | 同一 API；`modelKey` 存 `chrome.storage` |
 | 头像展示 | `<img src>` + Cookie | `fetch` + Blob URL + Bearer |
 | AI 专家选择 | 完整 UI | 可选；见 `GET /api/translate/experts` |
-| AI Write | `/write` 页 | 可选；见 `POST /api/write` |
+| AI Write | 完整 UI | 可选；见 `POST /api/write` |
+| 邮件 HTML 翻译 | — | 可选；见 `POST /api/translate/email` |
 | CORS | 同源 | 需配置 `ORIGINS` |
 
 ## TypeScript 类型引用
@@ -468,18 +581,17 @@ import type {
 import { MAX_TRANSLATE_CHARS } from "@opentranslator/shared-types";
 ```
 
-独立扩展项目应**定期同步**主仓库 `shared-types/` 目录（复制、submodule 或私有 npm 包）。当前未单独发布 npm 包；`MAX_TRANSLATE_CHARS` 等常量也在 `shared-types/` 中定义，避免在插件里硬编码魔法数字。
+独立扩展项目应**定期同步**主仓库 `shared-types/` 目录（复制、submodule 或私有 npm 包）。当前未单独发布 npm 包；`MAX_TRANSLATE_CHARS`、`MAX_EMAIL_HTML_CHARS` 等常量也在 `shared-types/` 中定义，避免在插件里硬编码魔法数字。
 
-## 参考文件
+## 后端实现索引（维护文档用）
+
+插件开发**无需**阅读下列路径；仅在核对本文档与行为是否一致时供主仓库维护者参考：
 
 | 内容 | 路径 |
 |---|---|
-| 主站 API 客户端 | `web/src/lib/api-client.ts` |
 | 翻译 handler | `src/features/translate/handler.ts` |
+| 邮件翻译 handler | `src/features/translate/email-handler.ts` |
 | 写作 handler | `src/features/write/handler.ts` |
 | 鉴权 | `src/auth/session.ts`、`src/routes/auth.ts` |
-| 头像 URL 拼接（主站） | `web/src/lib/avatar.ts` |
-| 模型选择 UI（主站） | `web/src/routes/translator/TranslatorPage.tsx` |
 | 共享类型 | `shared-types/translate.ts`、`shared-types/write.ts`、`shared-types/auth.ts`、`shared-types/health.ts` |
-| Chrome 扩展计划 | [plan.md](./plan.md) |
-| 视觉规范 | [design-guide.md](./design-guide.md) |
+| 设计风格与色彩 | [design-guide.md](./design-guide.md) |
