@@ -1,5 +1,7 @@
 /** Max source characters accepted by POST /api/translate. */
 export const MAX_TRANSLATE_CHARS = 80_000;
+/** Max HTML characters accepted by POST /api/translate/email. */
+export const MAX_EMAIL_HTML_CHARS = 80_000;
 /** Above this length, server splits into chunks (LLM providers). */
 export const TRANSLATE_CHUNK_THRESHOLD = 3_500;
 /** DeepL tolerates longer single requests — higher threshold. */
@@ -34,6 +36,24 @@ export interface TranslateRequest {
    * Stripped when sent by clients.
    */
   previousContext?: { sourceTail: string; translationTail: string };
+}
+
+/**
+ * POST /api/translate/email — whole-email HTML translation for the browser extension.
+ * Uses a fixed HTML-preserving system prompt (not AI experts).
+ */
+export interface TranslateEmailRequest {
+  html: string;
+  sourceLang: string;
+  targetLang: string;
+  stream?: boolean;
+  providerId?: string;
+  model?: string;
+  /**
+   * When true (default), leave quoted reply / signature blocks untranslated
+   * by stripping them from the model input and appending them back after.
+   */
+  preserveQuotes?: boolean;
 }
 
 /** 首页模型选择下拉里的一项。 */
