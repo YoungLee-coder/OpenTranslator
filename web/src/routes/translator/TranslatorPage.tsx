@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ModelIcon } from "@/components/ModelIcon";
 import { cn } from "@/lib/utils";
 
 type Status = "idle" | "streaming" | "done" | "error";
@@ -474,15 +475,25 @@ function ModelSelect({
       disabled={disabled || options.length === 0}
     >
       <SelectTrigger className="h-9 min-w-[7.5rem] flex-1 sm:w-[180px] sm:flex-none">
-        <span className="truncate">{label}</span>
+        <span className="flex min-w-0 items-center gap-1.5">
+          {selected ? (
+            <ModelIcon model={selected.model} providerType={selected.providerType} size={16} />
+          ) : null}
+          <span className="min-w-0 truncate">{label}</span>
+        </span>
       </SelectTrigger>
       <SelectContent>
           {options.map((o) => {
             const key = `${o.providerId}|${o.model}`;
             return (
               <SelectItem key={key} value={key}>
-                {o.providerName} · {o.modelLabel}
-                {key === defaultKey ? t("common.defaultSuffix") : ""}
+                <span className="inline-flex items-center gap-1.5">
+                  <ModelIcon model={o.model} providerType={o.providerType} size={16} />
+                  <span>
+                    {o.providerName} · {o.modelLabel}
+                    {key === defaultKey ? t("common.defaultSuffix") : ""}
+                  </span>
+                </span>
               </SelectItem>
             );
           })}

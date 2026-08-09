@@ -38,6 +38,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ModelIcon } from "@/components/ModelIcon";
+import { ProviderIcon } from "@/components/ProviderIcon";
 import {
   Table,
   TableBody,
@@ -398,6 +400,8 @@ export function ProvidersSection() {
         (m) => ({
           key: encodeModelKey(p.id, m),
           label: `${p.displayName} · ${m}`,
+          model: m,
+          providerType: p.type,
         }),
       ),
     );
@@ -582,7 +586,14 @@ export function ProvidersSection() {
                     <SelectContent>
                       {defaultModelOptions.map((o) => (
                         <SelectItem key={o.key} value={o.key}>
-                          {o.label}
+                          <span className="inline-flex items-center gap-1.5">
+                            <ModelIcon
+                              model={o.model}
+                              providerType={o.providerType}
+                              size={16}
+                            />
+                            {o.label}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -615,7 +626,10 @@ export function ProvidersSection() {
                         </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {providerLabel(p.type)}
+                        <span className="inline-flex items-center gap-1.5">
+                          <ProviderIcon type={p.type} size={16} />
+                          {providerLabel(p.type)}
+                        </span>
                       </TableCell>
                       <TableCell className="max-w-0">
                         <span
@@ -689,7 +703,10 @@ export function ProvidersSection() {
                   <SelectContent>
                     {types.map((type) => (
                       <SelectItem key={type} value={type}>
-                        {providerLabel(type)}
+                        <span className="inline-flex items-center gap-1.5">
+                          <ProviderIcon type={type} size={16} />
+                          {providerLabel(type)}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
