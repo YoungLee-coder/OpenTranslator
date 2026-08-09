@@ -5,9 +5,16 @@ import type {
   ProviderType,
   TranslateEmailRequest,
   TranslateRequest,
+  TranslateResponse,
   TranslateStreamEvent,
+  TranslationProvider,
 } from "@opentranslator/shared-types";
-import { MAX_EMAIL_HTML_CHARS } from "@opentranslator/shared-types";
+import {
+  MAX_EMAIL_HTML_CHARS,
+  TRANSLATE_CHUNK_THRESHOLD,
+  TRANSLATE_CONTEXT_TAIL_CHARS,
+  TRANSLATE_TARGET_CHUNK_CHARS,
+} from "@opentranslator/shared-types";
 import type { AppBindings, AppVariables } from "../../types";
 import { getSessionUser } from "../../auth/session";
 import { getSiteSettings } from "../../settings/cache";
@@ -22,6 +29,8 @@ import { providerRegistry } from "../../providers/registry";
 import { normalizeStoredProviderBaseUrl } from "../../providers/base-url";
 import { getClientIp, enforceRateLimit } from "../../middleware/rate-limit";
 import { publicProviderError } from "../../lib/errors";
+import { splitEmailHtmlIntoChunks } from "../../lib/email-html-chunks";
+import { tailSlice, type ChunkPlan } from "../../lib/text-chunks";
 import {
   buildEmailTranslatePrompt,
   splitEmailQuotes,
@@ -58,7 +67,11 @@ function parseAllowedModels(row: ProviderRow): string[] {
   return allowed;
 }
 
-function toTranslateRequest(req: TranslateEmailRequest, html: string): TranslateRequest {
+function toTranslateRequest(
+  req: TranslateEmailRequest,
+  html: string,
+  previousContext?: TranslateRequest["previousContext"],
+): TranslateRequest {
   const prompt = buildEmailTranslatePrompt(req, html);
   return {
     text: html,
@@ -68,6 +81,83 @@ function toTranslateRequest(req: TranslateEmailRequest, html: string): Translate
     providerId: req.providerId,
     model: req.model,
     promptOverride: prompt,
+    previousContext,
+  };
+}
+
+async function readStreamText(upstream: ReadableStream<Uint8Array>): Promise<string> {
+  const reader = upstream.getReader();
+  const decoder = new TextDecoder();
+  let full = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const text = decoder.decode(value, { stream: true });
+      if (text) full += text;
+    }
+    const tail = decoder.decode();
+    if (tail) full += tail;
+  } finally {
+    reader.releaseLock();
+  }
+  return full;
+}
+
+async function translateEmailChunked(args: {
+  plan: ChunkPlan;
+  req: TranslateEmailRequest;
+  adapter: TranslationProvider;
+  ctx: ProviderContext;
+  providerType: ProviderType;
+  onProgress?: (chunkIndex: number, chunkTotal: number) => Promise<void>;
+}): Promise<TranslateResponse> {
+  const { plan, req, adapter, ctx, providerType } = args;
+  let full = "";
+  let usage: TranslateResponse["usage"];
+  let detectedSourceLang: string | undefined;
+  let prevSource = "";
+  let prevTranslation = "";
+
+  for (let i = 0; i < plan.chunks.length; i++) {
+    const chunk = plan.chunks[i]!;
+    await args.onProgress?.(i, plan.chunks.length);
+
+    if (i > 0) {
+      const join = plan.joins[i - 1] ?? "";
+      if (join) full += join;
+    }
+
+    const previousContext =
+      i > 0
+        ? {
+            sourceTail: tailSlice(prevSource, TRANSLATE_CONTEXT_TAIL_CHARS),
+            translationTail: tailSlice(prevTranslation, TRANSLATE_CONTEXT_TAIL_CHARS),
+          }
+        : undefined;
+
+    const chunkReq = toTranslateRequest(req, chunk, previousContext);
+    const result = await adapter.translate(chunkReq, ctx);
+    const text = unwrapEmailHtml(result.translatedText);
+    full += text;
+    prevSource = chunk;
+    prevTranslation = text;
+    if (result.usage) {
+      usage = usage
+        ? {
+            inputTokens: usage.inputTokens + result.usage.inputTokens,
+            outputTokens: usage.outputTokens + result.usage.outputTokens,
+          }
+        : result.usage;
+    }
+    if (result.detectedSourceLang) detectedSourceLang = result.detectedSourceLang;
+  }
+
+  return {
+    translatedText: full,
+    provider: providerType,
+    usage,
+    detectedSourceLang,
   };
 }
 
@@ -117,8 +207,12 @@ export async function handleTranslateEmail(c: C): Promise<Response> {
   const limit = user
     ? settings.authedRateLimitPerMinute
     : settings.publicRateLimitPerMinute;
-  const blocked = await enforceRateLimit(c, limit);
-  if (blocked) return blocked;
+
+  const plan =
+    body.length > TRANSLATE_CHUNK_THRESHOLD
+      ? splitEmailHtmlIntoChunks(body, TRANSLATE_TARGET_CHUNK_CHARS)
+      : { chunks: [body], joins: [] as string[] };
+  const useChunking = plan.chunks.length > 1;
 
   let row: ProviderRow | null = null;
   let resolvedModel: string | undefined;
@@ -233,30 +327,64 @@ export async function handleTranslateEmail(c: C): Promise<Response> {
   const providerRowId = row.id;
   const usageChars = body.length;
 
+  const blocked = await enforceRateLimit(c, limit, "default", plan.chunks.length);
+  if (blocked) return blocked;
+
   const finalize = (raw: string) => {
     const translated = unwrapEmailHtml(raw);
     return tail ? `${translated}${tail}` : translated;
   };
 
+  if (useChunking) {
+    if (clientWantsStream) {
+      return streamSSE(c, async (stream) => {
+        try {
+          const result = await translateEmailChunked({
+            plan,
+            req,
+            adapter,
+            ctx,
+            providerType,
+            onProgress: async (chunkIndex, chunkTotal) => {
+              await writeEvent(stream, { type: "progress", chunkIndex, chunkTotal });
+            },
+          });
+          const translatedText = finalize(result.translatedText);
+          const final = { ...result, translatedText };
+          await writeEvent(stream, { type: "delta", text: translatedText });
+          await writeEvent(stream, { type: "done", ...final });
+          c.executionCtx?.waitUntil(
+            logUsage(c.env.DB, providerRowId, usageChars, isPublic, getClientIp(c)),
+          );
+        } catch (e) {
+          await writeEvent(stream, { type: "error", error: publicProviderError(e) });
+        }
+      });
+    }
+
+    try {
+      const result = await translateEmailChunked({
+        plan,
+        req,
+        adapter,
+        ctx,
+        providerType,
+      });
+      const translatedText = finalize(result.translatedText);
+      c.executionCtx?.waitUntil(
+        logUsage(c.env.DB, providerRowId, usageChars, isPublic, getClientIp(c)),
+      );
+      return c.json({ ...result, translatedText });
+    } catch (e) {
+      return c.json({ error: publicProviderError(e) }, 502);
+    }
+  }
+
   if (wantStream && adapter.translateStream) {
     return streamSSE(c, async (stream) => {
       try {
         // Buffer full HTML before emitting — partial tags would break the page.
-        const reader = adapter.translateStream!(translateReq, ctx).getReader();
-        const decoder = new TextDecoder();
-        let full = "";
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const text = decoder.decode(value, { stream: true });
-            if (text) full += text;
-          }
-          const end = decoder.decode();
-          if (end) full += end;
-        } finally {
-          reader.releaseLock();
-        }
+        const full = await readStreamText(adapter.translateStream!(translateReq, ctx));
 
         const translatedText = finalize(full);
         await writeEvent(stream, { type: "delta", text: translatedText });
