@@ -1,6 +1,8 @@
 # 外部客户端 API 参考
 
-供 Chrome 扩展、移动端、脚本等**非主站 SPA** 调用自托管 OpenTranslator 实例。契约以 `shared-types/` 为准；主站实现见 `web/src/lib/api-client.ts`。
+供 Chrome 扩展、移动端、脚本等**非主站 SPA** 调用自托管 OpenTranslator 实例。
+
+**契约单一来源：** `shared-types/`（类型与常量）+ 本文档。主站参考实现见 `web/src/lib/api-client.ts`。附属插件升级时，应优先 diff 上述路径，而非猜测 API 行为。
 
 ## 基础信息
 
@@ -266,7 +268,7 @@ GET /api/translate/experts
 }
 ```
 
-需功能模块 `ai-experts` 开启且配置了 `enabledIds`。
+需功能模块 `ai-experts` 开启且配置了 `enabledIds`。模块未开启时返回 `{ experts: [], defaultExpertId: "general" }`。
 
 ### 翻译（流式，推荐）
 
@@ -463,9 +465,10 @@ import type {
   AuthMeResponse,
   PingResponse,
 } from "@opentranslator/shared-types";
+import { MAX_TRANSLATE_CHARS } from "@opentranslator/shared-types";
 ```
 
-独立扩展项目可复制 `shared-types/` 或发布为 npm 包（当前未单独发布）。
+独立扩展项目应**定期同步**主仓库 `shared-types/` 目录（复制、submodule 或私有 npm 包）。当前未单独发布 npm 包；`MAX_TRANSLATE_CHARS` 等常量也在 `shared-types/` 中定义，避免在插件里硬编码魔法数字。
 
 ## 参考文件
 

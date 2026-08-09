@@ -31,7 +31,7 @@ src/                          # Hono Worker 后端（REST/SSE + 静态资源）
   routes/                     #   translate / write / auth / admin-*
   db/                         #   schema.sql + queries.ts + init.ts（幂等初始化器）
   durable-objects/            #   rate-limiter.ts（每 IP 滑动窗口）
-  features/                   #   功能模块后端（translate, write, glossary, ai-experts, public-access）
+  features/                   #   功能模块后端（translate, write, ai-experts, public-access）
   experts/                    #   AI expert 插件（plugins/*.yml → bundled.ts）
   middleware/                 #   auth.ts, rate-limit.ts
   auth/session.ts

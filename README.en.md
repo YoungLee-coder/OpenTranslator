@@ -26,7 +26,7 @@
 - **Encrypted key storage** — Provider API keys are encrypted with `ENCRYPTION_KEY` before being stored in D1; plaintext never hits the database.
 - **Fine-grained rate limiting** — Per-IP sliding window via Durable Objects, with separate quotas for anonymous and signed-in users.
 - **Caching & usage stats** — KV translation cache avoids duplicate requests; usage logs land in D1 and show up in the Dashboard.
-- **Glossary** — The first plugin-style feature: terms are injected into translation prompts automatically.
+- **AI experts** — Immersive Translate–compatible YAML prompts for scenario-specific translation; enable in the Dashboard and switch strategies via `expertId`.
 - **Site toggle** — Turn off public access with one switch for a private-only deployment.
 
 ---
@@ -226,7 +226,7 @@ Core routes and translation logic stay unchanged.
 - [x] Translation core: OpenAI/Claude/Gemini adapters, `/api/translate`, SSE, translator UI
 - [x] Auth + Dashboard: JWT, first-time init, site toggle, provider CRUD, encrypted keys, usage overview
 - [x] More providers + cache + stats: Azure OpenAI / DeepSeek / OpenRouter / custom adapters; KV translation cache; usage tracking
-- [x] Feature modules: `/api/admin/features` DB toggles, dynamic Dashboard nav, glossary as first plugin
+- [x] Feature modules: `/api/admin/features` DB toggles, dynamic Dashboard nav; public access, AI experts, and other plugin-style modules
 - [ ] Later (as needed): document translation / OCR, multi-role permissions, Analytics Engine migration, billing / quotas
 
 ---

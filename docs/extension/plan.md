@@ -1,8 +1,8 @@
 # Chrome 扩展实施计划
 
-将 OpenTranslator 接到浏览器侧的实施方案。视觉与交互对齐 [design-guide.md](./design-guide.md)；API 契约见 [api-reference.md](./api-reference.md)。
+将 OpenTranslator 接到浏览器侧的实施方案，供**独立仓库**中的 Chrome 扩展维护者使用。视觉与交互对齐 [design-guide.md](./design-guide.md)；API 契约见 [api-reference.md](./api-reference.md)。
 
-> 本仓库当前**不包含**扩展源码目录；本文为实施蓝图，可在独立 repo 或 `extension/` 目录落地。
+> 本仓库当前**不包含**扩展源码目录；本文为实施蓝图。主项目 API 或 `shared-types/` 变更时，请同步阅读 [README.md](./README.md)「附属插件如何跟进主项目变更」。
 
 ## 目标（v1）
 

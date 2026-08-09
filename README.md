@@ -26,7 +26,7 @@
 - **密钥加密存储** — 供应商 API Key 用 `ENCRYPTION_KEY` 加密后落 D1，明文绝不入库。
 - **细粒度限流** — 基于 Durable Object 的每 IP 滑动窗口，公开用户与登录用户分别配额。
 - **缓存与统计** — KV 翻译缓存避免重复请求，用量日志落 D1，Dashboard 可视化。
-- **术语库** — glossary 作为首个插件化功能，词条自动注入翻译提示词。
+- **AI 专家** — 沉浸式翻译 YAML 兼容的场景化 prompt；Dashboard 勾选启用，翻译时按 `expertId` 切换策略。
 - **站点开关** — 一键关闭公开访问，转为纯私有部署。
 
 ---
@@ -226,7 +226,7 @@ docs/images/             # README 截图
 - [x] 翻译核心：OpenAI/Claude/Gemini adapter、`/api/translate`、SSE、前端翻译页
 - [x] 鉴权 + Dashboard：JWT、首次初始化、站点开关、供应商 CRUD、密钥加密、用量概览
 - [x] 供应商补全 + 缓存 + 统计：Azure OpenAI / DeepSeek / OpenRouter / custom adapter；KV 翻译缓存；用量统计
-- [x] 功能模块化：`/api/admin/features` DB 驱动开关、Dashboard 动态导航、术语库 glossary 插件化
+- [x] 功能模块化：`/api/admin/features` DB 驱动开关、Dashboard 动态导航；公开访问与 AI 专家等模块插件化
 - [ ] 远期（按需排期）：文档翻译 / OCR、多角色权限、Analytics Engine 迁移、计费 / 配额
 
 ---

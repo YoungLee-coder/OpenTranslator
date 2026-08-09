@@ -374,13 +374,12 @@ for await (const ev of streamTranslate(req, signal)) {
 
 与 UI 无关、扩展也应遵循的**产品逻辑**：
 
-1. **配置驱动**：模型、供应商、功能模块由服务端 Dashboard 配置，客户端只消费 API。
-2. **注册表扩展**：新供应商/功能走注册表，客户端不硬编码厂商逻辑。
-3. **共享类型**：`shared-types/` 为 API 契约单一来源（`TranslateRequest`、`AuthSessionResponse` 等）。
-4. **流式优先**：翻译默认 `stream: true`，逐字渲染。
-5. **私站门禁**：未认证不暴露模型列表、不允许翻译。
+1. **配置驱动**：模型、供应商、功能开关由服务端 Dashboard 配置，客户端只消费 API。
+2. **共享类型**：`shared-types/` 为 API 契约单一来源（`TranslateRequest`、`AuthSessionResponse` 等）。
+3. **流式优先**：翻译默认 `stream: true`，逐字渲染。
+4. **私站门禁**：未认证不暴露模型列表、不允许翻译。
 
-扩展 v1 可省略模型/专家选择，使用账号默认模型——与主站「未选 modelKey」行为一致。
+扩展 v1 已实现模型选择（见 [plan.md](./plan.md)）；AI 专家选择可留到 v0.2，使用账号默认模型时与主站「未选 modelKey」行为一致。
 
 ---
 
