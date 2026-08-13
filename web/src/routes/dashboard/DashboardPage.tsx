@@ -4,12 +4,14 @@ import { Loader2 } from "lucide-react";
 import type { FeatureManifest } from "@opentranslator/shared-types";
 import { useAuth } from "@/lib/auth";
 import { apiGet } from "@/lib/api-client";
+import { clearDashboardCaches } from "@/lib/dashboard-caches";
 import { useTranslation } from "@/lib/i18n";
 import { featureComponents } from "@/features/registry";
 import { OverviewSection } from "./OverviewSection";
 import { ProfileSection } from "./ProfileSection";
 import { ProvidersSection } from "./ProvidersSection";
 import { SettingsSection } from "./SettingsSection";
+import { DataBackupSection } from "./DataBackupSection";
 import { ModulesSection } from "./ModulesSection";
 import { DbVersionSection } from "./DbVersionSection";
 import { DbAuditSection } from "./DbAuditSection";
@@ -43,6 +45,7 @@ export function DashboardPage() {
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(
     () => new Set(["overview"]),
   );
+  const [configEpoch, setConfigEpoch] = useState(0);
 
   async function refreshFeatures() {
     try {
@@ -53,6 +56,12 @@ export function DashboardPage() {
     } catch {
       // non-fatal: nav falls back to system tabs only
     }
+  }
+
+  async function handleDataImported() {
+    clearDashboardCaches();
+    setConfigEpoch((n) => n + 1);
+    await refreshFeatures();
   }
 
   useEffect(() => {
@@ -103,17 +112,22 @@ export function DashboardPage() {
 
         <TabsContent value="overview" {...keepMounted(visitedTabs.has("overview"))}>
           <div className="flex flex-col gap-6">
-            <OverviewSection />
+            <OverviewSection key={`overview-${configEpoch}`} />
             <ProfileSection />
           </div>
         </TabsContent>
         <TabsContent value="providers" {...keepMounted(visitedTabs.has("providers"))}>
-          <ProvidersSection />
+          <ProvidersSection key={`providers-${configEpoch}`} />
         </TabsContent>
         <TabsContent value="settings" {...keepMounted(visitedTabs.has("settings"))}>
           <div className="flex flex-col gap-6">
-            <SettingsSection />
-            <ModulesSection features={features} onChanged={refreshFeatures} />
+            <SettingsSection key={`settings-${configEpoch}`} />
+            <DataBackupSection onImported={handleDataImported} />
+            <ModulesSection
+              key={`modules-${configEpoch}`}
+              features={features}
+              onChanged={refreshFeatures}
+            />
             <DbVersionSection />
             <DbAuditSection />
           </div>
@@ -127,7 +141,7 @@ export function DashboardPage() {
               value={f.key}
               {...keepMounted(visitedTabs.has(f.key))}
             >
-              <FeaturePage />
+              <FeaturePage key={`${f.key}-${configEpoch}`} />
             </TabsContent>
           );
         })}

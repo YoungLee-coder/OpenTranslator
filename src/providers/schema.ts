@@ -42,6 +42,10 @@ export const providerSchemas: Record<ProviderType, ProviderField[]> = {
     },
     { key: "models", label: "模型", type: "models", placeholder: "gpt-4o-mini\ngpt-4o" },
   ],
+  openrouter: [
+    { key: "baseUrl", label: "Base URL", type: "text", required: true, placeholder: "https://openrouter.ai/api/v1" },
+    { key: "models", label: "模型", type: "models", placeholder: "openai/gpt-4o-mini\nanthropic/claude-sonnet-4\ngoogle/gemini-2.5-flash" },
+  ],
   cloudflare: [
     { key: "accountId", label: "Account ID", type: "text", required: true, placeholder: "Cloudflare 账户 ID（Dashboard 右侧栏可见）" },
     { key: "models", label: "模型", type: "models", placeholder: "@cf/google/gemma-4-26b-a4b-it\n@cf/meta/llama-3.1-8b-instruct" },

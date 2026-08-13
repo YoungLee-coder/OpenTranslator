@@ -25,6 +25,10 @@ const PROVIDER_DEFAULTS: Partial<
     baseUrl: "https://aihubmix.com/v1",
     model: "gpt-4o-mini",
   },
+  openrouter: {
+    baseUrl: "https://openrouter.ai/api/v1",
+    model: "openai/gpt-4o-mini",
+  },
   claude: {
     baseUrl: "https://api.anthropic.com",
     model: "claude-sonnet-4-5",
@@ -44,6 +48,10 @@ const PROVIDER_DEFAULTS: Partial<
 };
 
 const AIHUBMIX_HEADERS = { "APP-Code": "JFRG5263" };
+const OPENROUTER_HEADERS = {
+  "HTTP-Referer": "https://github.com/YoungLee-coder/OpenTranslator",
+  "X-OpenRouter-Title": "OpenTranslator",
+};
 const ANTHROPIC_VERSION = "2023-06-01";
 
 export type LatencyProbeResult = {
@@ -264,6 +272,12 @@ export async function probeProviderLatency(
       if (!baseUrl) return { ok: false, latencyMs: 0, error: "baseUrl is required" };
       if (!model) return { ok: false, latencyMs: 0, error: "model is required" };
       return probeOpenAICompat(baseUrl, apiKey, model, AIHUBMIX_HEADERS);
+    }
+    case "openrouter": {
+      const baseUrl = resolveBaseUrl(type, ctx);
+      if (!baseUrl) return { ok: false, latencyMs: 0, error: "baseUrl is required" };
+      if (!model) return { ok: false, latencyMs: 0, error: "model is required" };
+      return probeOpenAICompat(baseUrl, apiKey, model, OPENROUTER_HEADERS);
     }
     case "claude": {
       const baseUrl = resolveBaseUrl(type, ctx);

@@ -5,6 +5,7 @@ import OpenAI from "@lobehub/icons/es/OpenAI/components/Mono";
 import ClaudeColor from "@lobehub/icons/es/Claude/components/Color";
 import GeminiColor from "@lobehub/icons/es/Gemini/components/Color";
 import AiHubMixColor from "@lobehub/icons/es/AiHubMix/components/Color";
+import OpenRouterColor from "@lobehub/icons/es/OpenRouter/components/Color";
 import CloudflareColor from "@lobehub/icons/es/Cloudflare/components/Color";
 import DeepLColor from "@lobehub/icons/es/DeepL/components/Color";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ const PROVIDER_COLOR_ICONS: Record<
   claude: ClaudeColor,
   gemini: GeminiColor,
   aihubmix: AiHubMixColor,
+  openrouter: OpenRouterColor,
   cloudflare: CloudflareColor,
   deepl: DeepLColor,
 };

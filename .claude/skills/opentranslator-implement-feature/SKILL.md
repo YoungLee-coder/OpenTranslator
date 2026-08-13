@@ -16,7 +16,7 @@ Implement a new feature following the conventions defined in `.ai/`:
 
 ## 项目特定约束
 
-- **新增供应商**：`src/providers/` 加 adapter → `src/providers/index.ts` 注册 → `src/providers/schema.ts` 加表单字段。OpenAI 兼容厂商可复用 `openai.ts`。核心路由不动。
+- **新增供应商**：完整清单见 `.ai/architecture.md` 扩展点（`ProviderType` + adapter/注册/schema + base-url/reasoning/latency-probe + Dashboard 穷尽映射）。OpenAI 兼容可复用 `openai.ts`。核心路由不动。
 - **新增功能模块**：`web/src/features/` 加组件并在 `features/registry.ts` 注册 → `src/features/` 加后端 manifest/handler → Dashboard 模块管理里 DB 开关启用。
 - **共享类型**放 `shared-types/`，经 tsconfig paths 别名（包名 `opentranslator/shared-types`）引用，别在前后端各写一份。
 - **admin 路由**必须挂在 `authMiddleware` 之后（见 `src/index.ts`）。

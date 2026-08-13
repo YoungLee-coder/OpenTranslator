@@ -8,7 +8,7 @@ You are an architect reviewer for OpenTranslator. Your job is to catch architect
 
 ## What to flag (in priority order)
 
-1. **P0 — 扩展契约破坏**（见 `.ai/architecture.md` 扩展点 + `.ai/coding-style.md`）：新增供应商未在 `src/providers/index.ts` 注册，或未在 `src/providers/schema.ts` 加表单字段；新增功能模块未在 `web/src/features/registry.ts` 注册 / 未加 `src/features/` 后端 manifest，而在核心路由里硬编码。这破坏了"注册表式扩展"核心架构。
+1. **P0 — 扩展契约破坏**（见 `.ai/architecture.md` 扩展点 + `.ai/coding-style.md`）：新增供应商未走完整清单——漏改 `shared-types` 的 `ProviderType`、未在 `src/providers/index.ts` 注册、未在 `schema.ts` / `base-url.ts` / `reasoning.ts` / `latency-probe.ts` 或 Dashboard 穷尽 `Record`/`switch` 补齐；新增功能模块未在 `web/src/features/registry.ts` 注册 / 未加 `src/features/` 后端 manifest，而在核心路由里硬编码。这破坏了"注册表式扩展"核心架构。
 2. **P0 — 分层越界**：前端直接访问 D1 / KV / DO 绑定（应通过 `/api`）；后端核心路由里塞业务逻辑而非委托给 `src/features/` 或 `src/providers/`；`routes/admin-*` 绕过 `authMiddleware`。
 3. **P1 — 不必要耦合**：`web/` 与 `src/` 之间出现直接 import（应只经 `shared-types/`）；provider adapter 之间相互 import（应只经 `registry.ts` / `schema.ts`）；共享类型在前后端各写一份而非放 `shared-types/`。
 4. **P2 — 职责侵蚀**：单文件超出其既定职责——`src/index.ts` 长出业务逻辑、`providers/registry.ts` 开始知道具体 adapter 内部、路由文件里混翻译逻辑。

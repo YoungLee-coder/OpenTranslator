@@ -171,6 +171,25 @@ export const en: Messages = {
   "settings.disableModelReasoningDesc":
     "When on, request params turn off chain-of-thought / thinking (e.g. reasoning, thinking) to cut latency and token use. DeepL is unaffected; some models may reject these params.",
 
+  "backup.title": "Import / export data",
+  "backup.description":
+    "Export site settings, providers (with plaintext API keys), and feature-module toggles for backup or migration. The file contains secrets — keep it private. Admin accounts, avatars, and usage logs are not included. Import replaces all current providers and overwrites matching settings; this cannot be undone.",
+  "backup.export": "Export",
+  "backup.exporting": "Exporting…",
+  "backup.exported": "Backup downloaded",
+  "backup.import": "Import",
+  "backup.importing": "Importing…",
+  "backup.importTitle": "Import backup",
+  "backup.importDesc":
+    "This will import {{providers}} provider(s), {{settings}} setting(s), and {{modules}} feature module(s). All existing providers will be replaced. Continue?",
+  "backup.confirmImport": "Confirm import",
+  "backup.imported":
+    "Imported {{providers}} provider(s), {{settings}} setting(s), and {{modules}} feature module(s)",
+  "backup.importedWithSkip":
+    "Imported {{providers}} provider(s), {{settings}} setting(s), and {{modules}} feature module(s) (skipped {{skipped}} item(s) not supported on this instance)",
+  "backup.invalidFile": "Not a valid OpenTranslator backup file",
+  "backup.fileTooLarge": "File is too large (1 MB limit)",
+
   "modules.title": "Feature modules",
   "modules.module": "Module",
   "modules.descriptionCol": "Description",

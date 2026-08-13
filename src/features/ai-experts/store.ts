@@ -49,6 +49,10 @@ export async function saveAiExpertsConfig(
   return config;
 }
 
+export async function invalidateAiExpertsConfig(kv: KVNamespace): Promise<void> {
+  await kv.delete(CACHE_KEY);
+}
+
 export async function isAiExpertsFeatureEnabled(db: D1Database): Promise<boolean> {
   const modules = await getFeatureModules(db);
   const row = modules.get("ai-experts");

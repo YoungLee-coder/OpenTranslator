@@ -3,8 +3,8 @@ import type { ProviderContext, ProviderType } from "@opentranslator/shared-types
 /**
  * OpenAI-compatible 请求体上关闭推理 / 思考链的额外字段。
  *
- * - openai / aihubmix：统一传 `reasoning_effort: "none"`
- *   （aihubmix 统一推理规范推荐值；会映射到 deepseek/qwen/glm/claude/gemini 等）
+ * - openai / aihubmix / openrouter：统一传 `reasoning_effort: "none"`
+ *   （aihubmix 统一推理规范推荐值；OpenRouter 将其映射为 reasoning.effort）
  * - cloudflare 等：再附带常见 hybrid thinking 开关，兼容部分 Workers AI 模型
  *
  * @see https://docs.aihubmix.com/cn/api/unified-inference
@@ -14,7 +14,7 @@ export function openAICompatDisableReasoning(
   provider: ProviderType,
 ): Record<string, unknown> {
   if (!ctx.disableModelReasoning) return {};
-  if (provider === "openai" || provider === "aihubmix") {
+  if (provider === "openai" || provider === "aihubmix" || provider === "openrouter") {
     return { reasoning_effort: "none" };
   }
   return {

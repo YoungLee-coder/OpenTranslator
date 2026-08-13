@@ -169,6 +169,25 @@ export const zhCN = {
   "settings.disableModelReasoningDesc":
     "开启后在请求侧关闭思考链 / 推理（如 reasoning、thinking），降低延迟与用量。DeepL 不受影响；部分模型可能不支持此参数。",
 
+  "backup.title": "导入 / 导出数据",
+  "backup.description":
+    "导出站点设置、供应商（含 API Key 明文）与功能模块开关，便于备份或迁到新实例。文件含密钥，请妥善保管。不含管理员账号、头像与用量记录。导入会替换当前全部供应商并覆盖对应设置，不可撤销。",
+  "backup.export": "导出",
+  "backup.exporting": "导出中…",
+  "backup.exported": "备份已下载",
+  "backup.import": "导入",
+  "backup.importing": "导入中…",
+  "backup.importTitle": "导入备份",
+  "backup.importDesc":
+    "将导入 {{providers}} 个供应商、{{settings}} 项设置、{{modules}} 个功能模块。现有供应商会被全部替换。确认继续？",
+  "backup.confirmImport": "确认导入",
+  "backup.imported":
+    "已导入 {{providers}} 个供应商、{{settings}} 项设置、{{modules}} 个功能模块",
+  "backup.importedWithSkip":
+    "已导入 {{providers}} 个供应商、{{settings}} 项设置、{{modules}} 个功能模块（跳过 {{skipped}} 项本实例不支持的数据）",
+  "backup.invalidFile": "不是有效的 OpenTranslator 备份文件",
+  "backup.fileTooLarge": "文件过大（上限 1 MB）",
+
   "modules.title": "功能模块",
   "modules.module": "模块",
   "modules.descriptionCol": "说明",

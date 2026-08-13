@@ -21,6 +21,7 @@ const EMPTY_SCHEMAS: Record<ProviderType, ProviderField[]> = {
   claude: [],
   gemini: [],
   aihubmix: [],
+  openrouter: [],
   cloudflare: [],
   deepl: [],
 };

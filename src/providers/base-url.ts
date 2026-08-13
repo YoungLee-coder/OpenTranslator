@@ -21,6 +21,7 @@ export function normalizeStoredProviderBaseUrl(
   switch (type) {
     case "openai":
     case "aihubmix":
+    case "openrouter":
       return normalizeOpenAIBaseURL(baseUrl);
     case "claude":
       return normalizeAnthropicBaseURL(baseUrl);

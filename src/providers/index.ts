@@ -1,5 +1,5 @@
 import { providerRegistry } from "./registry";
-import { openaiProvider, aihubmixProvider } from "./openai";
+import { openaiProvider, aihubmixProvider, openrouterProvider } from "./openai";
 import { claudeProvider } from "./claude";
 import { geminiProvider } from "./gemini";
 import { cloudflareProvider } from "./cloudflare";
@@ -11,6 +11,7 @@ import { deeplProvider } from "./deepl";
  */
 providerRegistry.register("openai", openaiProvider);
 providerRegistry.register("aihubmix", aihubmixProvider);
+providerRegistry.register("openrouter", openrouterProvider);
 providerRegistry.register("claude", claudeProvider);
 providerRegistry.register("gemini", geminiProvider);
 providerRegistry.register("cloudflare", cloudflareProvider);

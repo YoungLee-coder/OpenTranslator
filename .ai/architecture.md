@@ -50,7 +50,17 @@ wrangler.toml                 # Worker 配置（[assets] 静态资源绑定）
 
 ## 扩展点（高频改动模式）
 
-- **新增供应商**：`src/providers/` 加 adapter（实现 `TranslationProvider`；OpenAI 兼容可复用 `openai.ts`）→ `src/providers/index.ts` 加一行 `providerRegistry.register(...)` → `src/providers/schema.ts` 加表单字段。核心路由不动。
+- **新增供应商**：`ProviderType` 是穷尽联合类型，漏改任一 `Record<ProviderType, …>` 或 `switch` 会 typecheck 失败。核心路由不动。清单：
+  1. `shared-types/provider.ts` — `ProviderType` 加新 id（前后端穷尽映射的源头）
+  2. Adapter：`src/providers/` 实现 `TranslationProvider`；OpenAI 兼容复用 `makeOpenAICompat`（`openai.ts`），不必新文件
+  3. `src/providers/index.ts` — `providerRegistry.register(...)`
+  4. `src/providers/schema.ts` — Dashboard 表单字段
+  5. `src/providers/base-url.ts` — `normalizeStoredProviderBaseUrl` switch（OpenAI 兼容走 `normalizeOpenAIBaseURL`）
+  6. `src/providers/reasoning.ts` — 关闭推理时的请求体（OpenAI 兼容通常并入 `reasoning_effort: "none"` 分支）
+  7. `src/providers/latency-probe.ts` — `PROVIDER_DEFAULTS` + `probeProviderLatency` switch（extra headers 与 adapter 一致）
+  8. Dashboard：`web/src/lib/dashboard-providers-cache.ts` 的 `EMPTY_SCHEMAS`、`ProvidersSection.tsx` 的 `PROVIDER_LABELS`、`ProviderIcon.tsx` 的 `@lobehub/icons`
+  9. 产品文案按需（landing FAQ 等厂商列表）
+  验证：`pnpm typecheck`（改了 shared-types）
 - **新增功能模块**：`web/src/features/` 加组件并在 `features/registry.ts` 注册 → `src/features/` 加后端 manifest/handler → Dashboard 模块管理里 DB 开关启用。
 - **新增 AI expert**：`src/experts/plugins/*.yml` 加定义 → `pnpm bundle-experts` 重生成 `bundled.ts`。解析逻辑在 `src/experts/resolve.ts`、`registry.ts`。
 

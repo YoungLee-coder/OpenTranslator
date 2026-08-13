@@ -8,3 +8,4 @@ export * from "./usage";
 export * from "./expert";
 export * from "./db";
 export * from "./health";
+export * from "./backup";

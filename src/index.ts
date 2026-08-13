@@ -13,6 +13,7 @@ import adminExpertsRoute from "./routes/admin-experts";
 import adminUsageRoute from "./routes/admin-usage";
 import adminDbRoute from "./routes/admin-db";
 import adminProfileRoute from "./routes/admin-profile";
+import adminBackupRoute from "./routes/admin-backup";
 import {
   getCurrentDbVersion,
   getPendingMigrations,
@@ -121,6 +122,7 @@ app.route("/api/admin/experts", adminExpertsRoute);
 app.route("/api/admin/usage", adminUsageRoute);
 app.route("/api/admin/db", adminDbRoute);
 app.route("/api/admin/profile", adminProfileRoute);
+app.route("/api/admin/backup", adminBackupRoute);
 
 // Catch-all: anything that isn't an /api route is served as a static asset
 // from the bundled frontend (SPA). With run_worker_first = true, the Worker
