@@ -5,7 +5,7 @@
 ## 密钥
 
 - **绝不**提交 `JWT_SECRET`、`ENCRYPTION_KEY`、`.dev.vars`、供应商 API Key 明文。`.dev.vars` 已 gitignore——别把密钥写进 `wrangler.toml` 或源码。
-- `JWT_SECRET`：JWT 签名密钥，**同时**是首次 `POST /api/init`（`X-Init-Secret` 头）建表的访问凭证。32 位以上随机字符串。已有库且仅有待迁移时，初始化页可无密钥触发升级。
+- `JWT_SECRET`：JWT 签名密钥，**同时**是首次 `POST /api/init`（`X-Init-Secret` 头）建表的访问凭证。32 位以上随机字符串。部署后首次打开进入 `/setup`，在页面填入该密钥并创建管理员。已有库且仅有待迁移时，初始化页可无密钥触发升级。
 - `ENCRYPTION_KEY`：供应商 API Key 的加密密钥。**不可恢复**——丢失 = 所有已存密钥作废。不要随意轮换 / 重新生成，除非同时重新加密全部密钥。**绝不删除。**
 - 供应商 API Key 用 `ENCRYPTION_KEY` 加密后落 D1，明文绝不入库（见 `src/lib/crypto.ts`、`src/db/queries.ts`）。**绝不**在日志、响应、错误信息里输出明文 Key 或加密密钥。
 

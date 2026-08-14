@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import type { AuthUser } from "@opentranslator/shared-types";
 import { ApiError, apiPost } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
@@ -11,13 +11,9 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 
 export function LoginPage() {
-  const { user, loading, setupCompleted, refresh } = useAuth();
+  const { user, loading, refresh } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [mode, setMode] = useState<"login" | "setup">(
-    searchParams.get("setup") === "1" ? "setup" : "login",
-  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -40,8 +36,7 @@ export function LoginPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const path = mode === "login" ? "/api/auth/login" : "/api/auth/setup";
-      const res = await apiPost<{ user: AuthUser }>(path, { email, password });
+      const res = await apiPost<{ user: AuthUser }>("/api/auth/login", { email, password });
       await refresh();
       void res;
       navigate("/dashboard", { replace: true });
@@ -52,14 +47,11 @@ export function LoginPage() {
     }
   }
 
-  const isLogin = mode === "login";
-  const canSetup = !setupCompleted;
-
   return (
     <div className="flex flex-1 items-center justify-center px-4">
       <div className="w-full max-w-sm animate-rise rounded-xl border border-rule bg-card p-7 shadow-md">
         <h1 className="font-display mb-5 text-center text-xl font-semibold tracking-tight">
-          {isLogin ? t("auth.loginTitle") : t("auth.setupTitle")}
+          {t("auth.loginTitle")}
         </h1>
         <form onSubmit={submit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
@@ -77,17 +69,14 @@ export function LoginPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="password">
-              {t("auth.password")}{!isLogin ? t("auth.passwordMin") : ""}
-            </Label>
+            <Label htmlFor="password">{t("auth.password")}</Label>
             <Input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              autoComplete={isLogin ? "current-password" : "new-password"}
+              autoComplete="current-password"
               required
-              minLength={isLogin ? undefined : 8}
               className="h-10"
             />
           </div>
@@ -104,22 +93,9 @@ export function LoginPage() {
             className="mt-1 h-10 w-full"
             disabled={submitting}
           >
-            {submitting ? t("common.submitting") : isLogin ? t("auth.login") : t("auth.createAndLogin")}
+            {submitting ? t("common.submitting") : t("auth.login")}
           </Button>
         </form>
-
-        {canSetup && (
-          <button
-            type="button"
-            onClick={() => {
-              setMode(isLogin ? "setup" : "login");
-              setError(null);
-            }}
-            className="mx-auto mt-5 block text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-          >
-            {isLogin ? t("auth.firstUseSetup") : t("auth.backToLogin")}
-          </button>
-        )}
       </div>
     </div>
   );

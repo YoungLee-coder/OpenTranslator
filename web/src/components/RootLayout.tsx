@@ -2,8 +2,9 @@ import { Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode 
 import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import type { AuthUser } from "@opentranslator/shared-types";
 import { LogoMark } from "@opentranslator/brand/LogoMark";
-import { Ellipsis, Languages, LayoutDashboard, LogOut, Moon, PenLine, Sun, X } from "lucide-react";
+import { Ellipsis, Languages, LayoutDashboard, LogOut, PenLine, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,9 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LanguageMenuButton, LanguageMenuItems } from "@/components/LanguageMenu";
-import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/lib/auth";
 import { prefetchDashboard } from "@/lib/dashboard-caches";
 import { useTranslation } from "@/lib/i18n";
@@ -45,27 +44,6 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
         </span>
       )}
     </Link>
-  );
-}
-
-function ThemeToggle() {
-  const { theme, toggle } = useTheme();
-  const { t } = useTranslation();
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          type="button"
-          onClick={toggle}
-          aria-label={t("theme.toggle")}
-        >
-          {theme === "dark" ? <Sun /> : <Moon />}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>{theme === "dark" ? t("theme.light") : t("theme.dark")}</TooltipContent>
-    </Tooltip>
   );
 }
 
@@ -106,7 +84,7 @@ export function RootLayout() {
     );
   }
   if (!siteReady) {
-    return <Navigate to="/setup-required" replace />;
+    return <Navigate to="/setup" replace />;
   }
   if (!sitePublic && !user && location.pathname !== "/login") {
     return <Navigate to="/login" replace />;

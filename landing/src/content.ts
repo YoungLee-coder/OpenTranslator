@@ -338,7 +338,7 @@ const zhCN: Content = {
     },
     {
       q: "如何部署到 Cloudflare？",
-      a: "pnpm build 后 wrangler deploy，或用 Cloudflare Git 连接。部署后 POST /api/init 建表，再初始化管理员账号。",
+      a: "pnpm build 后 wrangler deploy，或用 Cloudflare Git 连接。部署后打开站点，在初始化页建表并设定管理员账号。",
     },
     {
       q: "许可证有什么要求？",
@@ -657,7 +657,7 @@ const en: Content = {
     },
     {
       q: "How do I deploy to Cloudflare?",
-      a: "pnpm build then wrangler deploy, or connect Cloudflare Git. After deploy, POST /api/init to create tables, then bootstrap an admin account.",
+      a: "pnpm build then wrangler deploy, or connect Cloudflare Git. After deploy, open the site: the setup page creates tables and the admin account.",
     },
     {
       q: "What does the license require?",

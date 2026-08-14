@@ -23,7 +23,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [setupCompleted, setSetupCompleted] = useState(true);
+  const [setupCompleted, setSetupCompleted] = useState(false);
   const [sitePublic, setSitePublic] = useState(true);
 
   const refresh = useCallback(async (opts?: { silent?: boolean }) => {
@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!res.user) clearDashboardCaches();
     } catch {
       setUser(null);
+      setSetupCompleted(false);
       clearDashboardCaches();
     } finally {
       if (!opts?.silent) setLoading(false);

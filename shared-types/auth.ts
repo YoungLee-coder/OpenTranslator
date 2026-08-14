@@ -24,7 +24,7 @@ export interface AuthSessionResponse {
 export interface AuthMeResponse {
   authenticated: boolean;
   user?: AuthUser;
-  /** 是否已完成首次管理员初始化。登录页据此决定是否展示「初始化」入口。 */
+  /** 是否已完成首次管理员初始化。未完成时前端强制进入 /setup。 */
   setupCompleted: boolean;
   /** 站点是否公开访问。私有模式下未登录访客会被前端重定向到登录页。 */
   sitePublic: boolean;

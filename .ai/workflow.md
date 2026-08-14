@@ -37,4 +37,4 @@ pnpm db:init:remote       # 远程 D1 建表（需 wrangler login）
 1. **Cloudflare Git 连接**（推荐）：push 到 `main` → Cloudflare 自动构建部署。**push 到 main 即上线，谨慎。**
 2. **本地 wrangler**：`pnpm deploy`（= `pnpm build && wrangler deploy`）。
 
-部署后若 schema 有增量迁移，打开初始化页一键升级（有待迁移时无需密钥）；首次建表仍用 `POST /api/init` + 头 `X-Init-Secret: <JWT_SECRET>`（见 security.md）。
+部署后首次打开站点进入 `/setup`：首次建表仍需在页面填入 `JWT_SECRET`（`POST /api/init` + `X-Init-Secret`）；管理员账号在同一页创建。已有库且仅待迁移时一键升级（无需密钥）。

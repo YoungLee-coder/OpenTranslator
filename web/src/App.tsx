@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { RootLayout } from "./components/RootLayout";
 import { TranslatorPage } from "./routes/translator/TranslatorPage";
 import { useTranslation } from "./lib/i18n";
@@ -16,9 +16,9 @@ const DashboardPage = lazy(() =>
 const LoginPage = lazy(() =>
   import("./routes/login/LoginPage").then((m) => ({ default: m.LoginPage })),
 );
-const SetupRequiredPage = lazy(() =>
-  import("./routes/setup-required/SetupRequiredPage").then((m) => ({
-    default: m.SetupRequiredPage,
+const SetupPage = lazy(() =>
+  import("./routes/setup/SetupPage").then((m) => ({
+    default: m.SetupPage,
   })),
 );
 
@@ -34,13 +34,17 @@ function LazyFallback() {
 
 export const router = createBrowserRouter([
   {
-    // DB / KV 未绑定时强制跳转的提示页（独立顶层路由，不走 RootLayout）。
-    path: "/setup-required",
+    // 首次部署未就绪时的初始化向导（独立顶层路由，不走 RootLayout）。
+    path: "/setup",
     element: (
       <Suspense fallback={<LazyFallback />}>
-        <SetupRequiredPage />
+        <SetupPage />
       </Suspense>
     ),
+  },
+  {
+    path: "/setup-required",
+    element: <Navigate to="/setup" replace />,
   },
   {
     path: "/",

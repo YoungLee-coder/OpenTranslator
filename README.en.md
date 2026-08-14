@@ -84,16 +84,14 @@ Open http://localhost:5173 — the home page calls `/api/ping` to verify the ful
 
 ### First-time setup
 
-1. Open `/login` and click **First time? Initialize admin** to create the first administrator account.
-2. Go to `/dashboard` → Providers → Add (enter a real API key and check **Set as public default**).
-3. Return to `/` and start translating — output streams in real time.
+Open http://localhost:5173. If no admin exists yet, you are sent to the setup page. Create an admin email and password, then go to the dashboard. Add a provider (real API key, **Set as public default**), return to `/`, and start translating.
 
 ---
 
 ## ☁️ Deploy
 
 > [!NOTE]
-> The frontend is bundled into the same Worker. A single `wrangler deploy` ships both frontend and API on the same origin — no CORS, no `VITE_API_BASE_URL`. After deploy, call `POST /api/init` with header `X-Init-Secret: <JWT_SECRET>` to create tables (idempotent, safe to run again).
+> The frontend is bundled into the same Worker. A single `wrangler deploy` ships both frontend and API on the same origin — no CORS, no `VITE_API_BASE_URL`. After deploy, open the site: the first visit lands on the setup page to create tables and the admin account.
 
 <details>
 <summary><strong>Option 1: Cloudflare Git integration (recommended — all in the dashboard)</strong></summary>
@@ -118,24 +116,24 @@ After creation, open the Worker → Settings:
   - D1 binding, name `DB` → select the `opentranslator` database
   - KV binding, name `KV` → select the namespace you created
 
-**3. Initialize the database (once)**
+**3. Open the site to finish setup**
 
-After a successful deploy, run:
+After a successful deploy, open the Worker URL. The first visit opens the setup page: enter `JWT_SECRET` (Settings → Variables and Secrets) and create an admin email and password. You are signed in and taken to the dashboard. The secret is never written to the address bar.
+
+You can also create tables with curl (the admin account is still created on the setup page):
 
 ```bash
 curl -X POST "https://<your-worker-domain>/api/init" \
   -H "X-Init-Secret: <your-JWT_SECRET>"
 ```
 
-You should see `{"ok":true,...}` when tables are ready. You can also use the on-site setup page and paste `JWT_SECRET` into the form (the secret never goes in the URL).
+**4. Configure a provider**
 
-**4. Initial data**
-
-Open your Worker URL → `/login` → **First time? Initialize admin** → Dashboard → add a provider → return home to translate.
+Dashboard → Providers → Add (enter a real API key and check **Set as public default**) → return home to translate.
 
 **5. Updates**
 
-Push to `main` and Cloudflare rebuilds and redeploys. For incremental schema migrations, run the same `POST /api/init` again.
+Push to `main` and Cloudflare rebuilds and redeploys. If there are pending migrations, opening the site returns you to the setup page for a one-click upgrade (no secret required).
 
 </details>
 
@@ -150,8 +148,8 @@ wrangler secret put JWT_SECRET
 wrangler secret put ENCRYPTION_KEY
 pnpm build                                    # Build frontend to ./dist
 wrangler deploy                               # Deploy frontend + API together
-curl -X POST https://api.yourdomain.com/api/init \
-  -H "X-Init-Secret: $(grep JWT_SECRET .dev.vars | cut -d= -f2)"   # Create tables
+# Open the Worker URL and finish setup (tables + admin)
+# or: curl -X POST https://api.yourdomain.com/api/init -H "X-Init-Secret: $(grep JWT_SECRET .dev.vars | cut -d= -f2)"
 ```
 
 </details>
@@ -194,7 +192,7 @@ src/                     # Hono Worker backend (REST/SSE + static assets)
   durable-objects/       #   Rate limiter
   features/              #   Feature module backends
 web/                     # Vite + React SPA (build output → root dist/)
-  src/routes/            #   Translator / login / Dashboard
+  src/routes/            #   Translator / setup / login / Dashboard
   src/features/          #   Feature registry (Dashboard dynamic nav)
 shared-types/            # Shared TypeScript types (frontend + backend)
 wrangler.toml            # Worker config (includes [assets] binding)

@@ -84,16 +84,14 @@ pnpm dev            # 并行启动 web(5173) + api(8787)
 
 ### 首次初始化
 
-1. 打开 `/login`，点击「首次使用？初始化管理员」创建第一个管理员账号。
-2. 进入 `/dashboard` → 供应商 → 新增（填入真实 API Key 并勾选「设为公开默认」）。
-3. 回到 `/` 即可翻译，译文流式逐字渲染。
+打开 http://localhost:5173 。尚未创建管理员时会自动进入初始化页，设定管理员邮箱和密码后进入控制台。再到「供应商」新增（填入真实 API Key 并勾选「设为公开默认」），回到 `/` 即可翻译。
 
 ---
 
 ## ☁️ 部署
 
 > [!NOTE]
-> 前端打包进同一个 Worker，`wrangler deploy` 一次发布前后端，同源无需 CORS、无需 `VITE_API_BASE_URL`。部署后用 `POST /api/init`（头 `X-Init-Secret: <JWT_SECRET>`）即可建表，幂等可重复执行。
+> 前端打包进同一个 Worker，`wrangler deploy` 一次发布前后端，同源无需 CORS、无需 `VITE_API_BASE_URL`。部署后首次打开站点进入初始化页，建表并设定管理员账号即可。
 
 <details>
 <summary><strong>方式一：Cloudflare Git 连接（推荐，全程网页操作）</strong></summary>
@@ -118,24 +116,24 @@ Dashboard → Workers & Pages → Create → Workers → Import a repository →
   - D1 binding，名字填 `DB` → 选 `opentranslator` 数据库
   - KV binding，名字填 `KV` → 选刚才的命名空间
 
-**3. 初始化数据库（只做一次）**
+**3. 打开站点完成初始化**
 
-部署成功后执行：
+部署成功后打开 Worker 域名。首次访问会进入初始化页：填入 `JWT_SECRET`（Settings → Variables and Secrets），并设定管理员邮箱与密码。完成后自动登录并进入控制台。密钥不会写入地址栏。
+
+也可以用 curl 只建表（管理员仍须在初始化页创建）：
 
 ```bash
 curl -X POST "https://<你的-worker-域名>/api/init" \
   -H "X-Init-Secret: <你的-JWT_SECRET>"
 ```
 
-看到 `{"ok":true,...}` 即完成建表。也可打开站点后的「初始化」页，在表单中粘贴 `JWT_SECRET` 完成建表（密钥不会进入 URL）。
+**4. 配置供应商**
 
-**4. 初始化数据**
-
-打开 Worker 域名 → `/login` →「首次使用？初始化管理员」→ Dashboard 新增供应商 → 回首页即可翻译。
+控制台 → 供应商 → 新增（填入真实 API Key 并勾选「设为公开默认」）→ 回首页即可翻译。
 
 **5. 后续更新**
 
-改完代码 push 到 `main`，Cloudflare 自动重新构建部署。增量迁移再执行一次上面的 `POST /api/init` 即可。
+改完代码 push 到 `main`，Cloudflare 自动重新构建部署。若有增量迁移，打开站点会再次进入初始化页，一键升级（无需密钥）。
 
 </details>
 
@@ -150,8 +148,8 @@ wrangler secret put JWT_SECRET
 wrangler secret put ENCRYPTION_KEY
 pnpm build                                    # 构建前端到 ./dist
 wrangler deploy                               # 一次部署前端 + API
-curl -X POST https://api.yourdomain.com/api/init \
-  -H "X-Init-Secret: $(grep JWT_SECRET .dev.vars | cut -d= -f2)"   # 自动建表
+# 打开 Worker 域名，在初始化页完成建表与管理员账号
+# 或：curl -X POST https://api.yourdomain.com/api/init -H "X-Init-Secret: $(grep JWT_SECRET .dev.vars | cut -d= -f2)"
 ```
 
 </details>
@@ -194,7 +192,7 @@ src/                     # Hono Worker 后端（REST/SSE + 静态资源服务）
   durable-objects/       #   限流器
   features/              #   功能模块后端
 web/                     # Vite + React SPA（构建产物输出到根 dist/）
-  src/routes/            #   翻译页 / 登录页 / Dashboard
+  src/routes/            #   翻译页 / 初始化页 / 登录页 / Dashboard
   src/features/          #   功能模块注册表（Dashboard 动态渲染）
 shared-types/            # 前后端共享的 TypeScript 类型定义
 wrangler.toml            # Worker 配置（含 [assets] 静态资源绑定）

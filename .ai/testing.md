@@ -11,8 +11,8 @@
 ## 手动闭环验证
 
 - 后端：`pnpm /dev:api` → `curl http://localhost:8787/api/ping` 返回 `{"ok":true,"service":"opentranslator-api",...}`。
-- 前后端闭环：`pnpm dev` → http://localhost:5173 首页请求 `/api/ping`。
-- 翻译闭环：登录 → Dashboard 配供应商 → 回首页翻译，确认 SSE 逐字渲染。
+- 前后端闭环：`pnpm dev` → http://localhost:5173。未创建管理员时进入 `/setup`；已就绪则首页请求 `/api/ping`。
+- 翻译闭环：初始化管理员 → Dashboard 配供应商 → 回首页翻译，确认 SSE 逐字渲染。
 
 ## 加测试时（TODO）
 

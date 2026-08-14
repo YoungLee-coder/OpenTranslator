@@ -13,7 +13,7 @@
 ## 入口点
 
 - **后端入口** `src/index.ts` — Hono app。挂 `logger` + `cors`；`/api/ping` 健康检查；`POST /api/init`（首次建表需 `X-Init-Secret` = JWT_SECRET；仅待迁移时可无密钥）幂等建表/升级；`/api/translate`、`/api/write`、`/api/auth` 公开；`/api/admin/*` 挂在 `authMiddleware` 之后（需 JWT）；catch-all 把非 `/api` 请求交给 `ASSETS` 绑定服务 SPA。`import "./providers"` 以副作用在启动时注册全部 adapter。导出 `RateLimiter` DO。
-- **前端入口** `web/src/main.tsx` → `web/src/App.tsx`（React Router）。
+- **前端入口** `web/src/main.tsx` → `web/src/App.tsx`（React Router）。未就绪（缺绑定 / 未建表 / 待迁移 / 无管理员）时强制进入 `/setup` 初始化向导。
 - **Worker 配置** `wrangler.toml` — `[assets]` 指向 `./dist`，`run_worker_first = true`；D1/KV 绑定在 Dashboard 网页配（toml 里注释掉）。
 
 ## 仓库地图
@@ -40,7 +40,7 @@ src/                          # Hono Worker 后端（REST/SSE + 静态资源）
 web/                          # Vite + React SPA（构建产物输出到根 dist/）
   vite.config.ts              #   ★ build.outDir=../dist；dev 把 /api 代理到 :8787
   src/main.tsx, App.tsx       #   入口 + 路由
-  src/routes/                 #   translator / write / dashboard / login / setup-required
+  src/routes/                 #   translator / write / dashboard / login / setup
   src/features/               #   功能模块前端（AiExpertsManager, PublicAccessSettings）+ registry.ts
   src/components/RootLayout.tsx
   src/lib/                    #   api-client, languages, auth

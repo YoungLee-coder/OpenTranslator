@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type {
+  AuthMeResponse,
   AuthSessionResponse,
   AuthUser,
   LoginRequest,
@@ -33,20 +34,34 @@ const authRoute = new Hono<{
 
 authRoute.use("/me", populateUser);
 authRoute.get("/me", async (c) => {
-  const user = c.get("user");
-  const setupCompleted = (await getAdminCount(c.env.DB)) > 0;
-  const settings = await getSiteSettings(c.env.KV, c.env.DB);
-  let authUser: AuthUser | undefined;
-  if (user) {
-    const admin = await getAdminById(c.env.DB, user.id);
-    authUser = admin ? adminToAuthUser(admin) : user;
+  const uninitialized: AuthMeResponse = {
+    authenticated: false,
+    setupCompleted: false,
+    sitePublic: true,
+  };
+  if (!c.env.DB || !c.env.KV) {
+    return c.json(uninitialized);
   }
-  return c.json({
-    authenticated: !!user,
-    user: authUser,
-    setupCompleted,
-    sitePublic: settings.sitePublic,
-  });
+
+  try {
+    const user = c.get("user");
+    const setupCompleted = (await getAdminCount(c.env.DB)) > 0;
+    const settings = await getSiteSettings(c.env.KV, c.env.DB);
+    let authUser: AuthUser | undefined;
+    if (user) {
+      const admin = await getAdminById(c.env.DB, user.id);
+      authUser = admin ? adminToAuthUser(admin) : user;
+    }
+    return c.json({
+      authenticated: !!user,
+      user: authUser,
+      setupCompleted,
+      sitePublic: settings.sitePublic,
+    } satisfies AuthMeResponse);
+  } catch {
+    // 尚未建表或 D1 不可用时，按未初始化返回，避免首次打开 /api/auth/me 500。
+    return c.json(uninitialized);
+  }
 });
 
 /** POST /api/auth/setup — create the first admin. 409 once one exists. */
@@ -54,7 +69,17 @@ authRoute.post("/setup", async (c) => {
   const blocked = await enforceRateLimit(c, AUTH_RATE_LIMIT_PER_MINUTE, "auth");
   if (blocked) return blocked;
 
-  if ((await getAdminCount(c.env.DB)) > 0) {
+  if (!c.env.DB) {
+    return c.json({ error: "database not initialized" }, 503);
+  }
+
+  let existing = 0;
+  try {
+    existing = await getAdminCount(c.env.DB);
+  } catch {
+    return c.json({ error: "database not initialized" }, 503);
+  }
+  if (existing > 0) {
     return c.json({ error: "setup already completed" }, 409);
   }
   const body = (await c.req.json().catch(() => null)) as LoginRequest | null;

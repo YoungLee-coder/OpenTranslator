@@ -30,8 +30,8 @@ function fromResponse(
   const dbReady = bindingsOk && !!res?.dbReady;
   const needsMigration = bindingsOk && !!res?.needsMigration;
   const adminReady = bindingsOk && !!res?.adminReady;
-  // 未完成迁移也算未就绪，强制走初始化页升级。
-  const siteReady = bindingsOk && dbReady && !needsMigration;
+  // 绑定 / 建表 / 待迁移 / 尚未创建管理员，都强制走初始化页。
+  const siteReady = bindingsOk && dbReady && !needsMigration && adminReady;
 
   let status: ReadinessStatus = "loading";
   if (!loading) {
@@ -92,7 +92,8 @@ export function useWorkerReadiness(opts?: {
   const pollMs = opts?.pollIntervalMs;
   const siteReady =
     !!(data?.bindings?.db && data?.bindings?.kv && data?.dbReady) &&
-    !data?.needsMigration;
+    !data?.needsMigration &&
+    !!data?.adminReady;
 
   useEffect(() => {
     if (!pollMs || siteReady || loading) return;
