@@ -5,9 +5,17 @@ import type {
 import type { BuiltPrompt } from "../../experts/prompt";
 import { langDisplayName } from "../../experts/lang";
 
+const INVISIBLE_OR_SPACE = /[\s\u200b\u200c\u200d\u2060\ufeff]+/g;
+
+function visiblePlainLengthFromHtml(html: string): number {
+  return html.replace(/<[^>]+>/g, " ").replace(INVISIBLE_OR_SPACE, " ").trim().length;
+}
+
 /**
  * Best-effort strip of Gmail quoted replies / signatures from HTML.
  * Returns { body, tail } where tail is preserved and appended after translation.
+ * If stripping would leave no visible text (typical Gmail forward), keep the
+ * original HTML so the model actually receives the message.
  */
 export function splitEmailQuotes(
   html: string,
@@ -32,6 +40,9 @@ export function splitEmailQuotes(
       body = body.slice(0, m.index);
       break; // first (usually outermost) quote is enough
     }
+  }
+  if (!body.trim() || visiblePlainLengthFromHtml(body) === 0) {
+    return { body: html.trim(), tail: "" };
   }
   return { body: body.trim(), tail };
 }

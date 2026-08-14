@@ -241,6 +241,9 @@ export async function handleTranslateEmail(c: C): Promise<Response> {
   if (wantStream && adapter.translateStream) {
     return streamSSE(c, async (stream) => {
       try {
+        // First byte immediately so proxies / the extension SW do not treat
+        // the silent LLM buffer as a dead stream (client used to show 译文为空).
+        await writeEvent(stream, { type: "progress", chunkIndex: 0, chunkTotal: 1 });
         // Buffer full HTML before emitting — partial tags would break the page.
         const reader = adapter.translateStream!(translateReq, ctx).getReader();
         const decoder = new TextDecoder();
@@ -275,27 +278,26 @@ export async function handleTranslateEmail(c: C): Promise<Response> {
   }
 
   if (clientWantsStream) {
-    try {
-      const result = await adapter.translate(translateReq, ctx);
-      const translatedText = finalize(result.translatedText);
-      const final = {
-        translatedText,
-        provider: result.provider,
-        usage: result.usage,
-        detectedSourceLang: result.detectedSourceLang,
-      };
-      c.executionCtx?.waitUntil(
-        logUsage(c.env.DB, providerRowId, usageChars, isPublic, getClientIp(c)),
-      );
-      return streamSSE(c, async (stream) => {
+    return streamSSE(c, async (stream) => {
+      try {
+        await writeEvent(stream, { type: "progress", chunkIndex: 0, chunkTotal: 1 });
+        const result = await adapter.translate(translateReq, ctx);
+        const translatedText = finalize(result.translatedText);
+        c.executionCtx?.waitUntil(
+          logUsage(c.env.DB, providerRowId, usageChars, isPublic, getClientIp(c)),
+        );
         await writeEvent(stream, { type: "delta", text: translatedText });
-        await writeEvent(stream, { type: "done", ...final });
-      });
-    } catch (e) {
-      return streamSSE(c, async (stream) => {
+        await writeEvent(stream, {
+          type: "done",
+          translatedText,
+          provider: result.provider,
+          usage: result.usage,
+          detectedSourceLang: result.detectedSourceLang,
+        });
+      } catch (e) {
         await writeEvent(stream, { type: "error", error: publicProviderError(e) });
-      });
-    }
+      }
+    });
   }
 
   try {
