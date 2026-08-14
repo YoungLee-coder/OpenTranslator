@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: ^0.116.0
-        version: 0.116.0
+        version: 0.116.0(zod@4.4.3)
       '@fontsource-variable/source-serif-4':
         specifier: ^5.3.0
         version: 5.3.0
@@ -20,6 +20,9 @@ importers:
       '@lobehub/icons':
         specifier: ^5.15.0
         version: 5.15.0(@lobehub/ui@5.29.1)(@types/react@19.2.18)(antd@6.5.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@openrouter/sdk':
+        specifier: ^1.2.29
+        version: 1.2.29
       '@radix-ui/react-avatar':
         specifier: ^1.2.6
         version: 1.2.6(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -67,7 +70,7 @@ importers:
         version: 1.30.0(react@19.2.8)
       openai:
         specifier: ^7.4.0
-        version: 7.4.0(ws@8.21.3)
+        version: 7.4.0(ws@8.21.3)(zod@4.4.3)
       react:
         specifier: ^19.2.8
         version: 19.2.8
@@ -828,6 +831,9 @@ packages:
     peerDependencies:
       '@types/react': '>=16'
       react: '>=16'
+
+  '@openrouter/sdk@1.2.29':
+    resolution: {integrity: sha512-zQUsKFJQSlnYCX32Vl3q3LcsN4N9i/6FX09pu0XH85xagYIp2XKJam/JIh3XWPotLUvpF+OS/OP3u8oSgzFN+A==}
 
   '@oxc-project/types@0.143.0':
     resolution: {integrity: sha512-u6JZdLBTLotrNC9Vd6vPssINdzcCzleKAH6EJKImQb7GtYvX5keN2dxkoK44stCc4tffE6QQRtZTXVSzsLUlWA==}
@@ -3777,6 +3783,9 @@ packages:
   youch@4.1.0-beta.10:
     resolution: {integrity: sha512-rLfVLB4FgQneDr0dv1oddCVZmKjcJ6yX6mS4pU82Mq/Dt9a3cLZQ62pDBL4AUO+uVrCvtWz3ZFUL2HFAFJ/BXQ==}
 
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+
   zustand@3.7.2:
     resolution: {integrity: sha512-PIJDIZKtokhof+9+60cpockVOq05sJzHCriyvaLBmEJixseQ1a5Kdov6fWZfWOu5SK9c+FhH1jU0tntLxRJYMA==}
     engines: {node: '>=12.7.0'}
@@ -3837,10 +3846,12 @@ snapshots:
       react-dom: 19.2.8(react@19.2.8)
       throttle-debounce: 5.0.2
 
-  '@anthropic-ai/sdk@0.116.0':
+  '@anthropic-ai/sdk@0.116.0(zod@4.4.3)':
     dependencies:
       json-schema-to-ts: 3.1.1
       standardwebhooks: 1.0.0
+    optionalDependencies:
+      zod: 4.4.3
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -4496,6 +4507,10 @@ snapshots:
       '@types/mdx': 2.0.14
       '@types/react': 19.2.18
       react: 19.2.8
+
+  '@openrouter/sdk@1.2.29':
+    dependencies:
+      zod: 4.4.3
 
   '@oxc-project/types@0.143.0': {}
 
@@ -6983,9 +6998,10 @@ snapshots:
       regex: 6.1.0
       regex-recursion: 6.0.2
 
-  openai@7.4.0(ws@8.21.3):
+  openai@7.4.0(ws@8.21.3)(zod@4.4.3):
     optionalDependencies:
       ws: 8.21.3
+      zod: 4.4.3
 
   p-retry@4.6.2:
     dependencies:
@@ -7820,6 +7836,8 @@ snapshots:
       '@speed-highlight/core': 1.2.23
       cookie: 1.1.1
       youch-core: 0.3.3
+
+  zod@4.4.3: {}
 
   zustand@3.7.2(react@19.2.8):
     optionalDependencies:

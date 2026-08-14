@@ -1,5 +1,6 @@
 import { providerRegistry } from "./registry";
-import { openaiProvider, aihubmixProvider, openrouterProvider } from "./openai";
+import { openaiProvider, aihubmixProvider } from "./openai";
+import { openrouterProvider } from "./openrouter";
 import { claudeProvider } from "./claude";
 import { geminiProvider } from "./gemini";
 import { cloudflareProvider } from "./cloudflare";

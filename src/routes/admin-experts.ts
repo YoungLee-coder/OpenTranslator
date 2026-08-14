@@ -11,7 +11,7 @@ const adminExpertsRoute = new Hono<{
 
 /** GET /api/admin/experts — all bundled experts + site config. */
 adminExpertsRoute.get("/", async (c) => {
-  const config = await getAiExpertsConfig(c.env.SETTINGS_KV, c.env.DB);
+  const config = await getAiExpertsConfig(c.env.KV, c.env.DB);
   const experts = listAllExperts().map((e) => toExpertMeta(e));
   return c.json({ experts, config });
 });
@@ -29,7 +29,7 @@ adminExpertsRoute.put("/", async (c) => {
   if (defaultExpertId !== "general" && !validIds.has(defaultExpertId)) {
     return c.json({ error: "unknown defaultExpertId" }, 400);
   }
-  const config = await saveAiExpertsConfig(c.env.SETTINGS_KV, c.env.DB, {
+  const config = await saveAiExpertsConfig(c.env.KV, c.env.DB, {
     enabledIds,
     defaultExpertId,
   });

@@ -108,7 +108,7 @@ export async function handleTranslateEmail(c: C): Promise<Response> {
     c.req.header("authorization"),
   );
   const isPublic = !user;
-  const settings = await getSiteSettings(c.env.SETTINGS_KV, c.env.DB);
+  const settings = await getSiteSettings(c.env.KV, c.env.DB);
 
   if (!settings.sitePublic && !user) {
     return c.json({ error: "site is private", authenticated: false }, 403);

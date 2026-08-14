@@ -207,7 +207,7 @@ export async function handleListModels(c: C): Promise<Response> {
     c.env.JWT_SECRET,
     c.req.header("authorization"),
   );
-  const settings = await getSiteSettings(c.env.SETTINGS_KV, c.env.DB);
+  const settings = await getSiteSettings(c.env.KV, c.env.DB);
 
   // 私站且未登录：不暴露任何模型
   if (!user && !settings.sitePublic) {
@@ -283,7 +283,7 @@ export async function handleListExperts(c: C): Promise<Response> {
     c.env.JWT_SECRET,
     c.req.header("authorization"),
   );
-  const settings = await getSiteSettings(c.env.SETTINGS_KV, c.env.DB);
+  const settings = await getSiteSettings(c.env.KV, c.env.DB);
 
   if (!user && !settings.sitePublic) {
     return c.json({ experts: [], defaultExpertId: GENERAL_EXPERT_ID });
@@ -293,7 +293,7 @@ export async function handleListExperts(c: C): Promise<Response> {
     return c.json({ experts: [], defaultExpertId: GENERAL_EXPERT_ID });
   }
 
-  const config = await getAiExpertsConfig(c.env.SETTINGS_KV, c.env.DB);
+  const config = await getAiExpertsConfig(c.env.KV, c.env.DB);
   const experts = listExpertMeta(config.enabledIds);
   return c.json({
     experts,
@@ -348,7 +348,7 @@ export async function handleTranslate(c: C): Promise<Response> {
     c.req.header("authorization"),
   );
   const isPublic = !user;
-  const settings = await getSiteSettings(c.env.SETTINGS_KV, c.env.DB);
+  const settings = await getSiteSettings(c.env.KV, c.env.DB);
 
   // Private site gate: anonymous users can't pass when the site is closed.
   if (!settings.sitePublic && !user) {
@@ -356,7 +356,7 @@ export async function handleTranslate(c: C): Promise<Response> {
   }
 
   // Resolve AI expert (when feature enabled via non-empty enabledIds).
-  const expertId = await resolveExpertId(c.env.SETTINGS_KV, c.env.DB, req.expertId);
+  const expertId = await resolveExpertId(c.env.KV, c.env.DB, req.expertId);
   if (expertId) {
     req = { ...req, expertId };
   } else {
@@ -504,7 +504,7 @@ export async function handleTranslate(c: C): Promise<Response> {
     : null;
   const cacheTtlSeconds = settings.translationCacheTtlHours * 3600;
   if (cacheKey) {
-    const cached = await getTranslationCache(c.env.SETTINGS_KV, cacheKey);
+    const cached = await getTranslationCache(c.env.KV, cacheKey);
     if (cached) {
       const blocked = await enforceRateLimit(c, rateLimit, "default", 1);
       if (blocked) return blocked;
@@ -556,7 +556,7 @@ export async function handleTranslate(c: C): Promise<Response> {
           });
           await writeEvent(stream, { type: "done", ...final });
           if (cacheKey) {
-            void setTranslationCache(c.env.SETTINGS_KV, cacheKey, final, cacheTtlSeconds);
+            void setTranslationCache(c.env.KV, cacheKey, final, cacheTtlSeconds);
           }
           c.executionCtx?.waitUntil(
             logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)),
@@ -577,7 +577,7 @@ export async function handleTranslate(c: C): Promise<Response> {
         postProcess: promptBuilt.postProcess,
         preferStream: false,
       });
-      if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, final, cacheTtlSeconds);
+      if (cacheKey) void setTranslationCache(c.env.KV, cacheKey, final, cacheTtlSeconds);
       c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
       return c.json(final);
     } catch (e) {
@@ -593,7 +593,7 @@ export async function handleTranslate(c: C): Promise<Response> {
         });
         const result = { translatedText: full, provider: providerType };
         await writeEvent(stream, { type: "done", ...result });
-        if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, result, cacheTtlSeconds);
+        if (cacheKey) void setTranslationCache(c.env.KV, cacheKey, result, cacheTtlSeconds);
         c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
       } catch (e) {
         await writeEvent(stream, { type: "error", error: publicProviderError(e) });
@@ -608,7 +608,7 @@ export async function handleTranslate(c: C): Promise<Response> {
       let text = result.translatedText;
       if (promptBuilt.postProcess) text = promptBuilt.postProcess(text);
       const final = { ...result, translatedText: text };
-      if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, final, cacheTtlSeconds);
+      if (cacheKey) void setTranslationCache(c.env.KV, cacheKey, final, cacheTtlSeconds);
       c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
       return streamSSE(c, async (stream) => {
         await writeEvent(stream, { type: "delta", text });
@@ -627,7 +627,7 @@ export async function handleTranslate(c: C): Promise<Response> {
     let text = result.translatedText;
     if (promptBuilt.postProcess) text = promptBuilt.postProcess(text);
     const final = { ...result, translatedText: text };
-    if (cacheKey) void setTranslationCache(c.env.SETTINGS_KV, cacheKey, final, cacheTtlSeconds);
+    if (cacheKey) void setTranslationCache(c.env.KV, cacheKey, final, cacheTtlSeconds);
     c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
     return c.json(final);
   } catch (e) {

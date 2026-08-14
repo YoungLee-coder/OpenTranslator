@@ -5,7 +5,7 @@ import OpenAI from "@lobehub/icons/es/OpenAI/components/Mono";
 import ClaudeColor from "@lobehub/icons/es/Claude/components/Color";
 import GeminiColor from "@lobehub/icons/es/Gemini/components/Color";
 import AiHubMixColor from "@lobehub/icons/es/AiHubMix/components/Color";
-import OpenRouterColor from "@lobehub/icons/es/OpenRouter/components/Color";
+import OpenRouterMono from "@lobehub/icons/es/OpenRouter/components/Mono";
 import CloudflareColor from "@lobehub/icons/es/Cloudflare/components/Color";
 import DeepLColor from "@lobehub/icons/es/DeepL/components/Color";
 import { cn } from "@/lib/utils";
@@ -25,7 +25,7 @@ const PROVIDER_COLOR_ICONS: Record<
   claude: ClaudeColor,
   gemini: GeminiColor,
   aihubmix: AiHubMixColor,
-  openrouter: OpenRouterColor,
+  openrouter: OpenRouterMono,
   cloudflare: CloudflareColor,
   deepl: DeepLColor,
 };
@@ -43,9 +43,13 @@ export function ProviderIcon({
 }) {
   if (!KNOWN_TYPES.has(type)) return null;
   const Icon = PROVIDER_COLOR_ICONS[type as ProviderType];
-  // Mono 走 currentColor，避免继承 text-muted-foreground 发灰
+  // Mono 走 currentColor：OpenAI 跟前景色；OpenRouter 用官网主色紫（非 LobeHub 荧光绿 Color）
   const monoClass =
-    type === "openai" ? "text-foreground dark:text-foreground" : undefined;
+    type === "openai"
+      ? "text-foreground dark:text-foreground"
+      : type === "openrouter"
+        ? "text-[#7624F4]"
+        : undefined;
   return (
     <Icon
       size={size}

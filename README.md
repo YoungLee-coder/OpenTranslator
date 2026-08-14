@@ -103,7 +103,7 @@ push 到 GitHub → Cloudflare 自动构建部署，无需本地装 wrangler、�
 **1. 创建资源（Dashboard）**
 
 - D1：Storage & D1 → Create database → 名字 `opentranslator`
-- KV：Workers & Pages → KV → Create namespace → 名字 `SETTINGS_KV`
+- KV：Workers & Pages → KV → Create namespace → 名字 `KV`
 
 **2. 连接 Worker（Workers Builds）**
 
@@ -116,7 +116,7 @@ Dashboard → Workers & Pages → Create → Workers → Import a repository →
   - `ENCRYPTION_KEY`：供应商 API Key 加密密钥，**务必备份，丢了等于所有密钥作废**
 - **Bindings** → Add binding：
   - D1 binding，名字填 `DB` → 选 `opentranslator` 数据库
-  - KV binding，名字填 `SETTINGS_KV` → 选刚才的命名空间
+  - KV binding，名字填 `KV` → 选刚才的命名空间
 
 **3. 初始化数据库（只做一次）**
 
@@ -145,7 +145,7 @@ curl -X POST "https://<你的-worker-域名>/api/init" \
 ```bash
 wrangler login
 wrangler d1 create opentranslator            # 用返回的 ID 取消注释 wrangler.toml 里的 d1 段并填入
-wrangler kv namespace create SETTINGS_KV      # 同上，取消注释 kv 段并填入
+wrangler kv namespace create KV      # 同上，取消注释 kv 段并填入
 wrangler secret put JWT_SECRET
 wrangler secret put ENCRYPTION_KEY
 pnpm build                                    # 构建前端到 ./dist
@@ -166,7 +166,7 @@ curl -X POST https://api.yourdomain.com/api/init \
 | Variable | `ENV` | 环境标识，默认 `development` |
 | Variable | `ORIGINS` | 跨域来源白名单（逗号分隔）；同源部署无需填写 |
 | Binding (D1) | `DB` | 绑定到 `opentranslator` 数据库 |
-| Binding (KV) | `SETTINGS_KV` | 绑定到设置/缓存命名空间 |
+| Binding (KV) | `KV` | 绑定到设置/缓存命名空间 |
 | Binding (DO) | `RATE_LIMITER` | Durable Object，部署时自动创建，无需 ID |
 | Binding (Assets) | `ASSETS` | 前端静态资源，`wrangler.toml` 里已配，无需手动绑定 |
 

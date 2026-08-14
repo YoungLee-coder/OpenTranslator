@@ -14,7 +14,7 @@ import { streamFromDeltas } from "./sse";
 /**
  * OpenAI-compatible chat completions via the official `openai` SDK.
  * `baseUrl` is the SDK root (e.g. https://api.openai.com/v1); the SDK appends
- * /chat/completions. aihubmix / OpenRouter / Cloudflare share the same wire format.
+ * /chat/completions. aihubmix / Cloudflare share the same wire format.
  */
 
 function createClient(
@@ -132,13 +132,4 @@ export const aihubmixProvider = makeOpenAICompat(
   "https://aihubmix.com/v1",
   "gpt-4o-mini",
   { "APP-Code": "JFRG5263" },
-);
-export const openrouterProvider = makeOpenAICompat(
-  "openrouter",
-  "https://openrouter.ai/api/v1",
-  "openai/gpt-4o-mini",
-  {
-    "HTTP-Referer": "https://github.com/YoungLee-coder/OpenTranslator",
-    "X-OpenRouter-Title": "OpenTranslator",
-  },
 );

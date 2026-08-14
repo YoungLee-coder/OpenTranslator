@@ -99,13 +99,13 @@ export const zhCN = {
   "setup.stepDbTitle": "2. 数据库",
   "setup.stepAdminTitle": "3. 管理员账号",
   "setup.dbBinding": "D1 数据库（binding 名 DB）",
-  "setup.kvBinding": "KV 命名空间（binding 名 SETTINGS_KV）",
+  "setup.kvBinding": "KV 命名空间（binding 名 KV）",
   "setup.notConnected": "未连接",
   "setup.connected": "已连接",
   "setup.step1":
     "Cloudflare Dashboard → Workers & Pages → 选择本 Worker → Settings → Bindings",
   "setup.step2": "添加 D1 数据库，binding 名填 DB",
-  "setup.step3": "添加 KV 命名空间，binding 名填 SETTINGS_KV",
+  "setup.step3": "添加 KV 命名空间，binding 名填 KV",
   "setup.initHint":
     "在 Worker 的 Variables and Secrets 中找到 JWT_SECRET，输入后点击下方按钮幂等建表（不会写入浏览器地址栏）。",
   "setup.migrateHint":

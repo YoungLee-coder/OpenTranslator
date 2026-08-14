@@ -36,7 +36,7 @@ adminFeaturesRoute.put("/:key", async (c) => {
   // 公开访问模块的 enabled 与 site_public 合一：联动写入站点设置并失效缓存。
   if (key === "public-access") {
     await setSiteSetting(c.env.DB, "site_public", String(body.enabled));
-    await invalidateSiteSettings(c.env.SETTINGS_KV);
+    await invalidateSiteSettings(c.env.KV);
   }
   return c.json({ feature: { ...manifest, enabled: body.enabled } });
 });

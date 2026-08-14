@@ -49,7 +49,7 @@ app.use(
 
 // Health check — binding presence + schema/admin readiness (no env/deploy details).
 app.get("/api/ping", async (c) => {
-  const bindings = { db: !!c.env.DB, kv: !!c.env.SETTINGS_KV };
+  const bindings = { db: !!c.env.DB, kv: !!c.env.KV };
   const base = {
     ok: true,
     service: "opentranslator-api",
@@ -80,7 +80,7 @@ app.get("/api/ping", async (c) => {
 // Pending migrations (db already initialized) may run without the secret so the
 // setup page can one-click upgrade after deploy.
 app.post("/api/init", async (c) => {
-  if (!c.env.DB || !c.env.SETTINGS_KV) {
+  if (!c.env.DB || !c.env.KV) {
     return c.text("Bindings not ready", 503);
   }
 
@@ -105,7 +105,7 @@ app.post("/api/init", async (c) => {
 
   const result = await initDatabase({ env: c.env });
   // 迁移可能改了 site_settings；清 KV 缓存与 admin migrate 对齐
-  await invalidateSiteSettings(c.env.SETTINGS_KV);
+  await invalidateSiteSettings(c.env.KV);
   return c.json({ ok: true, applied: result.applied });
 });
 

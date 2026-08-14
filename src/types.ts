@@ -2,7 +2,7 @@ import type { AuthUser } from "@opentranslator/shared-types";
 
 export interface AppBindings {
   DB: D1Database;
-  SETTINGS_KV: KVNamespace;
+  KV: KVNamespace;
   RATE_LIMITER: DurableObjectNamespace;
   ASSETS: Fetcher;
   JWT_SECRET: string;

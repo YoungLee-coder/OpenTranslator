@@ -2,7 +2,7 @@ import type { TranslateRequest, TranslateResponse } from "@opentranslator/shared
 import { utf8Encode } from "./bytes";
 
 /**
- * Translation result cache backed by the SETTINGS_KV namespace. Keyed by
+ * Translation result cache backed by the KV namespace. Keyed by
  * provider + model + language pair + expert + organizeFormat + reasoning + text hash.
  */
 

@@ -392,7 +392,7 @@ export async function auditDatabase(db: D1Database): Promise<DbAuditIssue[]> {
 
 /** POST /api/admin/db/repair — 修复指定 code（缺省=全部可修），返回残留问题。 */
 export async function repairDatabase(
-  env: { DB: D1Database; SETTINGS_KV: KVNamespace },
+  env: { DB: D1Database; KV: KVNamespace },
   codes?: string[],
 ): Promise<{ repaired: string[]; remaining: DbAuditIssue[] }> {
   const before = await auditDatabase(env.DB);
@@ -414,7 +414,7 @@ export async function repairDatabase(
       target.has("public_default_provider_stale")
     ) {
       await prunePublicModelRefs(
-        env.SETTINGS_KV,
+        env.KV,
         env.DB,
         (r) => isStaleRef(r, index),
         (pid) => isStaleProviderId(pid, index),
@@ -463,7 +463,7 @@ export async function repairDatabase(
       if (parsed.ok) {
         const next = normalizeAiExpertsConfig(parsed.config);
         await setSiteSetting(env.DB, AI_EXPERTS_SETTING_KEY, JSON.stringify(next));
-        await env.SETTINGS_KV.delete(AI_EXPERTS_KV_CACHE_KEY);
+        await env.KV.delete(AI_EXPERTS_KV_CACHE_KEY);
       }
     }
   }

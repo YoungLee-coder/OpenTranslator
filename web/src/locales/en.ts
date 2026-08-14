@@ -101,13 +101,13 @@ export const en: Messages = {
   "setup.stepDbTitle": "2. Database",
   "setup.stepAdminTitle": "3. Admin account",
   "setup.dbBinding": "D1 database (binding name DB)",
-  "setup.kvBinding": "KV namespace (binding name SETTINGS_KV)",
+  "setup.kvBinding": "KV namespace (binding name KV)",
   "setup.notConnected": "Not connected",
   "setup.connected": "Connected",
   "setup.step1":
     "Cloudflare Dashboard → Workers & Pages → select this Worker → Settings → Bindings",
   "setup.step2": "Add a D1 database with binding name DB",
-  "setup.step3": "Add a KV namespace with binding name SETTINGS_KV",
+  "setup.step3": "Add a KV namespace with binding name KV",
   "setup.initHint":
     "Find JWT_SECRET under Worker → Variables and Secrets. Enter it below and run initialization (nothing is written to the address bar).",
   "setup.migrateHint":

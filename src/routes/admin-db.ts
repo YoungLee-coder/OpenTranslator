@@ -36,7 +36,7 @@ adminDbRoute.get("/version", async (c) => {
 adminDbRoute.post("/migrate", async (c) => {
   const result = await initDatabase({ env: c.env });
   // 迁移可能改了 site_settings 种子数据/结构，清缓存确保一致
-  await invalidateSiteSettings(c.env.SETTINGS_KV);
+  await invalidateSiteSettings(c.env.KV);
   const after = await getCurrentDbVersion(c.env.DB);
   const info = versionInfo(after);
   const res: DbMigrateResult = {
@@ -64,7 +64,7 @@ adminDbRoute.post("/repair", async (c) => {
     | { codes?: string[] }
     | null;
   const res = await repairDatabase(
-    { DB: c.env.DB, SETTINGS_KV: c.env.SETTINGS_KV },
+    { DB: c.env.DB, KV: c.env.KV },
     body?.codes,
   );
   const result: DbAuditRepairResult = {

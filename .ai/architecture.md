@@ -27,7 +27,7 @@ src/                          # Hono Worker 后端（REST/SSE + 静态资源）
     registry.ts, schema.ts    #   providerRegistry / Dashboard 表单字段
     prompt.ts, sse.ts         #   共用提示词 / SSE 流式
     openai.ts, claude.ts,     #   各家 adapter（实现 TranslationProvider）
-    gemini.ts, deepl.ts, cloudflare.ts
+    gemini.ts, openrouter.ts, deepl.ts, cloudflare.ts
   routes/                     #   translate / write / auth / admin-*
   db/                         #   schema.sql + queries.ts + init.ts（幂等初始化器）
   durable-objects/            #   rate-limiter.ts（每 IP 滑动窗口）
@@ -52,11 +52,11 @@ wrangler.toml                 # Worker 配置（[assets] 静态资源绑定）
 
 - **新增供应商**：`ProviderType` 是穷尽联合类型，漏改任一 `Record<ProviderType, …>` 或 `switch` 会 typecheck 失败。核心路由不动。清单：
   1. `shared-types/provider.ts` — `ProviderType` 加新 id（前后端穷尽映射的源头）
-  2. Adapter：`src/providers/` 实现 `TranslationProvider`；OpenAI 兼容复用 `makeOpenAICompat`（`openai.ts`），不必新文件
+  2. Adapter：`src/providers/` 实现 `TranslationProvider`；OpenAI 兼容复用 `makeOpenAICompat`（`openai.ts`），不必新文件。OpenRouter 用官方 `@openrouter/sdk`（`openrouter.ts`，原生 `httpReferer` / `appTitle` / `serverURL`）
   3. `src/providers/index.ts` — `providerRegistry.register(...)`
   4. `src/providers/schema.ts` — Dashboard 表单字段
   5. `src/providers/base-url.ts` — `normalizeStoredProviderBaseUrl` switch（OpenAI 兼容走 `normalizeOpenAIBaseURL`）
-  6. `src/providers/reasoning.ts` — 关闭推理时的请求体（OpenAI 兼容通常并入 `reasoning_effort: "none"` 分支）
+  6. `src/providers/reasoning.ts` — 关闭推理时的请求体（OpenAI 兼容通常并入 `reasoning_effort: "none"` 分支；OpenRouter 走原生 `reasoning.effort`）
   7. `src/providers/latency-probe.ts` — `PROVIDER_DEFAULTS` + `probeProviderLatency` switch（extra headers 与 adapter 一致）
   8. Dashboard：`web/src/lib/dashboard-providers-cache.ts` 的 `EMPTY_SCHEMAS`、`ProvidersSection.tsx` 的 `PROVIDER_LABELS`、`ProviderIcon.tsx` 的 `@lobehub/icons`
   9. 产品文案按需（landing FAQ 等厂商列表）

@@ -7,6 +7,7 @@ import {
 } from "./base-url";
 import { cloudflareBaseURL } from "./cloudflare";
 import { deeplProvider } from "./deepl";
+import { OPENROUTER_APP_TITLE, OPENROUTER_HTTP_REFERER } from "./openrouter";
 import { safeText } from "./sse";
 
 const PROBE_TIMEOUT_MS = 15_000;
@@ -49,8 +50,8 @@ const PROVIDER_DEFAULTS: Partial<
 
 const AIHUBMIX_HEADERS = { "APP-Code": "JFRG5263" };
 const OPENROUTER_HEADERS = {
-  "HTTP-Referer": "https://github.com/YoungLee-coder/OpenTranslator",
-  "X-OpenRouter-Title": "OpenTranslator",
+  "HTTP-Referer": OPENROUTER_HTTP_REFERER,
+  "X-OpenRouter-Title": OPENROUTER_APP_TITLE,
 };
 const ANTHROPIC_VERSION = "2023-06-01";
 

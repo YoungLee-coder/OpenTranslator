@@ -25,7 +25,7 @@ const adminSettingsRoute = new Hono<{
 
 /** GET /api/admin/settings. */
 adminSettingsRoute.get("/", async (c) => {
-  const settings = await getSiteSettings(c.env.SETTINGS_KV, c.env.DB);
+  const settings = await getSiteSettings(c.env.KV, c.env.DB);
   return c.json({ settings });
 });
 
@@ -36,7 +36,7 @@ adminSettingsRoute.put("/", async (c) => {
 
   if (body.publicRateLimitPerMinute !== undefined) {
     await updateSetting(
-      c.env.SETTINGS_KV,
+      c.env.KV,
       c.env.DB,
       "public_rate_limit_per_minute",
       clampRateLimitPerMinute(
@@ -47,7 +47,7 @@ adminSettingsRoute.put("/", async (c) => {
   }
   if (body.authedRateLimitPerMinute !== undefined) {
     await updateSetting(
-      c.env.SETTINGS_KV,
+      c.env.KV,
       c.env.DB,
       "authed_rate_limit_per_minute",
       clampRateLimitPerMinute(
@@ -58,7 +58,7 @@ adminSettingsRoute.put("/", async (c) => {
   }
   if (body.translationCacheEnabled !== undefined) {
     await updateSetting(
-      c.env.SETTINGS_KV,
+      c.env.KV,
       c.env.DB,
       "translation_cache_enabled",
       body.translationCacheEnabled,
@@ -67,7 +67,7 @@ adminSettingsRoute.put("/", async (c) => {
   if (body.translationCacheTtlHours !== undefined) {
     // 夹到合法区间后落库，避免前端或脏数据写入越界值。
     await updateSetting(
-      c.env.SETTINGS_KV,
+      c.env.KV,
       c.env.DB,
       "translation_cache_ttl_hours",
       clampCacheTtlHours(body.translationCacheTtlHours),
@@ -75,7 +75,7 @@ adminSettingsRoute.put("/", async (c) => {
   }
   if (body.organizeFormatEnabled !== undefined) {
     await updateSetting(
-      c.env.SETTINGS_KV,
+      c.env.KV,
       c.env.DB,
       "organize_format_enabled",
       body.organizeFormatEnabled,
@@ -83,7 +83,7 @@ adminSettingsRoute.put("/", async (c) => {
   }
   if (body.disableModelReasoning !== undefined) {
     await updateSetting(
-      c.env.SETTINGS_KV,
+      c.env.KV,
       c.env.DB,
       "disable_model_reasoning",
       body.disableModelReasoning,
@@ -91,7 +91,7 @@ adminSettingsRoute.put("/", async (c) => {
   }
   if (body.publicDefaultProviderId !== undefined) {
     await updateSetting(
-      c.env.SETTINGS_KV,
+      c.env.KV,
       c.env.DB,
       "public_default_provider_id",
       body.publicDefaultProviderId ?? "",
@@ -103,7 +103,7 @@ adminSettingsRoute.put("/", async (c) => {
       ? body.publicModels.filter(isPublicModelRef)
       : [];
     await updateSetting(
-      c.env.SETTINGS_KV,
+      c.env.KV,
       c.env.DB,
       "public_models",
       arr.length ? JSON.stringify(arr) : "",
@@ -113,7 +113,7 @@ adminSettingsRoute.put("/", async (c) => {
   if (body.publicDefaultModel !== undefined) {
     const m = body.publicDefaultModel;
     await updateSetting(
-      c.env.SETTINGS_KV,
+      c.env.KV,
       c.env.DB,
       "public_default_model",
       isPublicModelRef(m) ? JSON.stringify(m) : "",
@@ -123,14 +123,14 @@ adminSettingsRoute.put("/", async (c) => {
   if (body.defaultModel !== undefined) {
     const m = body.defaultModel;
     await updateSetting(
-      c.env.SETTINGS_KV,
+      c.env.KV,
       c.env.DB,
       "default_model",
       isPublicModelRef(m) ? JSON.stringify(m) : "",
     );
   }
 
-  const settings = await getSiteSettings(c.env.SETTINGS_KV, c.env.DB);
+  const settings = await getSiteSettings(c.env.KV, c.env.DB);
   return c.json({ settings });
 });
 

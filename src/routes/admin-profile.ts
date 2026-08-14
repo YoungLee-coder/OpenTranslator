@@ -33,7 +33,7 @@ adminProfileRoute.get("/avatar", async (c) => {
   const admin = await getAdminById(c.env.DB, user.id);
   if (!admin?.avatar_updated_at) return c.text("not found", 404);
 
-  const avatar = await getAvatar(c.env.SETTINGS_KV, user.id);
+  const avatar = await getAvatar(c.env.KV, user.id);
   if (!avatar) return c.text("not found", 404);
 
   return new Response(avatar.data, {
@@ -61,7 +61,7 @@ adminProfileRoute.put("/avatar", async (c) => {
 
   const updatedAt = Math.floor(Date.now() / 1000);
   await putAvatar(
-    c.env.SETTINGS_KV,
+    c.env.KV,
     user.id,
     validated.buffer,
     validated.contentType,
@@ -79,7 +79,7 @@ adminProfileRoute.delete("/avatar", async (c) => {
   const user = c.get("user");
   if (!user) return c.json({ error: "unauthorized" }, 401);
 
-  await deleteAvatar(c.env.SETTINGS_KV, user.id);
+  await deleteAvatar(c.env.KV, user.id);
   await updateAdmin(c.env.DB, user.id, { avatar_updated_at: null });
 
   const admin = await getAdminById(c.env.DB, user.id);

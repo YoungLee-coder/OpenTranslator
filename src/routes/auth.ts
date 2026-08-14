@@ -35,7 +35,7 @@ authRoute.use("/me", populateUser);
 authRoute.get("/me", async (c) => {
   const user = c.get("user");
   const setupCompleted = (await getAdminCount(c.env.DB)) > 0;
-  const settings = await getSiteSettings(c.env.SETTINGS_KV, c.env.DB);
+  const settings = await getSiteSettings(c.env.KV, c.env.DB);
   let authUser: AuthUser | undefined;
   if (user) {
     const admin = await getAdminById(c.env.DB, user.id);

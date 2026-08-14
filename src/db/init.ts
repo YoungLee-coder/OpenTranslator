@@ -11,7 +11,7 @@
  * - 版本化迁移方法逐个执行；仅成功后才写入 `_migrations`，失败可重试 */
 
 interface InitContext {
-  env: { DB: D1Database; SETTINGS_KV: KVNamespace };
+  env: { DB: D1Database; KV: KVNamespace };
 }
 
 /** 执行单条 SQL，吞掉「已存在」类错误，返回是否真的执行了。 */

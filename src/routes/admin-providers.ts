@@ -100,7 +100,7 @@ adminProvidersRoute.post("/", async (c) => {
   const id = crypto.randomUUID();
   if (body.isPublicDefault) {
     await clearPublicDefaultFlag(c.env.DB);
-    await invalidateSiteSettings(c.env.SETTINGS_KV);
+    await invalidateSiteSettings(c.env.KV);
   }
   // models 首项作为默认模型，兼容旧 defaultModel 字段与兜底展示。
   const modelsJson = body.models?.length ? JSON.stringify(body.models) : null;
@@ -156,7 +156,7 @@ adminProvidersRoute.put("/:id", async (c) => {
   if (body.isPublicDefault !== undefined) {
     if (body.isPublicDefault) {
       await clearPublicDefaultFlag(c.env.DB);
-      await invalidateSiteSettings(c.env.SETTINGS_KV);
+      await invalidateSiteSettings(c.env.KV);
     }
     patch.is_public_default = body.isPublicDefault ? 1 : 0;
   }
@@ -167,7 +167,7 @@ adminProvidersRoute.put("/:id", async (c) => {
   // 改了 models 时，级联剔除公开白名单中已被移除的模型引用。
   if (body.models !== undefined) {
     const newModels = new Set(body.models);
-    await prunePublicModelRefs(c.env.SETTINGS_KV, c.env.DB, (r) =>
+    await prunePublicModelRefs(c.env.KV, c.env.DB, (r) =>
       r.providerId === id && !newModels.has(r.model),
     );
   }
@@ -182,7 +182,7 @@ adminProvidersRoute.delete("/:id", async (c) => {
   if (!ok) return c.json({ error: "not found" }, 404);
   // 级联清理公开白名单中指向该 provider 的引用（含公开默认 provider 与默认模型）。
   await prunePublicModelRefs(
-    c.env.SETTINGS_KV,
+    c.env.KV,
     c.env.DB,
     (r) => r.providerId === id,
     (pid) => pid === id,

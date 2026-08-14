@@ -103,7 +103,7 @@ Push to GitHub → Cloudflare builds and deploys automatically. No local wrangle
 **1. Create resources (Dashboard)**
 
 - D1: Storage & D1 → Create database → name it `opentranslator`
-- KV: Workers & Pages → KV → Create namespace → name it `SETTINGS_KV`
+- KV: Workers & Pages → KV → Create namespace → name it `KV`
 
 **2. Connect the Worker (Workers Builds)**
 
@@ -116,7 +116,7 @@ After creation, open the Worker → Settings:
   - `ENCRYPTION_KEY` — encrypts provider API keys; **back this up — losing it invalidates all stored keys**
 - **Bindings** → Add binding:
   - D1 binding, name `DB` → select the `opentranslator` database
-  - KV binding, name `SETTINGS_KV` → select the namespace you created
+  - KV binding, name `KV` → select the namespace you created
 
 **3. Initialize the database (once)**
 
@@ -145,7 +145,7 @@ Push to `main` and Cloudflare rebuilds and redeploys. For incremental schema mig
 ```bash
 wrangler login
 wrangler d1 create opentranslator            # Uncomment d1 block in wrangler.toml and paste the returned ID
-wrangler kv namespace create SETTINGS_KV      # Same for the kv block
+wrangler kv namespace create KV      # Same for the kv block
 wrangler secret put JWT_SECRET
 wrangler secret put ENCRYPTION_KEY
 pnpm build                                    # Build frontend to ./dist
@@ -166,7 +166,7 @@ curl -X POST https://api.yourdomain.com/api/init \
 | Variable | `ENV` | Environment label, default `development` |
 | Variable | `ORIGINS` | CORS allowlist (comma-separated); omit for same-origin deploy |
 | Binding (D1) | `DB` | Bind to `opentranslator` database |
-| Binding (KV) | `SETTINGS_KV` | Settings/cache namespace |
+| Binding (KV) | `KV` | Settings/cache namespace |
 | Binding (DO) | `RATE_LIMITER` | Durable Object for rate limiting; created on deploy, no ID needed |
 | Binding (Assets) | `ASSETS` | Frontend static assets; configured in `wrangler.toml`, no manual bind |
 

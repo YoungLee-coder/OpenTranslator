@@ -1,33 +1,17 @@
 name = "opentranslator"
 main = "src/index.ts"
 compatibility_date = "2025-11-01"
-# Anthropic / OpenAI / Gemini 官方 SDK 会引用 node:fs 等内置模块
 compatibility_flags = ["nodejs_compat"]
 
-# Static assets — 前端打包产物（pnpm build 输出到 ./dist）。
-# 同一个 Worker 既服务 SPA 又处理 /api/*，一次部署全搞定，同源无需 CORS。
 [assets]
 binding = "ASSETS"
 directory = "./dist"
 not_found_handling = "single-page-application"
 run_worker_first = true
 
-# D1 database — 在 Dashboard 创建后，到 Worker → Settings → Bindings 里绑定，
-# binding 名必须填 "DB"（与代码 env.DB 对应），无需在此手填 database_id。
-# 香港/亚太部署：创建时指定 apac（亚太），主库会落在离香港最近的区域。
-#   wrangler d1 create opentranslator --location=apac
-# Dashboard 创建时在 Location 选 Asia-Pacific (apac)。已创建的库无法改区域，需新建并迁移。
-#[[d1_databases]]
-#binding = "DB"
-#database_name = "opentranslator"
-#database_id = ""
+[placement]
+region = "gcp:asia-east2"
 
-# KV namespace — 同上，在 Dashboard 绑定，binding 名必须填 "SETTINGS_KV"。
-#[[kv_namespaces]]
-#binding = "SETTINGS_KV"
-#id = ""
-
-# Durable Object: per-IP sliding-window rate limiter（无需 ID，部署时自动创建）
 [[durable_objects.bindings]]
 name = "RATE_LIMITER"
 class_name = "RateLimiter"
@@ -35,18 +19,3 @@ class_name = "RateLimiter"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["RateLimiter"]
-
-# Worker 计算贴近香港，减少与 D1（apac）往返延迟。
-# 静态资源（SPA）仍按全球边缘就近下发；仅 API / Worker 逻辑受此配置影响。
-# aws:ap-east-1 = AWS 香港；亦可改为 gcp:asia-east2（GCP 香港）。
-# 若后端分散或位置不确定，可改为 mode = "smart" 让 Cloudflare 自动择优。
-[placement]
-region = "aws:ap-east-1"
-
-[vars]
-ENV = "development"
-# ORIGINS = "https://your-domain.com"   # 跨域来源白名单（逗号分隔）；同源部署时无需填写
-
-# Secrets — 在 Dashboard → Worker → Settings → Variables and Secrets 添加：
-#   JWT_SECRET       （随机字符串，32 位以上，同时作为 POST /api/init 的 X-Init-Secret 凭证）
-#   ENCRYPTION_KEY   （随机字符串，32 位以上，务必备份，丢了等于所有供应商密钥作废）

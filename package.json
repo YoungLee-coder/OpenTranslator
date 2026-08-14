@@ -1,6 +1,6 @@
 {
   "name": "opentranslator",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "description": "DeepL-style AI translator — Vite SPA + Hono Worker on Cloudflare",
@@ -29,6 +29,7 @@
     "@fontsource-variable/source-serif-4": "^5.3.0",
     "@google/genai": "^2.16.0",
     "@lobehub/icons": "^5.15.0",
+    "@openrouter/sdk": "^1.2.29",
     "@radix-ui/react-avatar": "^1.2.6",
     "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/react-dropdown-menu": "^2.1.24",

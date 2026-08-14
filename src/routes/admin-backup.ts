@@ -209,13 +209,13 @@ adminBackupRoute.post("/", async (c) => {
 
   await c.env.DB.batch(statements);
   await prunePublicModelRefs(
-    c.env.SETTINGS_KV,
+    c.env.KV,
     c.env.DB,
     (r) => !importedIds.has(r.providerId),
     (pid) => !importedIds.has(pid),
   );
-  await invalidateSiteSettings(c.env.SETTINGS_KV);
-  await invalidateAiExpertsConfig(c.env.SETTINGS_KV);
+  await invalidateSiteSettings(c.env.KV);
+  await invalidateAiExpertsConfig(c.env.KV);
 
   const result: SiteBackupImportResult = {
     ok: true,
