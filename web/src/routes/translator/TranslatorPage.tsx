@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { Navigate } from "react-router-dom";
 import { ArrowLeftRight, Check, Copy, Square } from "lucide-react";
 import type { TranslateModelOption, TranslateModelsResponse, AiExpertMeta, AiExpertsPublicResponse } from "@opentranslator/shared-types";
-import { MAX_TRANSLATE_CHARS } from "@opentranslator/shared-types";
+import { canUseFeature, MAX_TRANSLATE_CHARS } from "@opentranslator/shared-types";
 import { ApiError, apiGet, streamTranslate } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
 import { LANGUAGES, languageName } from "@/lib/languages";
@@ -30,7 +31,7 @@ export function TranslatorPage() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  const { user } = useAuth();
+  const { user, sitePublic } = useAuth();
   const [modelOptions, setModelOptions] = useState<TranslateModelOption[]>([]);
   // 编码选中项：「providerId|model」；加载后选中站点默认模型
   const [modelKey, setModelKey] = useState<string | null>(null);
@@ -179,6 +180,15 @@ export function TranslatorPage() {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     });
+  }
+
+  if (user && !canUseFeature(user, sitePublic, "translate")) {
+    return (
+      <Navigate
+        to={canUseFeature(user, sitePublic, "write") ? "/write" : "/dashboard"}
+        replace
+      />
+    );
   }
 
   return (

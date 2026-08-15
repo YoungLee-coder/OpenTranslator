@@ -1,4 +1,9 @@
-import type { AuthUser } from "@opentranslator/shared-types";
+import type { AuthUser, UserRole } from "@opentranslator/shared-types";
+import {
+  isAdminRole,
+  parseUserPermissionsJson,
+  USER_PERMISSIONS,
+} from "@opentranslator/shared-types";
 import type { AdminUserRow } from "../db/queries";
 
 const KV_PREFIX = "av:";
@@ -25,10 +30,18 @@ export function avatarUrl(updatedAt: number | null | undefined): string | undefi
 }
 
 export function adminToAuthUser(admin: AdminUserRow): AuthUser {
+  const role: UserRole = isAdminRole(admin.role) ? "admin" : "user";
+  const username = admin.email;
   return {
     id: admin.id,
-    email: admin.email,
-    role: admin.role,
+    username,
+    email: username,
+    role,
+    permissions:
+      role === "admin"
+        ? [...USER_PERMISSIONS]
+        : parseUserPermissionsJson(admin.permissions_json),
+    enabled: admin.enabled !== 0,
     avatarUrl: avatarUrl(admin.avatar_updated_at),
   };
 }

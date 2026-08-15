@@ -7,8 +7,9 @@ import type {
   WriteRequest,
   WriteStreamEvent,
 } from "@opentranslator/shared-types";
+import { hasPermission } from "@opentranslator/shared-types";
 import type { AppBindings, AppVariables } from "../../types";
-import { getSessionUser } from "../../auth/session";
+import { resolveLiveUser } from "../../auth/live-user";
 import { getSiteSettings } from "../../settings/cache";
 import {
   getProviderRow,
@@ -82,16 +83,20 @@ export async function handleWrite(c: C): Promise<Response> {
     return c.json({ error: validationError }, 400);
   }
 
-  const user = await getSessionUser(
+  const user = await resolveLiveUser(
     c.req.header("cookie"),
     c.env.JWT_SECRET,
     c.req.header("authorization"),
+    c.env.DB,
   );
   const isPublic = !user;
   const settings = await getSiteSettings(c.env.KV, c.env.DB);
 
   if (!settings.sitePublic && !user) {
     return c.json({ error: "site is private", authenticated: false }, 403);
+  }
+  if (user && !hasPermission(user, "write")) {
+    return c.json({ error: "forbidden" }, 403);
   }
 
   const limit = user

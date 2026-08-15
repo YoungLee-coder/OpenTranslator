@@ -17,7 +17,7 @@ export function UserAvatar({
     <Avatar className={className}>
       {src ? <AvatarImage src={src} alt={avatarAlt(user)} /> : null}
       <AvatarFallback className={cn("text-[0.7rem]", fallbackClassName)}>
-        {initialsOf(user.email)}
+        {initialsOf(user.username || user.email)}
       </AvatarFallback>
     </Avatar>
   );

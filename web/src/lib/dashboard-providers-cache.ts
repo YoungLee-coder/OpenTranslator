@@ -2,7 +2,7 @@ import type {
   ProviderField,
   ProviderRecord,
   ProviderType,
-  SiteSettings,
+  PublicModelRef,
 } from "@opentranslator/shared-types";
 import { apiGet } from "./api-client";
 import { createSessionSnapshotCache } from "./session-snapshot-cache";
@@ -47,16 +47,17 @@ const cache = createSessionSnapshotCache<ProvidersSnapshot>({
   storageKey: "ot.dashboard.providers.v1",
   isSnapshot: isProvidersSnapshot,
   async fetchFresh() {
-    const [listRes, schemaRes, setRes] = await Promise.all([
-      apiGet<{ providers: ProviderRecord[]; types: ProviderType[] }>(
-        "/api/admin/providers",
-      ),
+    const [listRes, schemaRes] = await Promise.all([
+      apiGet<{
+        providers: ProviderRecord[];
+        types: ProviderType[];
+        defaultModel?: PublicModelRef | null;
+      }>("/api/admin/providers"),
       apiGet<{ schemas: Record<ProviderType, ProviderField[]> }>(
         "/api/admin/providers/schema",
       ),
-      apiGet<{ settings: SiteSettings }>("/api/admin/settings"),
     ]);
-    const pdm = setRes.settings.defaultModel;
+    const pdm = listRes.defaultModel;
     return {
       providers: listRes.providers,
       types: listRes.types,

@@ -7,7 +7,7 @@
 - **绝不**提交 `JWT_SECRET`、`ENCRYPTION_KEY`、`.dev.vars`、供应商 API Key 明文。`.dev.vars` 已 gitignore——别把密钥写进 `wrangler.toml` 或源码。
 - `JWT_SECRET`：JWT 签名密钥，**同时**是首次 `POST /api/init`（`X-Init-Secret` 头）建表的访问凭证。32 位以上随机字符串。部署后首次打开进入 `/setup`，在页面填入该密钥并创建管理员。已有库且仅有待迁移时，初始化页可无密钥触发升级。
 - `ENCRYPTION_KEY`：供应商 API Key 的加密密钥。**不可恢复**——丢失 = 所有已存密钥作废。不要随意轮换 / 重新生成，除非同时重新加密全部密钥。**绝不删除。**
-- 供应商 API Key 用 `ENCRYPTION_KEY` 加密后落 D1，明文绝不入库（见 `src/lib/crypto.ts`、`src/db/queries.ts`）。**绝不**在日志、响应、错误信息里输出明文 Key 或加密密钥。
+- 供应商 API Key 用 `ENCRYPTION_KEY` 加密后落 D1，明文绝不入库（见 `src/lib/crypto.ts`、`src/db/queries.ts`）。**绝不**在日志、普通 API 响应、错误信息里输出明文 Key 或加密密钥。唯一例外是 `GET /api/admin/backup`（仅管理员），导出文件含明文 Key，须按密钥材料保管。
 
 ## 数据库
 
@@ -16,7 +16,10 @@
 
 ## 鉴权
 
-- `/api/admin/*` 必须挂在 `authMiddleware`（JWT）之后（见 `src/index.ts`）。新增 admin 路由**不要**绕过该中间件。
+- `/api/admin/*` 必须挂在 `authMiddleware` 之后，并经过 `adminPermissionMiddleware`（见 `src/index.ts`）。新增 admin 路由**不要**绕过这两层，且必须把路径前缀登记进 `PERMISSION_BY_PREFIX`——**未登记的 `/api/admin/*` 一律 403**。
+- JWT 只证明身份与 `session_version`（`src/lib/jwt.ts`）。角色、权限、停用状态每次请求从 D1 读取（`resolveLiveUser`）。**不要**用 JWT 里的 `role` 做授权。
+- 改密（用户资料或管理员重置）会自增 `admin_users.session_version`，旧 JWT 立即失效。当前这次请求会签发新 cookie；其它设备 / 扩展需重新登录。
+- `/api/admin/backup` 与 `/api/admin/db` **仅管理员**。`settings` 权限不能导出明文 API Key，也不能跑迁移/修复。
 - 密码用 `src/lib/password.ts` 哈希，**绝不**明文存储或比较。JWT 签发 / 校验走 `src/lib/jwt.ts`。
 
 ## 部署 / 生产

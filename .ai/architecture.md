@@ -12,7 +12,7 @@
 
 ## 入口点
 
-- **后端入口** `src/index.ts` — Hono app。挂 `logger` + `cors`；`/api/ping` 健康检查；`POST /api/init`（首次建表需 `X-Init-Secret` = JWT_SECRET；仅待迁移时可无密钥）幂等建表/升级；`/api/translate`、`/api/write`、`/api/auth` 公开；`/api/admin/*` 挂在 `authMiddleware` 之后（需 JWT）；catch-all 把非 `/api` 请求交给 `ASSETS` 绑定服务 SPA。`import "./providers"` 以副作用在启动时注册全部 adapter。导出 `RateLimiter` DO。
+- **后端入口** `src/index.ts` — Hono app。挂 `logger` + `cors`；`/api/ping` 健康检查；`POST /api/init`（首次建表需 `X-Init-Secret` = JWT_SECRET；仅待迁移时可无密钥）幂等建表/升级；`/api/translate`、`/api/write`、`/api/auth` 公开；`/api/admin/*` 挂在 `authMiddleware`（JWT + D1 实时用户）与 `adminPermissionMiddleware`（路径权限，未登记前缀 403）之后；`/api/admin/backup` 与 `/api/admin/db` 仅管理员。catch-all 把非 `/api` 请求交给 `ASSETS` 绑定服务 SPA。`import "./providers"` 以副作用在启动时注册全部 adapter。导出 `RateLimiter` DO。
 - **前端入口** `web/src/main.tsx` → `web/src/App.tsx`（React Router）。未就绪（缺绑定 / 未建表 / 待迁移 / 无管理员）时强制进入 `/setup` 初始化向导。
 - **Worker 配置** `wrangler.toml` — `[assets]` 指向 `./dist`，`run_worker_first = true`；D1/KV 绑定在 Dashboard 网页配（toml 里注释掉）。
 
@@ -31,17 +31,17 @@ src/                          # Hono Worker 后端（REST/SSE + 静态资源）
   routes/                     #   translate / write / auth / admin-*
   db/                         #   schema.sql + queries.ts + init.ts（幂等初始化器）
   durable-objects/            #   rate-limiter.ts（每 IP 滑动窗口）
-  features/                   #   功能模块后端（translate, write, ai-experts, public-access）
+  features/                   #   功能模块后端（translate, write, ai-experts, public-access, multi-user）
   experts/                    #   AI expert 插件（plugins/*.yml → bundled.ts）
   middleware/                 #   auth.ts, rate-limit.ts
-  auth/session.ts
+  auth/session.ts, live-user.ts
   lib/                        #   jwt, bytes, password, crypto, cache
   settings/cache.ts
 web/                          # Vite + React SPA（构建产物输出到根 dist/）
   vite.config.ts              #   ★ build.outDir=../dist；dev 把 /api 代理到 :8787
   src/main.tsx, App.tsx       #   入口 + 路由
   src/routes/                 #   translator / write / dashboard / login / setup
-  src/features/               #   功能模块前端（AiExpertsManager, PublicAccessSettings）+ registry.ts
+  src/features/               #   功能模块前端（AiExpertsManager, PublicAccessSettings, MultiUserManager）+ registry.ts
   src/components/RootLayout.tsx
   src/lib/                    #   api-client, languages, auth
 shared-types/                 # 前后端共享类型，别名 @opentranslator/shared-types 引用
@@ -61,7 +61,7 @@ wrangler.toml                 # Worker 配置（[assets] 静态资源绑定）
   8. Dashboard：`web/src/lib/dashboard-providers-cache.ts` 的 `EMPTY_SCHEMAS`、`ProvidersSection.tsx` 的 `PROVIDER_LABELS`、`ProviderIcon.tsx` 的 `@lobehub/icons`
   9. 产品文案按需（landing FAQ 等厂商列表）
   验证：`pnpm typecheck`（改了 shared-types）
-- **新增功能模块**：`web/src/features/` 加组件并在 `features/registry.ts` 注册 → `src/features/` 加后端 manifest/handler → Dashboard 模块管理里 DB 开关启用。
+- **新增功能模块**：`web/src/features/` 加组件并在 `features/registry.ts` 注册 → `src/features/` 加后端 manifest/handler → Dashboard 模块管理里 DB 开关启用。`FeatureManifest.requiredAccess` 声明谁能看到该模块（`admin` 或具体权限；缺省 `settings`）。新 admin API 还要在 `adminPermissionMiddleware` 的前缀表登记，否则 403。
 - **新增 AI expert**：`src/experts/plugins/*.yml` 加定义 → `pnpm bundle-experts` 重生成 `bundled.ts`。解析逻辑在 `src/experts/resolve.ts`、`registry.ts`。
 
 ## 大文件与所有权

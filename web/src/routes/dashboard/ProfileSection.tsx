@@ -29,7 +29,7 @@ export function ProfileSection() {
   const { user, refresh } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const rise = useOnceAnimation(true, 650);
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +38,7 @@ export function ProfileSection() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) setEmail(user.email);
+    if (user) setUsername(user.username || user.email);
   }, [user]);
 
   useEffect(() => {
@@ -49,8 +49,8 @@ export function ProfileSection() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) {
-      setError(t("profile.emailRequired"));
+    if (!username.trim()) {
+      setError(t("profile.usernameRequired"));
       return;
     }
     if (!currentPassword) {
@@ -63,15 +63,15 @@ export function ProfileSection() {
     }
 
     if (!user) return;
-    const emailChanged = email.trim() !== user.email;
+    const usernameChanged = username.trim() !== (user.username || user.email);
     const passwordChanging = !!newPassword;
-    if (!emailChanged && !passwordChanging) {
+    if (!usernameChanged && !passwordChanging) {
       setError(t("profile.noChanges"));
       return;
     }
 
     const body: UpdateProfileRequest = {
-      email: email.trim(),
+      username: username.trim(),
       currentPassword,
     };
     if (newPassword) body.newPassword = newPassword;
@@ -209,14 +209,16 @@ export function ProfileSection() {
             )}
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="profile-email">{t("auth.email")}</Label>
+              <Label htmlFor="profile-username">{t("auth.username")}</Label>
               <Input
-                id="profile-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
+                id="profile-username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
                 required
+                minLength={2}
+                maxLength={64}
               />
             </div>
 

@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import type { AuthUser } from "@opentranslator/shared-types";
+import { canUseFeature, userLoginName } from "@opentranslator/shared-types";
 import { LogoMark } from "@opentranslator/brand/LogoMark";
 import { Ellipsis, Languages, LayoutDashboard, LogOut, PenLine, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,7 @@ export function RootLayout() {
   // 已登录：立刻预拉控制台数据与 chunk，进页时尽量命中快照
   useEffect(() => {
     if (!user || authLoading) return;
-    prefetchDashboard();
+    prefetchDashboard(user);
   }, [user, authLoading]);
 
   if (authLoading || readinessStatus === "loading") {
@@ -93,8 +94,12 @@ export function RootLayout() {
   const closeMobile = () => setMobileExpanded(false);
 
   const navItems: NavItem[] = [
-    { to: "/", label: t("nav.translate"), active: location.pathname === "/" },
-    { to: "/write", label: t("nav.write"), active: location.pathname === "/write" },
+    ...((!user || canUseFeature(user, sitePublic, "translate"))
+      ? [{ to: "/", label: t("nav.translate"), active: location.pathname === "/" }]
+      : []),
+    ...((!user || canUseFeature(user, sitePublic, "write"))
+      ? [{ to: "/write", label: t("nav.write"), active: location.pathname === "/write" }]
+      : []),
     user
       ? {
           to: "/dashboard",
@@ -114,6 +119,7 @@ export function RootLayout() {
           onExpandedChange={setMobileExpanded}
           location={location}
           user={user}
+          sitePublic={sitePublic}
           onLogout={() => {
             closeMobile();
             void logout();
@@ -145,7 +151,7 @@ export function RootLayout() {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="min-w-52">
-                  <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
+                  <DropdownMenuLabel>{userLoginName(user)}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <LanguageMenuItems />
                   <DropdownMenuItem
@@ -182,12 +188,14 @@ function MobileIslandCapsule({
   onExpandedChange,
   location,
   user,
+  sitePublic,
   onLogout,
 }: {
   expanded: boolean;
   onExpandedChange: (open: boolean) => void;
   location: ReturnType<typeof useLocation>;
   user: AuthUser | null;
+  sitePublic: boolean;
   onLogout: () => void;
 }) {
   const { t } = useTranslation();
@@ -254,20 +262,24 @@ function MobileIslandCapsule({
           <div className="min-w-0 overflow-hidden">
             <div className="border-t border-rule/70 px-2.5 pb-3 pt-2">
               <nav className="flex flex-col gap-0.5">
-                <IslandNavLink
-                  to="/"
-                  label={t("nav.translate")}
-                  icon={<Languages className="size-4" />}
-                  active={location.pathname === "/"}
-                  onGo={close}
-                />
-                <IslandNavLink
-                  to="/write"
-                  label={t("nav.write")}
-                  icon={<PenLine className="size-4" />}
-                  active={location.pathname === "/write"}
-                  onGo={close}
-                />
+                {(!user || canUseFeature(user, sitePublic, "translate")) && (
+                  <IslandNavLink
+                    to="/"
+                    label={t("nav.translate")}
+                    icon={<Languages className="size-4" />}
+                    active={location.pathname === "/"}
+                    onGo={close}
+                  />
+                )}
+                {(!user || canUseFeature(user, sitePublic, "write")) && (
+                  <IslandNavLink
+                    to="/write"
+                    label={t("nav.write")}
+                    icon={<PenLine className="size-4" />}
+                    active={location.pathname === "/write"}
+                    onGo={close}
+                  />
+                )}
                 {user ? (
                   <IslandNavLink
                     to="/dashboard"
@@ -291,7 +303,7 @@ function MobileIslandCapsule({
                   <div className="mb-2.5 flex items-center gap-2.5 px-1">
                     <UserAvatar user={user} className="size-8 ring-1 ring-rule" />
                     <span className="min-w-0 truncate text-xs text-muted-foreground">
-                      {user.email}
+                      {userLoginName(user)}
                     </span>
                   </div>
                   <Button

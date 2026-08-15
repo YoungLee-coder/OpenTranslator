@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type {
   CreateProviderRequest,
   ProviderType,
+  PublicModelRef,
   TestProviderLatencyRequest,
   TestProviderLatencyResponse,
 } from "@opentranslator/shared-types";
@@ -19,7 +20,7 @@ import {
   type ProviderPatch,
 } from "../db/queries";
 import { decryptSecret, encryptSecret } from "../lib/crypto";
-import { invalidateSiteSettings, prunePublicModelRefs } from "../settings/cache";
+import { getSiteSettings, invalidateSiteSettings, prunePublicModelRefs, updateSetting } from "../settings/cache";
 import { probeProviderLatency } from "../providers/latency-probe";
 
 const adminProvidersRoute = new Hono<{
@@ -29,15 +30,48 @@ const adminProvidersRoute = new Hono<{
 
 /** GET /api/admin/providers — list all (no api keys). */
 adminProvidersRoute.get("/", async (c) => {
-  const providers = await listProviderRecords(c.env.DB);
+  const [providers, settings] = await Promise.all([
+    listProviderRecords(c.env.DB),
+    getSiteSettings(c.env.KV, c.env.DB),
+  ]);
   return c.json({
     providers,
     types: Object.keys(providerSchemas) as ProviderType[],
+    defaultModel: settings.defaultModel ?? null,
   });
 });
 
 /** GET /api/admin/providers/schema — form schema per provider type. */
 adminProvidersRoute.get("/schema", (c) => c.json({ schemas: providerSchemas }));
+
+function isModelRef(m: unknown): m is PublicModelRef {
+  if (typeof m !== "object" || m === null) return false;
+  const r = m as Record<string, unknown>;
+  return typeof r.providerId === "string" && typeof r.model === "string";
+}
+
+/** PUT /api/admin/providers/default-model — 站点默认模型的唯一写入面（providers 权限）。 */
+adminProvidersRoute.put("/default-model", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as { defaultModel?: unknown } | null;
+  if (!body || typeof body !== "object") {
+    return c.json({ error: "invalid body" }, 400);
+  }
+  if (!("defaultModel" in body)) {
+    return c.json({ error: "defaultModel is required" }, 400);
+  }
+  const m = body.defaultModel;
+  if (m != null && m !== "" && !isModelRef(m)) {
+    return c.json({ error: "invalid defaultModel" }, 400);
+  }
+  await updateSetting(
+    c.env.KV,
+    c.env.DB,
+    "default_model",
+    isModelRef(m) ? JSON.stringify(m) : "",
+  );
+  const settings = await getSiteSettings(c.env.KV, c.env.DB);
+  return c.json({ defaultModel: settings.defaultModel ?? null });
+});
 
 /**
  * POST /api/admin/providers/test-latency — Worker → model API probe ("say hi").

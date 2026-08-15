@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { PublicAccessSettings } from "./PublicAccessSettings";
 import { AiExpertsManager } from "./AiExpertsManager";
+import { MultiUserManager } from "./MultiUserManager";
 
 /**
  * Frontend feature registry. The Dashboard fetches feature manifests from
@@ -10,4 +11,5 @@ import { AiExpertsManager } from "./AiExpertsManager";
 export const featureComponents: Record<string, ComponentType> = {
   "public-access": PublicAccessSettings,
   "ai-experts": AiExpertsManager,
+  "multi-user": MultiUserManager,
 };

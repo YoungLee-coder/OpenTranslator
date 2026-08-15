@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Navigate } from "react-router-dom";
 import { Check, Copy, Replace, Square } from "lucide-react";
 import type {
   TranslateModelOption,
@@ -7,6 +8,7 @@ import type {
   WriteMode,
   WriteStyle,
 } from "@opentranslator/shared-types";
+import { canUseFeature } from "@opentranslator/shared-types";
 import { ApiError, apiGet, streamWrite } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
 import { useTranslation } from "@/lib/i18n";
@@ -62,7 +64,7 @@ export function WritePage() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  const { user } = useAuth();
+  const { user, sitePublic } = useAuth();
   const [modelOptions, setModelOptions] = useState<TranslateModelOption[]>([]);
   const [modelKey, setModelKey] = useState<string | null>(null);
   const [defaultModelKey, setDefaultModelKey] = useState<string | null>(null);
@@ -188,6 +190,15 @@ export function WritePage() {
     setRevisedText("");
     setStatus("idle");
     setError(null);
+  }
+
+  if (user && !canUseFeature(user, sitePublic, "write")) {
+    return (
+      <Navigate
+        to={canUseFeature(user, sitePublic, "translate") ? "/" : "/dashboard"}
+        replace
+      />
+    );
   }
 
   return (

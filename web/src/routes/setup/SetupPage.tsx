@@ -64,7 +64,7 @@ export function SetupPage() {
   } = useWorkerReadiness({ pollIntervalMs: 5000 });
 
   const [initSecret, setInitSecret] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -126,7 +126,7 @@ export function SetupPage() {
         await runDbInit(initSecret.trim());
         setInitSecret("");
       }
-      await apiPost<{ user: AuthUser }>("/api/auth/setup", { email, password });
+      await apiPost<{ user: AuthUser }>("/api/auth/setup", { username, password });
       await refresh();
       await recheck();
     } catch (err) {
@@ -291,15 +291,16 @@ export function SetupPage() {
               )}
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="setup-email">{t("setup.adminEmail")}</Label>
+                <Label htmlFor="setup-username">{t("setup.adminUsername")}</Label>
                 <Input
-                  id="setup-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="setup-username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
-                  placeholder="you@example.com"
                   required
+                  minLength={2}
+                  maxLength={64}
                   className="h-10"
                   disabled={submitting}
                 />
@@ -350,7 +351,7 @@ export function SetupPage() {
                 disabled={
                   submitting ||
                   (needsFirstInit && !initSecret.trim()) ||
-                  !email.trim() ||
+                  !username.trim() ||
                   password.length < 8 ||
                   !passwordConfirm
                 }

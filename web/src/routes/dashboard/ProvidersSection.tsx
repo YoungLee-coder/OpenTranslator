@@ -381,7 +381,7 @@ export function ProvidersSection() {
     patchProvidersSnapshot({ defaultModelKey: key }, writeGen);
     setSavingDefault(true);
     try {
-      await apiPut("/api/admin/settings", {
+      await apiPut("/api/admin/providers/default-model", {
         defaultModel: decodeModelKey(key),
       });
       toast.success(t("providers.defaultModelSaved"));

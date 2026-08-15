@@ -28,6 +28,7 @@
 - **Caching & usage stats** — KV translation cache avoids duplicate requests; usage logs land in D1 and show up in the Dashboard.
 - **AI experts** — Immersive Translate–compatible YAML prompts for scenario-specific translation; enable in the Dashboard and switch strategies via `expertId`.
 - **Site toggle** — Turn off public access with one switch for a private-only deployment.
+- **Multi-user management** — Optional feature module: the admin can create regular users, assign permissions, and enable or disable accounts. There is always exactly one admin.
 
 ---
 

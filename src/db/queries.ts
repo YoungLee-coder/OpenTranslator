@@ -28,6 +28,9 @@ interface AdminUserRow {
   role: string;
   created_at: number | null;
   avatar_updated_at: number | null;
+  enabled: number | null;
+  permissions_json: string | null;
+  session_version: number | null;
 }
 
 function toProviderRecord(row: ProviderRow): ProviderRecord {
@@ -330,18 +333,19 @@ export async function createFirstAdmin(
   return (result.meta.changes ?? 0) > 0;
 }
 
-export async function createAdmin(
+export async function createUser(
   db: D1Database,
   id: string,
-  email: string,
+  username: string,
   passwordHash: string,
+  permissionsJson: string,
 ): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
   await db
     .prepare(
-      "INSERT INTO admin_users (id, email, password_hash, role, created_at) VALUES (?, ?, ?, 'admin', ?)",
+      "INSERT INTO admin_users (id, email, password_hash, role, created_at, enabled, permissions_json) VALUES (?, ?, ?, 'user', ?, 1, ?)",
     )
-    .bind(id, email, passwordHash, now)
+    .bind(id, username, passwordHash, now, permissionsJson)
     .run();
 }
 
@@ -359,6 +363,31 @@ export interface AdminPatch {
   email?: string;
   password_hash?: string;
   avatar_updated_at?: number | null;
+  enabled?: boolean;
+  permissions_json?: string | null;
+}
+
+export async function listAdmins(db: D1Database): Promise<AdminUserRow[]> {
+  const res = await db
+    .prepare("SELECT * FROM admin_users ORDER BY created_at ASC")
+    .all<AdminUserRow>();
+  return res.results ?? [];
+}
+
+/**
+ * 删除普通用户。不能删除 role=admin 的账号。
+ */
+export async function deleteNonAdminUser(
+  db: D1Database,
+  id: string,
+): Promise<"deleted" | "not_found" | "is_admin"> {
+  const result = await db
+    .prepare("DELETE FROM admin_users WHERE id = ? AND role != 'admin'")
+    .bind(id)
+    .run();
+  if ((result.meta.changes ?? 0) > 0) return "deleted";
+  const remaining = await getAdminById(db, id);
+  return remaining ? "is_admin" : "not_found";
 }
 
 export async function updateAdmin(
@@ -375,10 +404,19 @@ export async function updateAdmin(
   if (patch.password_hash !== undefined) {
     sets.push("password_hash = ?");
     params.push(patch.password_hash);
+    sets.push("session_version = COALESCE(session_version, 0) + 1");
   }
   if (patch.avatar_updated_at !== undefined) {
     sets.push("avatar_updated_at = ?");
     params.push(patch.avatar_updated_at);
+  }
+  if (patch.enabled !== undefined) {
+    sets.push("enabled = ?");
+    params.push(patch.enabled ? 1 : 0);
+  }
+  if (patch.permissions_json !== undefined) {
+    sets.push("permissions_json = ?");
+    params.push(patch.permissions_json);
   }
   if (sets.length === 0) return true;
   params.push(id);

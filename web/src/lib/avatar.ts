@@ -35,11 +35,11 @@ export function resolveAvatarUrl(url: string | undefined): string | undefined {
   return `${base}${url}`;
 }
 
-export function initialsOf(email: string): string {
-  const head = email.split("@")[0] ?? email;
+export function initialsOf(name: string): string {
+  const head = name.includes("@") ? (name.split("@")[0] ?? name) : name;
   return head.slice(0, 2).toUpperCase();
 }
 
 export function avatarAlt(user: AuthUser): string {
-  return user.email;
+  return user.username || user.email;
 }

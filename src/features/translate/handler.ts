@@ -19,7 +19,8 @@ import {
   TRANSLATE_TARGET_CHUNK_CHARS,
 } from "@opentranslator/shared-types";
 import type { AppBindings, AppVariables } from "../../types";
-import { getSessionUser } from "../../auth/session";
+import { resolveLiveUser } from "../../auth/live-user";
+import { hasPermission } from "@opentranslator/shared-types";
 import { getSiteSettings } from "../../settings/cache";
 import {
   getProviderRow,
@@ -202,15 +203,19 @@ function parseAllowedModels(row: ProviderRow): string[] {
 
 /** GET /api/translate/models — 返回当前用户可选的模型与默认项。 */
 export async function handleListModels(c: C): Promise<Response> {
-  const user = await getSessionUser(
+  const user = await resolveLiveUser(
     c.req.header("cookie"),
     c.env.JWT_SECRET,
     c.req.header("authorization"),
+    c.env.DB,
   );
   const settings = await getSiteSettings(c.env.KV, c.env.DB);
 
   // 私站且未登录：不暴露任何模型
   if (!user && !settings.sitePublic) {
+    return c.json({ models: [], default: null } satisfies TranslateModelsResponse);
+  }
+  if (user && !hasPermission(user, "translate") && !hasPermission(user, "write")) {
     return c.json({ models: [], default: null } satisfies TranslateModelsResponse);
   }
 
@@ -278,14 +283,18 @@ export async function handleListModels(c: C): Promise<Response> {
 
 /** GET /api/translate/experts — enabled AI experts for the translator UI. */
 export async function handleListExperts(c: C): Promise<Response> {
-  const user = await getSessionUser(
+  const user = await resolveLiveUser(
     c.req.header("cookie"),
     c.env.JWT_SECRET,
     c.req.header("authorization"),
+    c.env.DB,
   );
   const settings = await getSiteSettings(c.env.KV, c.env.DB);
 
   if (!user && !settings.sitePublic) {
+    return c.json({ experts: [], defaultExpertId: GENERAL_EXPERT_ID });
+  }
+  if (user && !hasPermission(user, "translate")) {
     return c.json({ experts: [], defaultExpertId: GENERAL_EXPERT_ID });
   }
 
@@ -342,10 +351,11 @@ export async function handleTranslate(c: C): Promise<Response> {
     );
   }
 
-  const user = await getSessionUser(
+  const user = await resolveLiveUser(
     c.req.header("cookie"),
     c.env.JWT_SECRET,
     c.req.header("authorization"),
+    c.env.DB,
   );
   const isPublic = !user;
   const settings = await getSiteSettings(c.env.KV, c.env.DB);
@@ -353,6 +363,9 @@ export async function handleTranslate(c: C): Promise<Response> {
   // Private site gate: anonymous users can't pass when the site is closed.
   if (!settings.sitePublic && !user) {
     return c.json({ error: "site is private", authenticated: false }, 403);
+  }
+  if (user && !hasPermission(user, "translate")) {
+    return c.json({ error: "forbidden" }, 403);
   }
 
   // Resolve AI expert (when feature enabled via non-empty enabledIds).

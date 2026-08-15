@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { cors } from "hono/cors";
 import type { AppBindings, AppVariables } from "./types";
-import { authMiddleware } from "./middleware/auth";
+import { authMiddleware, adminPermissionMiddleware } from "./middleware/auth";
 import translateRoute from "./routes/translate";
 import writeRoute from "./routes/write";
 import authRoute from "./routes/auth";
@@ -14,6 +14,7 @@ import adminUsageRoute from "./routes/admin-usage";
 import adminDbRoute from "./routes/admin-db";
 import adminProfileRoute from "./routes/admin-profile";
 import adminBackupRoute from "./routes/admin-backup";
+import adminUsersRoute from "./routes/admin-users";
 import {
   getCurrentDbVersion,
   getPendingMigrations,
@@ -115,6 +116,7 @@ app.route("/api/auth", authRoute);
 
 // Admin endpoints sit behind JWT auth.
 app.use("/api/admin/*", authMiddleware);
+app.use("/api/admin/*", adminPermissionMiddleware);
 app.route("/api/admin/providers", adminProvidersRoute);
 app.route("/api/admin/settings", adminSettingsRoute);
 app.route("/api/admin/features", adminFeaturesRoute);
@@ -123,6 +125,7 @@ app.route("/api/admin/usage", adminUsageRoute);
 app.route("/api/admin/db", adminDbRoute);
 app.route("/api/admin/profile", adminProfileRoute);
 app.route("/api/admin/backup", adminBackupRoute);
+app.route("/api/admin/users", adminUsersRoute);
 
 // Catch-all: anything that isn't an /api route is served as a static asset
 // from the bundled frontend (SPA). With run_worker_first = true, the Worker

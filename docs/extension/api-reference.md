@@ -40,7 +40,7 @@ Options「测试连接」建议：`ok && bindings.db && bindings.kv` 为连通�
 
 | 端点 | 方法 | 说明 |
 |---|---|---|
-| `/api/auth/login` | POST | `{ email, password }` → `AuthSessionResponse`（含 `token`） |
+| `/api/auth/login` | POST | `{ username, password }`（亦接受 `email` 作为 username 别名）→ `AuthSessionResponse`（含 `token`） |
 | `/api/auth/setup` | POST | 首次初始化管理员（仅无用户时）；密码至少 8 位 |
 | `/api/auth/logout` | POST | 注销（Cookie 客户端；Bearer 客户端本地删 token 即可） |
 | `/api/auth/me` | GET | 会话状态（见 `AuthMeResponse`） |
@@ -55,6 +55,8 @@ Authorization: Bearer <token>
 
 **私站门禁：** `sitePublic === false` 时，未登录调用翻译 / 写作相关 API 返回 `403 { error: "site is private", authenticated: false }`。扩展应强制登录，不支持匿名翻译。
 
+**会话失效：** 改密（自己改或管理员重置）会使已签发的 JWT **立即失效**（`session_version` 不匹配 → `401` / `GET /api/auth/me` 的 `authenticated: false`）。扩展应清除本地 token 并回到登录。停用账号同样立即失效。
+
 **类型**（`shared-types/auth.ts`）：
 
 ```typescript
@@ -66,8 +68,12 @@ interface AuthSessionResponse {
 
 interface AuthUser {
   id: string;
+  username: string;
+  /** 与 username 相同，兼容旧客户端 */
   email: string;
-  role: string;
+  role: "admin" | "user";
+  permissions: Array<"translate" | "write" | "providers" | "settings" | "usage">;
+  enabled: boolean;
   /** 相对路径，如 /api/admin/profile/avatar?v=1710000000；无自定义头像时省略 */
   avatarUrl?: string;
 }
@@ -85,7 +91,7 @@ interface AuthMeResponse {
 
 ## 用户头像
 
-登录（`POST /api/auth/login`）与 `GET /api/auth/me` 在 `user.avatarUrl` 返回头像地址。无自定义头像时该字段省略，客户端用邮箱首字母做 fallback。
+登录（`POST /api/auth/login`）与 `GET /api/auth/me` 在 `user.avatarUrl` 返回头像地址。无自定义头像时该字段省略，客户端用用户名首字母做 fallback。
 
 `avatarUrl` 为**相对路径**（带 cache-bust 参数 `v`），需拼上实例 `baseUrl`：
 
@@ -155,7 +161,7 @@ useEffect(() => {
   };
 }, [baseUrl, token, user.avatarUrl]);
 
-// 有 avatarSrc 用图片，否则显示 initialsOf(user.email)
+// 有 avatarSrc 用图片，否则显示 initialsOf(user.username || user.email)
 ```
 
 上传 / 删除头像走 Dashboard 同款 admin API（`PUT` / `DELETE /api/admin/profile/avatar`）；扩展 v1 通常只读展示即可。

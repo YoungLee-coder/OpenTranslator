@@ -14,7 +14,7 @@ export function LoginPage() {
   const { user, loading, refresh } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,12 +36,13 @@ export function LoginPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await apiPost<{ user: AuthUser }>("/api/auth/login", { email, password });
+      const res = await apiPost<{ user: AuthUser }>("/api/auth/login", { username, password });
       await refresh();
       void res;
       navigate("/dashboard", { replace: true });
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      const msg = e instanceof ApiError ? e.message : String(e);
+      setError(msg === "account is disabled" ? t("auth.accountDisabled") : msg);
     } finally {
       setSubmitting(false);
     }
@@ -55,14 +56,13 @@ export function LoginPage() {
         </h1>
         <form onSubmit={submit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="email">{t("auth.email")}</Label>
+            <Label htmlFor="username">{t("auth.username")}</Label>
             <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              placeholder="you@example.com"
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
               required
               className="h-10"
             />

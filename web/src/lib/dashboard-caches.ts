@@ -1,3 +1,5 @@
+import type { AuthUser } from "@opentranslator/shared-types";
+import { hasPermission } from "@opentranslator/shared-types";
 import { clearOverviewSnapshot, loadOverviewSnapshot } from "./dashboard-overview-cache";
 import {
   clearProvidersSnapshot,
@@ -19,9 +21,15 @@ export function clearDashboardCaches(): void {
  * 登录后在站点空闲时预拉控制台数据 + lazy chunk。
  * 失败静默；进控制台时有快照即可免零态过渡。
  */
-export function prefetchDashboard(): void {
-  void loadOverviewSnapshot().catch(() => {});
-  void loadProvidersSnapshot().catch(() => {});
-  void loadSettingsSnapshot().catch(() => {});
+export function prefetchDashboard(user?: AuthUser | null): void {
+  if (!user || hasPermission(user, "usage")) {
+    void loadOverviewSnapshot().catch(() => {});
+  }
+  if (!user || hasPermission(user, "providers")) {
+    void loadProvidersSnapshot().catch(() => {});
+  }
+  if (!user || hasPermission(user, "settings")) {
+    void loadSettingsSnapshot().catch(() => {});
+  }
   void import("@/routes/dashboard/DashboardPage").catch(() => {});
 }

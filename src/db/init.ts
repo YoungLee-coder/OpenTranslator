@@ -55,7 +55,10 @@ async function v0_1_0({ env }: InitContext): Promise<void> {
       password_hash TEXT,
       role TEXT DEFAULT 'admin',
       created_at INTEGER,
-      avatar_updated_at INTEGER
+      avatar_updated_at INTEGER,
+      enabled INTEGER DEFAULT 1,
+      permissions_json TEXT,
+      session_version INTEGER DEFAULT 0
     )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS usage_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -168,6 +171,32 @@ async function v0_9_0({ env }: InitContext): Promise<void> {
   ).run();
 }
 
+/**
+ * v1.0：多用户（生产基线 0.9.0 → 1.0）。
+ * 功能模块、账号启用/权限、改密吊销会话；全站仅保留最早一名管理员。
+ */
+async function v1_0({ env }: InitContext): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO feature_modules (key, name, enabled, config_json, created_at) VALUES
+      ('multi-user', '多用户管理', 0, NULL, ${now})`,
+  ).run();
+  await addColumn(env.DB, "admin_users", "enabled", "INTEGER DEFAULT 1");
+  await addColumn(env.DB, "admin_users", "permissions_json", "TEXT");
+  await addColumn(env.DB, "admin_users", "session_version", "INTEGER DEFAULT 0");
+  await env.DB.prepare(
+    `UPDATE admin_users
+     SET role = 'user',
+         permissions_json = '["translate","write","providers","settings","usage"]'
+     WHERE role = 'admin'
+       AND id NOT IN (
+         SELECT id FROM (
+           SELECT id FROM admin_users ORDER BY created_at ASC, id ASC LIMIT 1
+         )
+       )`,
+  ).run();
+}
+
 /** 迁移记录表，记录已执行的版本，避免重复跑。 */
 async function ensureMigrationTable(db: D1Database): Promise<void> {
   await db
@@ -193,6 +222,7 @@ const migrations: Migration[] = [
   { version: "0.7.0", run: v0_7_0 },
   { version: "0.8.0", run: v0_8_0 },
   { version: "0.9.0", run: v0_9_0 },
+  { version: "1.0", run: v1_0 },
 ];
 
 export async function initDatabase(ctx: InitContext): Promise<{

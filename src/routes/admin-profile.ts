@@ -18,7 +18,9 @@ import {
   validateAvatarFile,
 } from "../lib/avatar";
 import { hashPassword, verifyPassword } from "../lib/password";
-import { cookieSecureFromUrl, sessionCookie, signJwt } from "../lib/jwt";
+import { normalizeUsername } from "../lib/username";
+import { cookieSecureFromUrl, sessionCookie } from "../lib/jwt";
+import { issueSessionToken } from "../auth/session";
 
 const adminProfileRoute = new Hono<{
   Bindings: AppBindings;
@@ -104,21 +106,17 @@ adminProfileRoute.put("/", async (c) => {
   }
 
   const patch: { email?: string; password_hash?: string } = {};
-  let nextEmail = admin.email;
 
-  if (body.email !== undefined) {
-    if (typeof body.email !== "string") {
-      return c.json({ error: "invalid email" }, 400);
-    }
-    const email = body.email.trim();
-    if (!email) return c.json({ error: "email is required" }, 400);
-    if (email !== admin.email) {
-      const existing = await getAdminByEmail(c.env.DB, email);
+  const nextUsernameRaw = body.username ?? body.email;
+  if (nextUsernameRaw !== undefined) {
+    const username = normalizeUsername(nextUsernameRaw);
+    if (!username) return c.json({ error: "invalid username" }, 400);
+    if (username !== admin.email) {
+      const existing = await getAdminByEmail(c.env.DB, username);
       if (existing && existing.id !== admin.id) {
-        return c.json({ error: "email already registered" }, 409);
+        return c.json({ error: "username already registered" }, 409);
       }
-      patch.email = email;
-      nextEmail = email;
+      patch.email = username;
     }
   }
 
@@ -138,16 +136,11 @@ adminProfileRoute.put("/", async (c) => {
   const updatedAdmin = await getAdminById(c.env.DB, user.id);
   if (!updatedAdmin) return c.json({ error: "user not found" }, 404);
 
-  if (patch.email) {
-    const token = await signJwt(
-      { sub: user.id, email: nextEmail, role: user.role },
-      c.env.JWT_SECRET,
-    );
-    c.header(
-      "Set-Cookie",
-      sessionCookie(token, { secure: cookieSecureFromUrl(c.req.url) }),
-    );
-  }
+  const token = await issueSessionToken(updatedAdmin, c.env.JWT_SECRET);
+  c.header(
+    "Set-Cookie",
+    sessionCookie(token, { secure: cookieSecureFromUrl(c.req.url) }),
+  );
   return c.json({ user: adminToAuthUser(updatedAdmin), changed: true });
 });
 

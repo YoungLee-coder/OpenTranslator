@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { canAccessFeature } from "@opentranslator/shared-types";
 import type { AppBindings, AppVariables } from "../types";
 import { featureManifests } from "../features/manifests";
 import { getFeatureModules, upsertFeatureModule, setSiteSetting } from "../db/queries";
@@ -15,11 +16,14 @@ const adminFeaturesRoute = new Hono<{
  * all it takes to surface a new module.
  */
 adminFeaturesRoute.get("/", async (c) => {
+  const user = c.get("user");
   const dbModules = await getFeatureModules(c.env.DB);
-  const features = featureManifests.map((m) => {
-    const row = dbModules.get(m.key);
-    return { ...m, enabled: row ? row.enabled === 1 : m.enabled };
-  });
+  const features = featureManifests
+    .map((m) => {
+      const row = dbModules.get(m.key);
+      return { ...m, enabled: row ? row.enabled === 1 : m.enabled };
+    })
+    .filter((f) => canAccessFeature(user, f.requiredAccess));
   return c.json({ features });
 });
 
@@ -32,6 +36,9 @@ adminFeaturesRoute.put("/:key", async (c) => {
   }
   const manifest = featureManifests.find((m) => m.key === key);
   if (!manifest) return c.json({ error: "unknown feature" }, 404);
+  if (!canAccessFeature(c.get("user"), manifest.requiredAccess)) {
+    return c.json({ error: "forbidden" }, 403);
+  }
   await upsertFeatureModule(c.env.DB, key, body.enabled);
   // 公开访问模块的 enabled 与 site_public 合一：联动写入站点设置并失效缓存。
   if (key === "public-access") {

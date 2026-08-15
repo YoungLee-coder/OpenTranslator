@@ -11,4 +11,5 @@ export const publicAccessManifest: FeatureManifest = {
   description: "匿名访客的公开翻译入口；启用后可在专属选项卡配置开放模型、公开默认与限流",
   enabled: true,
   adminRoute: "/dashboard/public-access",
+  requiredAccess: "settings",
 };

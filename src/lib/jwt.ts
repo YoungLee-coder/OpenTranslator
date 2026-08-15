@@ -8,6 +8,8 @@ export interface JwtPayload {
   sub: string;
   email: string;
   role: string;
+  /** 与 D1 `session_version` 对齐；缺省视为 0（旧 token）。 */
+  sv?: number;
   iat: number;
   exp: number;
 }
@@ -26,12 +28,17 @@ function hmacKey(secret: string): Promise<CryptoKey> {
 }
 
 export async function signJwt(
-  payload: Pick<JwtPayload, "sub" | "email" | "role">,
+  payload: Pick<JwtPayload, "sub" | "email" | "role" | "sv">,
   secret: string,
   ttlSeconds = SEVEN_DAYS_SECONDS,
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  const full: JwtPayload = { ...payload, iat: now, exp: now + ttlSeconds };
+  const full: JwtPayload = {
+    ...payload,
+    sv: payload.sv ?? 0,
+    iat: now,
+    exp: now + ttlSeconds,
+  };
   const header = { alg: "HS256", typ: "JWT" };
   const h = base64Url(utf8Encode(JSON.stringify(header)));
   const p = base64Url(utf8Encode(JSON.stringify(full)));
