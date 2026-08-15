@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import type { AppBindings, AppVariables } from "../types";
 import { handleListModels, handleListExperts, handleTranslate } from "../features/translate/handler";
-import { handleTranslateEmail } from "../features/translate/email-handler";
 
 const translateRoute = new Hono<{
   Bindings: AppBindings;
@@ -18,9 +17,5 @@ translateRoute.get("/experts", handleListExperts);
 // POST /api/translate { text, sourceLang, targetLang, stream?, providerId?, model?, expertId? }
 // -> JSON { translatedText, provider, usage? } or SSE stream of deltas.
 translateRoute.post("/", handleTranslate);
-
-// POST /api/translate/email { html, sourceLang, targetLang, stream?, providerId?, model?, preserveQuotes?, display? }
-// Whole-email HTML translation for the browser extension (layout-preserving; display=bilingual for side-by-side).
-translateRoute.post("/email", handleTranslateEmail);
 
 export default translateRoute;

@@ -12,7 +12,7 @@
 
 | 文档 | 用途 |
 |---|---|
-| [api-reference.md](./api-reference.md) | 鉴权、翻译/写作/邮件 SSE、错误码、语言表、类型与客户端示例 |
+| [api-reference.md](./api-reference.md) | 鉴权、翻译/写作 SSE、错误码、语言表、类型与客户端示例 |
 | [design-guide.md](./design-guide.md) | 设计风格、OKLCH 色彩 token |
 
 ## 快速开始

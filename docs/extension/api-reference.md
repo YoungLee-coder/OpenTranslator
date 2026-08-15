@@ -416,39 +416,6 @@ export async function* streamTranslate(
 }
 ```
 
-### 邮件 HTML 翻译（可选）
-
-供邮件类扩展使用；不使用 AI 专家，固定 HTML 保留式 prompt。
-
-```
-POST /api/translate/email
-Content-Type: application/json
-```
-
-请求 `TranslateEmailRequest`（`shared-types/translate.ts`）：
-
-```typescript
-{
-  html: string;              // 必填
-  sourceLang: string;        // 默认 "auto"
-  targetLang: string;        // 必填
-  stream?: boolean;
-  providerId?: string;
-  model?: string;
-  preserveQuotes?: boolean;  // 默认 true：引用块/签名不翻译
-  display?: "replace" | "bilingual";  // 默认 "replace"
-}
-```
-
-| 约束 | 说明 |
-|---|---|
-| 长度上限 | `html` 最长 `MAX_EMAIL_HTML_CHARS`（80 000）；超出 → `400` |
-| DeepL | 不支持 → `400` |
-| 私站匿名 | 同翻译 → `403 site is private` |
-| 流式 | 服务端缓冲完整 HTML 后一次发出 `delta` + `done`（避免半截标签破坏页面） |
-
-非流式响应与 `TranslateResponse` 相同。流式 SSE 事件类型同 `TranslateStreamEvent`（`delta` / `done` / `error`），解析逻辑与上文 `streamTranslate` 相同。
-
 ## 写作 API（可选）
 
 与翻译共用公开门禁与模型解析；模型列表复用 `GET /api/translate/models`。扩展 v1 可不实现。
@@ -561,7 +528,6 @@ Content-Type: application/json
 | 头像展示 | `<img src>` + Cookie | `fetch` + Blob URL + Bearer |
 | AI 专家选择 | 完整 UI | 可选；见 `GET /api/translate/experts` |
 | AI Write | 完整 UI | 可选；见 `POST /api/write` |
-| 邮件 HTML 翻译 | — | 可选；见 `POST /api/translate/email` |
 | CORS | 同源 | 需配置 `ORIGINS` |
 
 ## TypeScript 类型引用
@@ -581,7 +547,7 @@ import type {
 import { MAX_TRANSLATE_CHARS } from "@opentranslator/shared-types";
 ```
 
-独立扩展项目应**定期同步**主仓库 `shared-types/` 目录（复制、submodule 或私有 npm 包）。当前未单独发布 npm 包；`MAX_TRANSLATE_CHARS`、`MAX_EMAIL_HTML_CHARS` 等常量也在 `shared-types/` 中定义，避免在插件里硬编码魔法数字。
+独立扩展项目应**定期同步**主仓库 `shared-types/` 目录（复制、submodule 或私有 npm 包）。当前未单独发布 npm 包；`MAX_TRANSLATE_CHARS` 等常量也在 `shared-types/` 中定义，避免在插件里硬编码魔法数字。
 
 ## 后端实现索引（维护文档用）
 
@@ -590,7 +556,6 @@ import { MAX_TRANSLATE_CHARS } from "@opentranslator/shared-types";
 | 内容 | 路径 |
 |---|---|
 | 翻译 handler | `src/features/translate/handler.ts` |
-| 邮件翻译 handler | `src/features/translate/email-handler.ts` |
 | 写作 handler | `src/features/write/handler.ts` |
 | 鉴权 | `src/auth/session.ts`、`src/routes/auth.ts` |
 | 共享类型 | `shared-types/translate.ts`、`shared-types/write.ts`、`shared-types/auth.ts`、`shared-types/health.ts` |
