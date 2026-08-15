@@ -9,7 +9,8 @@ import type {
 // 需以 http(s):// 开头；SDK 负责拼接 /chat/completions、/v1/messages 等路径。
 // 旧配置若仍存完整端点 URL，adapter 会剥离已知后缀以保持兼容。
 // preset 字段由 schema 锁定为完整预设值，前端不可编辑；
-// select + defaultValue 用于可选预设（如 aihubmix 主站/备用 Base URL）。
+// select + defaultValue 用于可选预设（如 aihubmix 主站/备用 Base URL）；
+// preset 用于唯一官方端点（如 openrouter）。
 // models 字段一行一个模型名，首项视为该供应商的默认模型。
 export const providerSchemas: Record<ProviderType, ProviderField[]> = {
   openai: [
@@ -43,7 +44,12 @@ export const providerSchemas: Record<ProviderType, ProviderField[]> = {
     { key: "models", label: "模型", type: "models", placeholder: "gpt-4o-mini\ngpt-4o" },
   ],
   openrouter: [
-    { key: "baseUrl", label: "Base URL", type: "text", required: true, placeholder: "https://openrouter.ai/api/v1" },
+    {
+      key: "baseUrl",
+      label: "Base URL",
+      type: "text",
+      preset: "https://openrouter.ai/api/v1",
+    },
     { key: "models", label: "模型", type: "models", placeholder: "openai/gpt-4o-mini\nanthropic/claude-sonnet-4\ngoogle/gemini-2.5-flash" },
   ],
   cloudflare: [
