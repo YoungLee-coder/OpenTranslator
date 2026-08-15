@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import type {
   CreateManagedUserResponse,
   ManagedUser,
-  ManagedUserListResponse,
   UserPermission,
 } from "@opentranslator/shared-types";
 import {
@@ -10,8 +9,14 @@ import {
   isAdminRole,
   USER_PERMISSIONS,
 } from "@opentranslator/shared-types";
-import { apiDelete, apiGet, apiPost, apiPut, ApiError } from "@/lib/api-client";
+import { apiDelete, apiPost, apiPut, ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
+import {
+  beginMultiUserWrite,
+  getMultiUserSnapshot,
+  loadMultiUserSnapshot,
+  setMultiUserSnapshot,
+} from "./multi-user-cache";
 import { useTranslation, type Locale } from "@/lib/i18n";
 import type { MessageKey } from "@/locales/zh-CN";
 import {
@@ -97,9 +102,10 @@ function PermissionList({
 export function MultiUserManager() {
   const { t, locale } = useTranslation();
   const { user: me } = useAuth();
-  const [users, setUsers] = useState<ManagedUser[]>([]);
+  const initial = getMultiUserSnapshot();
+  const [users, setUsers] = useState<ManagedUser[]>(() => initial?.users ?? []);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !initial);
 
   const [addOpen, setAddOpen] = useState(false);
   const [addUsername, setAddUsername] = useState("");
@@ -145,13 +151,26 @@ export function MultiUserManager() {
     }
   }
 
-  async function load() {
+  function commitUsers(
+    updater: (prev: ManagedUser[]) => ManagedUser[],
+    writeGen: number,
+  ) {
+    setUsers((prev) => {
+      const next = updater(prev);
+      setMultiUserSnapshot(next, writeGen);
+      return next;
+    });
+  }
+
+  async function load(opts?: { force?: boolean }) {
     try {
-      const res = await apiGet<ManagedUserListResponse>("/api/admin/users");
-      setUsers(res.users);
+      const snap = await loadMultiUserSnapshot(opts);
+      setUsers(snap.users);
       setError(null);
     } catch (e) {
-      setError(e instanceof ApiError ? mapError(e.message) : String(e));
+      if (!getMultiUserSnapshot()) {
+        setError(e instanceof ApiError ? mapError(e.message) : String(e));
+      }
     } finally {
       setLoading(false);
     }
@@ -185,13 +204,14 @@ export function MultiUserManager() {
       return;
     }
     setAdding(true);
+    const writeGen = beginMultiUserWrite();
     try {
       const res = await apiPost<CreateManagedUserResponse>("/api/admin/users", {
         username,
         password: addPassword,
         permissions: [...addPerms],
       });
-      setUsers((prev) => [...prev, res.user]);
+      commitUsers((prev) => [...prev, res.user], writeGen);
       toast.success(t("users.created"));
       setAddOpen(false);
       setAddUsername("");
@@ -207,9 +227,13 @@ export function MultiUserManager() {
   async function confirmDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
+    const writeGen = beginMultiUserWrite();
     try {
       await apiDelete(`/api/admin/users/${deleteTarget.id}`);
-      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+      commitUsers(
+        (prev) => prev.filter((u) => u.id !== deleteTarget.id),
+        writeGen,
+      );
       toast.success(t("users.deleted", { name: deleteTarget.username }));
       setDeleteTarget(null);
     } catch (err) {
@@ -227,12 +251,16 @@ export function MultiUserManager() {
       return;
     }
     setResetting(true);
+    const writeGen = beginMultiUserWrite();
     try {
       const res = await apiPut<{ user: ManagedUser }>(
         `/api/admin/users/${resetTarget.id}`,
         { password: resetPassword },
       );
-      setUsers((prev) => prev.map((u) => (u.id === res.user.id ? res.user : u)));
+      commitUsers(
+        (prev) => prev.map((u) => (u.id === res.user.id ? res.user : u)),
+        writeGen,
+      );
       toast.success(t("users.resetDone", { name: resetTarget.username }));
       setResetTarget(null);
       setResetPassword("");
@@ -246,12 +274,16 @@ export function MultiUserManager() {
   async function savePermissions() {
     if (!editTarget) return;
     setSavingPerms(true);
+    const writeGen = beginMultiUserWrite();
     try {
       const res = await apiPut<{ user: ManagedUser }>(
         `/api/admin/users/${editTarget.id}`,
         { permissions: [...editPerms] },
       );
-      setUsers((prev) => prev.map((u) => (u.id === res.user.id ? res.user : u)));
+      commitUsers(
+        (prev) => prev.map((u) => (u.id === res.user.id ? res.user : u)),
+        writeGen,
+      );
       toast.success(t("users.permissionsSaved"));
       setEditTarget(null);
     } catch (err) {
@@ -263,11 +295,15 @@ export function MultiUserManager() {
 
   async function toggleEnabled(u: ManagedUser, enabled: boolean) {
     setBusyId(u.id);
+    const writeGen = beginMultiUserWrite();
     try {
       const res = await apiPut<{ user: ManagedUser }>(`/api/admin/users/${u.id}`, {
         enabled,
       });
-      setUsers((prev) => prev.map((row) => (row.id === res.user.id ? res.user : row)));
+      commitUsers(
+        (prev) => prev.map((row) => (row.id === res.user.id ? res.user : row)),
+        writeGen,
+      );
       toast.success(
         enabled
           ? t("users.enabledToast", { name: u.username })

@@ -1,5 +1,10 @@
 import type { FeatureManifest } from "@opentranslator/shared-types";
 import { apiPut, ApiError } from "@/lib/api-client";
+import { onFeatureToggled } from "@/features/prefetch";
+import {
+  beginFeaturesWrite,
+  setFeaturesSnapshot,
+} from "@/lib/dashboard-features-cache";
 import { useTranslation } from "@/lib/i18n";
 import {
   Card,
@@ -20,7 +25,7 @@ import { toast } from "@/components/ui/sonner";
 
 interface Props {
   features: FeatureManifest[];
-  onChanged: () => Promise<void>;
+  onChanged: (next?: FeatureManifest[]) => Promise<void>;
 }
 
 /** Modules (system) tab: enable/disable feature modules — drives the dynamic nav. */
@@ -28,17 +33,25 @@ export function ModulesSection({ features, onChanged }: Props) {
   const { t } = useTranslation();
 
   async function toggle(key: string, enabled: boolean, name: string) {
+    const nextEnabled = !enabled;
+    const writeGen = beginFeaturesWrite();
     try {
-      await apiPut(`/api/admin/features/${key}`, { enabled: !enabled });
+      await apiPut(`/api/admin/features/${key}`, { enabled: nextEnabled });
+      const nextFeatures = features.map((f) =>
+        f.key === key ? { ...f, enabled: nextEnabled } : f,
+      );
+      setFeaturesSnapshot(nextFeatures, writeGen);
+      onFeatureToggled(key, nextEnabled);
       toast.success(
         enabled
           ? t("modules.disabledToast", { name })
           : t("modules.enabledToast", { name }),
       );
+      await onChanged(nextFeatures);
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : t("common.operationFailed"));
+      await onChanged();
     }
-    await onChanged();
   }
 
   return (

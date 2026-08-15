@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
 import type { ProviderRecord, SiteSettings } from "@opentranslator/shared-types";
-import { apiGet, apiPut, ApiError } from "@/lib/api-client";
+import { apiPut, ApiError } from "@/lib/api-client";
+import {
+  getProvidersSnapshot,
+  loadProvidersSnapshot,
+} from "@/lib/dashboard-providers-cache";
+import {
+  beginSettingsWrite,
+  getSettingsSnapshot,
+  loadSettingsSnapshot,
+  setSettingsSnapshot,
+} from "@/lib/dashboard-settings-cache";
 import {
   Card,
   CardContent,
@@ -31,10 +41,37 @@ interface ModelOption {
   providerName: string;
 }
 
+function encodeKey(providerId: string, model: string): string {
+  return `${providerId}|${model}`;
+}
+
 /** 把「providerId|model」拆成两段；模型名假定不含「|」。 */
 function decodeKey(key: string): { providerId: string; model: string } {
   const sep = key.indexOf("|");
   return { providerId: key.slice(0, sep), model: key.slice(sep + 1) };
+}
+
+function publicAccessFromSnapshots(): {
+  providers: ProviderRecord[];
+  rateLimit: number;
+  openKeys: Set<string>;
+  defaultKey: string | null;
+} | null {
+  const settingsSnap = getSettingsSnapshot();
+  if (!settingsSnap) return null;
+  const settings = settingsSnap.settings;
+  const providers = (getProvidersSnapshot()?.providers ?? []).filter(
+    (p) => p.enabled,
+  );
+  const pdm = settings.publicDefaultModel;
+  return {
+    providers,
+    rateLimit: settings.publicRateLimitPerMinute,
+    openKeys: new Set(
+      (settings.publicModels ?? []).map((m) => encodeKey(m.providerId, m.model)),
+    ),
+    defaultKey: pdm ? encodeKey(pdm.providerId, pdm.model) : null,
+  };
 }
 
 /**
@@ -43,34 +80,60 @@ function decodeKey(key: string): { providerId: string; model: string } {
  */
 export function PublicAccessSettings() {
   const { t } = useTranslation();
-  const [providers, setProviders] = useState<ProviderRecord[]>([]);
-  const [rateLimit, setRateLimit] = useState<number>(20);
+  const initial = publicAccessFromSnapshots();
+  const [providers, setProviders] = useState<ProviderRecord[]>(
+    () => initial?.providers ?? [],
+  );
+  const [rateLimit, setRateLimit] = useState<number>(
+    () => initial?.rateLimit ?? 20,
+  );
   // 开放集合与默认项均用「providerId|model」编码键
-  const [openKeys, setOpenKeys] = useState<Set<string>>(new Set());
-  const [defaultKey, setDefaultKey] = useState<string | null>(null);
+  const [openKeys, setOpenKeys] = useState<Set<string>>(
+    () => initial?.openKeys ?? new Set(),
+  );
+  const [defaultKey, setDefaultKey] = useState<string | null>(
+    () => initial?.defaultKey ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [savingLimit, setSavingLimit] = useState(false);
 
-  async function load() {
-    try {
-      const [provRes, setRes] = await Promise.all([
-        apiGet<{ providers: ProviderRecord[] }>("/api/admin/providers"),
-        apiGet<{ settings: SiteSettings }>("/api/admin/settings"),
-      ]);
-      setProviders(provRes.providers.filter((p) => p.enabled));
-      setRateLimit(setRes.settings.publicRateLimitPerMinute);
-      const pm = setRes.settings.publicModels ?? [];
-      setOpenKeys(new Set(pm.map((m) => `${m.providerId}|${m.model}`)));
-      const pdm = setRes.settings.publicDefaultModel;
-      setDefaultKey(pdm ? `${pdm.providerId}|${pdm.model}` : null);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
-    }
+  function applySettings(settings: SiteSettings) {
+    setRateLimit(settings.publicRateLimitPerMinute);
+    setOpenKeys(
+      new Set(
+        (settings.publicModels ?? []).map((m) =>
+          encodeKey(m.providerId, m.model),
+        ),
+      ),
+    );
+    const pdm = settings.publicDefaultModel;
+    setDefaultKey(pdm ? encodeKey(pdm.providerId, pdm.model) : null);
   }
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [providersSnap, settingsSnap] = await Promise.all([
+          loadProvidersSnapshot().catch(() => null),
+          loadSettingsSnapshot(),
+        ]);
+        if (cancelled) return;
+        if (providersSnap) {
+          setProviders(providersSnap.providers.filter((p) => p.enabled));
+        }
+        applySettings(settingsSnap.settings);
+        setError(null);
+      } catch (e) {
+        if (cancelled) return;
+        if (!getSettingsSnapshot()) {
+          setError(e instanceof ApiError ? e.message : String(e));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // 所有 enabled provider 的模型展开
@@ -86,11 +149,13 @@ export function PublicAccessSettings() {
     const prevDefault = defaultKey;
     setOpenKeys(nextOpen);
     setDefaultKey(nextDefault);
+    const writeGen = beginSettingsWrite();
     try {
-      await apiPut("/api/admin/settings", {
+      const res = await apiPut<{ settings: SiteSettings }>("/api/admin/settings", {
         publicModels: Array.from(nextOpen).map(decodeKey),
         publicDefaultModel: nextDefault ? decodeKey(nextDefault) : null,
       });
+      setSettingsSnapshot(res.settings, writeGen);
     } catch (e) {
       setOpenKeys(prevOpen);
       setDefaultKey(prevDefault);
@@ -117,11 +182,13 @@ export function PublicAccessSettings() {
 
   async function saveLimit() {
     setSavingLimit(true);
+    const writeGen = beginSettingsWrite();
     try {
       const res = await apiPut<{ settings: SiteSettings }>(
         "/api/admin/settings",
         { publicRateLimitPerMinute: rateLimit },
       );
+      setSettingsSnapshot(res.settings, writeGen);
       setRateLimit(res.settings.publicRateLimitPerMinute);
       setError(null);
       toast.success(t("publicAccess.rateLimitSaved"));

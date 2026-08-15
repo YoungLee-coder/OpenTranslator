@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import type {
-  AiExpertMeta,
-  AiExpertsAdminResponse,
-  AiExpertsConfig,
-} from "@opentranslator/shared-types";
-import { apiGet, apiPut, ApiError } from "@/lib/api-client";
+import type { AiExpertMeta, AiExpertsConfig } from "@opentranslator/shared-types";
+import { apiPut, ApiError } from "@/lib/api-client";
+import {
+  beginAiExpertsWrite,
+  getAiExpertsSnapshot,
+  loadAiExpertsSnapshot,
+  setAiExpertsSnapshot,
+} from "./ai-experts-cache";
 import {
   Card,
   CardContent,
@@ -36,28 +38,48 @@ const GENERAL_ID = "general";
 /** AI 专家管理：启用/停用各场景策略，并设置站点默认专家。 */
 export function AiExpertsManager() {
   const { t, locale } = useTranslation();
-  const [experts, setExperts] = useState<AiExpertMeta[]>([]);
-  const [enabledIds, setEnabledIds] = useState<Set<string>>(new Set());
-  const [defaultExpertId, setDefaultExpertId] = useState<string>(GENERAL_ID);
+  const initial = getAiExpertsSnapshot();
+  const [experts, setExperts] = useState<AiExpertMeta[]>(
+    () => initial?.experts ?? [],
+  );
+  const [enabledIds, setEnabledIds] = useState<Set<string>>(
+    () => new Set(initial?.config.enabledIds ?? []),
+  );
+  const [defaultExpertId, setDefaultExpertId] = useState<string>(
+    () => initial?.config.defaultExpertId ?? GENERAL_ID,
+  );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
-  async function load() {
-    try {
-      const res = await apiGet<AiExpertsAdminResponse>("/api/admin/experts");
-      setExperts(res.experts);
-      setEnabledIds(new Set(res.config.enabledIds));
-      setDefaultExpertId(res.config.defaultExpertId ?? GENERAL_ID);
-      setError(null);
-      setDirty(false);
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
-    }
+  function applySnapshot(snap: {
+    experts: AiExpertMeta[];
+    config: AiExpertsConfig;
+  }) {
+    setExperts(snap.experts);
+    setEnabledIds(new Set(snap.config.enabledIds));
+    setDefaultExpertId(snap.config.defaultExpertId ?? GENERAL_ID);
+    setError(null);
+    setDirty(false);
   }
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void (async () => {
+      try {
+        const snap = await loadAiExpertsSnapshot();
+        if (cancelled) return;
+        applySnapshot(snap);
+      } catch (e) {
+        if (cancelled) return;
+        if (!getAiExpertsSnapshot()) {
+          setError(e instanceof ApiError ? e.message : String(e));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function toggleExpert(id: string, on: boolean) {
@@ -85,10 +107,12 @@ export function AiExpertsManager() {
       enabledIds: [...enabledIds],
       defaultExpertId: defaultExpertId === GENERAL_ID ? GENERAL_ID : defaultExpertId,
     };
+    const writeGen = beginAiExpertsWrite();
     try {
       await apiPut("/api/admin/experts", config);
+      setAiExpertsSnapshot({ experts, config }, writeGen);
+      applySnapshot({ experts, config });
       toast.success(t("experts.saved"));
-      await load();
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : String(e);
       setError(msg);

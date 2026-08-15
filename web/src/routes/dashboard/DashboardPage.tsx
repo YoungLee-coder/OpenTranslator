@@ -4,10 +4,15 @@ import { Loader2 } from "lucide-react";
 import type { FeatureManifest } from "@opentranslator/shared-types";
 import { canAccessFeature, hasPermission, isAdminRole } from "@opentranslator/shared-types";
 import { useAuth } from "@/lib/auth";
-import { apiGet } from "@/lib/api-client";
 import { clearDashboardCaches } from "@/lib/dashboard-caches";
+import {
+  getFeaturesSnapshot,
+  loadFeaturesSnapshot,
+} from "@/lib/dashboard-features-cache";
 import { useTranslation } from "@/lib/i18n";
 import { featureComponents } from "@/features/registry";
+import { isFeatureKey } from "@/features/keys";
+import { prefetchFeature } from "@/features/prefetch";
 import { OverviewSection } from "./OverviewSection";
 import { ProfileSection } from "./ProfileSection";
 import { ProvidersSection } from "./ProvidersSection";
@@ -36,32 +41,37 @@ export function DashboardPage() {
   const { t } = useTranslation();
   const { user, loading } = useAuth();
 
-  const [features, setFeatures] = useState<FeatureManifest[]>([]);
+  const [features, setFeatures] = useState<FeatureManifest[]>(
+    () => getFeaturesSnapshot()?.features ?? [],
+  );
   const [tab, setTab] = useState<string>("overview");
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(
     () => new Set(["overview"]),
   );
   const [configEpoch, setConfigEpoch] = useState(0);
 
-  async function refreshFeatures() {
+  async function refreshFeatures(opts?: { force?: boolean }) {
     if (!hasPermission(user, "settings")) {
       setFeatures([]);
       return;
     }
     try {
-      const res = await apiGet<{ features: FeatureManifest[] }>(
-        "/api/admin/features",
-      );
-      setFeatures(res.features);
+      const snap = await loadFeaturesSnapshot(opts);
+      setFeatures(snap.features);
     } catch {
-      // non-fatal: nav falls back to system tabs only
+      // non-fatal: nav falls back to snapshot or system tabs only
     }
   }
 
   async function handleDataImported() {
     clearDashboardCaches();
     setConfigEpoch((n) => n + 1);
-    await refreshFeatures();
+    await refreshFeatures({ force: true });
+    const snap = getFeaturesSnapshot();
+    if (!snap) return;
+    for (const feature of snap.features) {
+      if (feature.enabled) prefetchFeature(feature.key);
+    }
   }
 
   useEffect(() => {
@@ -100,7 +110,7 @@ export function DashboardPage() {
 
   const enabledFeatures = features.filter((f) => f.enabled);
   const featureTabs = enabledFeatures.filter((f) => {
-    if (!featureComponents[f.key]) return false;
+    if (!isFeatureKey(f.key) || !featureComponents[f.key]) return false;
     return canAccessFeature(user, f.requiredAccess);
   });
   const tabs: SystemTab[] = [
@@ -149,7 +159,14 @@ export function DashboardPage() {
               <ModulesSection
                 key={`modules-${configEpoch}`}
                 features={features}
-                onChanged={refreshFeatures}
+                onChanged={async (next) => {
+                  if (next) {
+                    setFeatures(next);
+                    void refreshFeatures({ force: true });
+                    return;
+                  }
+                  await refreshFeatures({ force: true });
+                }}
               />
               {isAdmin ? <DbVersionSection /> : null}
               {isAdmin ? <DbAuditSection /> : null}
@@ -157,7 +174,7 @@ export function DashboardPage() {
           </TabsContent>
         ) : null}
         {enabledFeatures.map((f) => {
-          if (!visibleFeatureKeys.has(f.key)) return null;
+          if (!visibleFeatureKeys.has(f.key) || !isFeatureKey(f.key)) return null;
           const FeaturePage = featureComponents[f.key];
           if (!FeaturePage) return null;
           return (
