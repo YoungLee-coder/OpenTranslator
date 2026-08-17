@@ -42,7 +42,7 @@ import { providerRegistry } from "../../providers/registry";
 import { normalizeStoredProviderBaseUrl } from "../../providers/base-url";
 import { resolveModelLabel } from "../../providers/schema";
 import { getClientIp, enforceRateLimit } from "../../middleware/rate-limit";
-import { publicProviderError } from "../../lib/errors";
+import { providerErrorPayload } from "../../lib/errors";
 import {
   normalizePastedText,
   splitIntoChunks,
@@ -359,6 +359,7 @@ export async function handleTranslate(c: C): Promise<Response> {
   );
   const isPublic = !user;
   const userId = user?.id ?? null;
+  const exposeProviderDetail = hasPermission(user, "providers");
   const settings = await getSiteSettings(c.env.KV, c.env.DB);
 
   // Private site gate: anonymous users can't pass when the site is closed.
@@ -576,7 +577,7 @@ export async function handleTranslate(c: C): Promise<Response> {
             logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c), userId),
           );
         } catch (e) {
-          await writeEvent(stream, { type: "error", error: publicProviderError(e) });
+          await writeEvent(stream, { type: "error", ...providerErrorPayload(e, exposeProviderDetail) });
         }
       });
     }
@@ -595,7 +596,7 @@ export async function handleTranslate(c: C): Promise<Response> {
       c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c), userId));
       return c.json(final);
     } catch (e) {
-      return c.json({ error: publicProviderError(e) }, 502);
+      return c.json(providerErrorPayload(e, exposeProviderDetail), 502);
     }
   }
 
@@ -610,7 +611,7 @@ export async function handleTranslate(c: C): Promise<Response> {
         if (cacheKey) void setTranslationCache(c.env.KV, cacheKey, result, cacheTtlSeconds);
         c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c), userId));
       } catch (e) {
-        await writeEvent(stream, { type: "error", error: publicProviderError(e) });
+        await writeEvent(stream, { type: "error", ...providerErrorPayload(e, exposeProviderDetail) });
       }
     });
   }
@@ -630,7 +631,7 @@ export async function handleTranslate(c: C): Promise<Response> {
       });
     } catch (e) {
       return streamSSE(c, async (stream) => {
-        await writeEvent(stream, { type: "error", error: publicProviderError(e) });
+        await writeEvent(stream, { type: "error", ...providerErrorPayload(e, exposeProviderDetail) });
       });
     }
   }
@@ -645,6 +646,6 @@ export async function handleTranslate(c: C): Promise<Response> {
     c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c), userId));
     return c.json(final);
   } catch (e) {
-    return c.json({ error: publicProviderError(e) }, 502);
+    return c.json(providerErrorPayload(e, exposeProviderDetail), 502);
   }
 }

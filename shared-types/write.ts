@@ -35,4 +35,4 @@ export interface WriteResponse {
 export type WriteStreamEvent =
   | { type: "delta"; text: string }
   | { type: "done"; revisedText: string; provider: string; usage?: WriteUsage }
-  | { type: "error"; error: string };
+  | { type: "error"; error: string; detail?: string };

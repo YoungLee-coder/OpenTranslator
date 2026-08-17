@@ -78,4 +78,4 @@ export type TranslateStreamEvent =
       chunkTotal: number;
     }
   | { type: "done"; translatedText: string; provider: string; usage?: TranslateUsage; detectedSourceLang?: string }
-  | { type: "error"; error: string };
+  | { type: "error"; error: string; detail?: string };

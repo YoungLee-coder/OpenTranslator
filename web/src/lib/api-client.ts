@@ -7,12 +7,31 @@ import type {
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
+type ApiErrorBody = { error?: string; detail?: string };
+
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  detail?: string;
+  constructor(status: number, message: string, detail?: string) {
     super(message);
     this.status = status;
     this.name = "ApiError";
+    this.detail = detail;
+    if (detail) console.warn("[provider]", detail);
+  }
+}
+
+function logProviderEvent(ev: { type: string; error?: string; detail?: string }) {
+  if (ev.type === "error" && ev.detail) {
+    console.warn("[provider]", ev.detail);
+  }
+}
+
+async function readErrorBody(res: Response): Promise<ApiErrorBody> {
+  try {
+    return (await res.json()) as ApiErrorBody;
+  } catch {
+    return {};
   }
 }
 
@@ -31,14 +50,12 @@ async function request<T>(
     cache: "no-store",
   });
   if (!res.ok) {
-    let msg = `${method} ${path} -> ${res.status}`;
-    try {
-      const data = (await res.json()) as { error?: string };
-      if (data?.error) msg = data.error;
-    } catch {
-      // ignore
-    }
-    throw new ApiError(res.status, msg);
+    const data = await readErrorBody(res);
+    throw new ApiError(
+      res.status,
+      data.error || `${method} ${path} -> ${res.status}`,
+      data.detail,
+    );
   }
   return res.json() as Promise<T>;
 }
@@ -68,14 +85,11 @@ export async function apiUploadAvatar<T>(file: File): Promise<T> {
     body: form,
   });
   if (!res.ok) {
-    let msg = `PUT /api/admin/profile/avatar -> ${res.status}`;
-    try {
-      const data = (await res.json()) as { error?: string };
-      if (data?.error) msg = data.error;
-    } catch {
-      // ignore
-    }
-    throw new ApiError(res.status, msg);
+    const data = await readErrorBody(res);
+    throw new ApiError(
+      res.status,
+      data.error || `PUT /api/admin/profile/avatar -> ${res.status}`,
+    );
   }
   return res.json() as Promise<T>;
 }
@@ -97,14 +111,12 @@ export async function* streamTranslate(
     signal,
   });
   if (!res.ok || !res.body) {
-    let msg = `translate stream -> ${res.status}`;
-    try {
-      const data = (await res.json()) as { error?: string };
-      if (data?.error) msg = data.error;
-    } catch {
-      // ignore
-    }
-    throw new ApiError(res.status, msg);
+    const data = await readErrorBody(res);
+    throw new ApiError(
+      res.status,
+      data.error || `translate stream -> ${res.status}`,
+      data.detail,
+    );
   }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
@@ -126,7 +138,9 @@ export async function* streamTranslate(
       if (dataParts.length === 0) continue;
       const json = dataParts.join("\n");
       try {
-        yield JSON.parse(json) as TranslateStreamEvent;
+        const ev = JSON.parse(json) as TranslateStreamEvent;
+        logProviderEvent(ev);
+        yield ev;
       } catch {
         // skip malformed keepalives
       }
@@ -149,7 +163,12 @@ export async function* streamWrite(
     signal,
   });
   if (!res.ok || !res.body) {
-    throw new ApiError(res.status, `write stream -> ${res.status}`);
+    const data = await readErrorBody(res);
+    throw new ApiError(
+      res.status,
+      data.error || `write stream -> ${res.status}`,
+      data.detail,
+    );
   }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
@@ -171,7 +190,9 @@ export async function* streamWrite(
       if (dataParts.length === 0) continue;
       const json = dataParts.join("\n");
       try {
-        yield JSON.parse(json) as WriteStreamEvent;
+        const ev = JSON.parse(json) as WriteStreamEvent;
+        logProviderEvent(ev);
+        yield ev;
       } catch {
         // skip malformed keepalives
       }

@@ -22,7 +22,7 @@ import { buildWritePrompt } from "./prompt";
 import { providerRegistry } from "../../providers/registry";
 import { normalizeStoredProviderBaseUrl } from "../../providers/base-url";
 import { getClientIp, enforceRateLimit } from "../../middleware/rate-limit";
-import { publicProviderError } from "../../lib/errors";
+import { providerErrorPayload } from "../../lib/errors";
 
 import "../../providers";
 
@@ -91,6 +91,7 @@ export async function handleWrite(c: C): Promise<Response> {
   );
   const isPublic = !user;
   const userId = user?.id ?? null;
+  const exposeProviderDetail = hasPermission(user, "providers");
   const settings = await getSiteSettings(c.env.KV, c.env.DB);
 
   if (!settings.sitePublic && !user) {
@@ -256,7 +257,7 @@ export async function handleWrite(c: C): Promise<Response> {
         await stream.writeSSE({
           data: JSON.stringify({
             type: "error",
-            error: publicProviderError(e),
+            ...providerErrorPayload(e, exposeProviderDetail),
           } satisfies WriteStreamEvent),
         });
       } finally {
@@ -292,7 +293,7 @@ export async function handleWrite(c: C): Promise<Response> {
         await stream.writeSSE({
           data: JSON.stringify({
             type: "error",
-            error: publicProviderError(e),
+            ...providerErrorPayload(e, exposeProviderDetail),
           } satisfies WriteStreamEvent),
         });
       });
@@ -310,6 +311,6 @@ export async function handleWrite(c: C): Promise<Response> {
       usage: result.usage,
     });
   } catch (e) {
-    return c.json({ error: publicProviderError(e) }, 502);
+    return c.json(providerErrorPayload(e, exposeProviderDetail), 502);
   }
 }
