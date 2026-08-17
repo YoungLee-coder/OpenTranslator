@@ -14,6 +14,11 @@ export interface UsageSummary {
 export interface UserUsageTotals {
   requests: number;
   chars: number;
+  byProvider: UsageByProvider[];
 }
 
-export const EMPTY_USER_USAGE: UserUsageTotals = { requests: 0, chars: 0 };
+export const EMPTY_USER_USAGE: UserUsageTotals = {
+  requests: 0,
+  chars: 0,
+  byProvider: [],
+};

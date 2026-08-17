@@ -484,16 +484,30 @@ export async function getUsageByUserIds(
   const placeholders = userIds.map(() => "?").join(", ");
   const res = await db
     .prepare(
-      `SELECT user_id, COUNT(*) AS n, COALESCE(SUM(char_count), 0) AS chars
+      `SELECT user_id, provider_id, COUNT(*) AS n, COALESCE(SUM(char_count), 0) AS chars
        FROM usage_logs
        WHERE user_id IN (${placeholders})
-       GROUP BY user_id`,
+       GROUP BY user_id, provider_id
+       ORDER BY n DESC`,
     )
     .bind(...userIds)
-    .all<{ user_id: string; n: number; chars: number }>();
+    .all<{ user_id: string; provider_id: string | null; n: number; chars: number }>();
   for (const row of res.results ?? []) {
     if (!row.user_id) continue;
-    map.set(row.user_id, { requests: row.n, chars: row.chars });
+    let entry = map.get(row.user_id);
+    if (!entry) {
+      entry = { requests: 0, chars: 0, byProvider: [] };
+      map.set(row.user_id, entry);
+    }
+    entry.requests += row.n;
+    entry.chars += row.chars;
+    if (row.provider_id) {
+      entry.byProvider.push({
+        providerId: row.provider_id,
+        requests: row.n,
+        chars: row.chars,
+      });
+    }
   }
   return map;
 }

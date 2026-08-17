@@ -2,23 +2,30 @@ import { useEffect, useState } from "react";
 import type {
   CreateManagedUserResponse,
   ManagedUser,
+  ProviderRecord,
   UserPermission,
 } from "@opentranslator/shared-types";
 import {
   DEFAULT_USER_PERMISSIONS,
+  EMPTY_USER_USAGE,
   isAdminRole,
   USER_PERMISSIONS,
 } from "@opentranslator/shared-types";
 import { apiDelete, apiPost, apiPut, ApiError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
 import {
+  getProvidersSnapshot,
+  loadProvidersSnapshot,
+} from "@/lib/dashboard-providers-cache";
+import {
   beginMultiUserWrite,
   getMultiUserSnapshot,
   loadMultiUserSnapshot,
   setMultiUserSnapshot,
 } from "./multi-user-cache";
-import { useTranslation, type Locale } from "@/lib/i18n";
+import { useTranslation } from "@/lib/i18n";
 import type { MessageKey } from "@/locales/zh-CN";
+import { ProviderIcon } from "@/components/ProviderIcon";
 import {
   Card,
   CardContent,
@@ -47,7 +54,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AlertCircle, KeyRound, Loader2, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { Activity, AlertCircle, FileText, KeyRound, Loader2, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 
 const PERM_LABEL: Record<UserPermission, MessageKey> = {
@@ -57,27 +64,6 @@ const PERM_LABEL: Record<UserPermission, MessageKey> = {
   settings: "users.perm.settings",
   usage: "users.perm.usage",
 };
-
-function formatCreatedAt(ts: number | null, locale: Locale): string {
-  if (!ts) return "—";
-  return new Date(ts * 1000).toLocaleDateString(
-    locale === "zh-CN" ? "zh-CN" : "en-US",
-    { year: "numeric", month: "short", day: "numeric" },
-  );
-}
-
-function formatUsage(
-  requests: number,
-  chars: number,
-  locale: Locale,
-  t: (key: MessageKey, params?: Record<string, string | number>) => string,
-): string {
-  const loc = locale === "zh-CN" ? "zh-CN" : "en-US";
-  return t("users.usageSummary", {
-    requests: requests.toLocaleString(loc),
-    chars: chars.toLocaleString(loc),
-  });
-}
 
 function PermissionList({
   value,
@@ -113,7 +99,7 @@ function PermissionList({
 
 /** 多用户管理：普通用户的创建、权限、启用/停用。全站仅一名管理员。 */
 export function MultiUserManager() {
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const { user: me } = useAuth();
   const initial = getMultiUserSnapshot();
   const [users, setUsers] = useState<ManagedUser[]>(() => initial?.users ?? []);
@@ -139,7 +125,17 @@ export function MultiUserManager() {
   const [editPerms, setEditPerms] = useState<Set<UserPermission>>(new Set());
   const [savingPerms, setSavingPerms] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [usageTarget, setUsageTarget] = useState<ManagedUser | null>(null);
+  const [usageProviders, setUsageProviders] = useState<ProviderRecord[]>(
+    () => getProvidersSnapshot()?.providers ?? [],
+  );
   const others = users.filter((u) => u.id !== me?.id);
+  const usage = usageTarget?.usage ?? EMPTY_USER_USAGE;
+  const usageProviderById = new Map(usageProviders.map((p) => [p.id, p]));
+  const visibleUsageByProvider =
+    usageProviders.length > 0
+      ? (usage.byProvider ?? []).filter((p) => usageProviderById.has(p.providerId))
+      : (usage.byProvider ?? []);
 
   function mapError(msg: string): string {
     switch (msg) {
@@ -196,6 +192,21 @@ export function MultiUserManager() {
     }
     void load();
   }, [me]);
+
+  useEffect(() => {
+    if (!usageTarget) return;
+    let cancelled = false;
+    void loadProvidersSnapshot()
+      .then((snap) => {
+        if (!cancelled) setUsageProviders(snap.providers);
+      })
+      .catch(() => {
+        if (!cancelled) setUsageProviders(getProvidersSnapshot()?.providers ?? []);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [usageTarget]);
 
   function closeAdd() {
     if (adding) return;
@@ -372,15 +383,13 @@ export function MultiUserManager() {
           </div>
         ) : (
           <div className="rounded-md border border-rule">
-            <Table className="min-w-[760px]">
+            <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("users.username")}</TableHead>
                   <TableHead>{t("users.role")}</TableHead>
                   <TableHead>{t("users.status")}</TableHead>
                   <TableHead>{t("users.permissions")}</TableHead>
-                  <TableHead>{t("users.usage")}</TableHead>
-                  <TableHead>{t("users.createdAt")}</TableHead>
                   <TableHead className="text-right">{t("users.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -417,19 +426,20 @@ export function MultiUserManager() {
                             ? u.permissions.map((p) => t(PERM_LABEL[p])).join("、")
                             : t("users.noPermissions")}
                       </TableCell>
-                      <TableCell className="text-muted-foreground tabular-nums">
-                        {formatUsage(
-                          u.usage?.requests ?? 0,
-                          u.usage?.chars ?? 0,
-                          locale,
-                          t,
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatCreatedAt(u.createdAt, locale)}
-                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 gap-1.5"
+                            type="button"
+                            onClick={() => setUsageTarget(u)}
+                          >
+                            <Activity className="size-3" />
+                            <span className="hidden sm:inline">
+                              {t("users.usage")}
+                            </span>
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -654,6 +664,92 @@ export function MultiUserManager() {
             </Button>
             <Button type="button" onClick={() => void savePermissions()} disabled={savingPerms}>
               {savingPerms ? t("common.saving") : t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={!!usageTarget}
+        onOpenChange={(o) => !o && setUsageTarget(null)}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("users.usageTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("users.usageDesc", { name: usageTarget?.username ?? "" })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-1">
+            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-rule bg-rule">
+              <div className="flex flex-col gap-1.5 bg-card p-4">
+                <div className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <Activity className="size-4" />
+                </div>
+                <div className="font-display text-2xl font-semibold tabular-nums tracking-tight">
+                  {usage.requests.toLocaleString()}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {t("overview.totalRequests")}
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5 bg-card p-4">
+                <div className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <FileText className="size-4" />
+                </div>
+                <div className="font-display text-2xl font-semibold tabular-nums tracking-tight">
+                  {usage.chars.toLocaleString()}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {t("overview.totalChars")}
+                </div>
+              </div>
+            </div>
+            {visibleUsageByProvider.length > 0 ? (
+              <div className="overflow-hidden rounded-md border border-rule">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("overview.provider")}</TableHead>
+                      <TableHead className="text-right">
+                        {t("overview.requests")}
+                      </TableHead>
+                      <TableHead className="text-right">
+                        {t("overview.chars")}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visibleUsageByProvider.map((p) => {
+                      const provider = usageProviderById.get(p.providerId);
+                      return (
+                        <TableRow key={p.providerId}>
+                          <TableCell>
+                            <span className="inline-flex items-center gap-1.5">
+                              {provider ? (
+                                <ProviderIcon type={provider.type} size={16} />
+                              ) : null}
+                              {provider?.displayName ?? p.providerId}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {p.requests.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {p.chars.toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : usage.requests === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("users.usageEmpty")}</p>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setUsageTarget(null)}>
+              {t("common.close")}
             </Button>
           </DialogFooter>
         </DialogContent>

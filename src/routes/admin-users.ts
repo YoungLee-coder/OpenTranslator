@@ -8,7 +8,6 @@ import type {
 } from "@opentranslator/shared-types";
 import {
   DEFAULT_USER_PERMISSIONS,
-  EMPTY_USER_USAGE,
   isAdminRole,
   parseUserPermissions,
   USER_PERMISSIONS,
@@ -56,7 +55,7 @@ function managedUserFromRow(row: AdminUserRow): ManagedUser {
     permissions,
     enabled: row.enabled !== 0,
     createdAt: row.created_at,
-    usage: EMPTY_USER_USAGE,
+    usage: { requests: 0, chars: 0, byProvider: [] },
   };
 }
 
@@ -65,7 +64,10 @@ async function attachUsage(db: D1Database, users: ManagedUser[]): Promise<Manage
     db,
     users.map((u) => u.id),
   );
-  return users.map((u) => ({ ...u, usage: map.get(u.id) ?? EMPTY_USER_USAGE }));
+  return users.map((u) => ({
+    ...u,
+    usage: map.get(u.id) ?? { requests: 0, chars: 0, byProvider: [] },
+  }));
 }
 
 async function attachUsageOne(db: D1Database, user: ManagedUser): Promise<ManagedUser> {
