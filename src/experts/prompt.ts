@@ -1,6 +1,10 @@
 import type { TranslateRequest } from "@opentranslator/shared-types";
 import { langDisplayName } from "./lang";
 import { extractExpertTranslation } from "./parse-response";
+import {
+  buildReadFrogDefaultTranslateSystemPrompt,
+  buildReadFrogDefaultTranslateUserPrompt,
+} from "./read-frog-prompts";
 import { getExpert, isGeneralExpert } from "./registry";
 import { resolveExpertPrompts } from "./resolve";
 
@@ -52,25 +56,8 @@ function withPreviousContext(built: BuiltPrompt, req: TranslateRequest): BuiltPr
 }
 
 function buildDefaultPrompt(req: TranslateRequest): BuiltPrompt {
-  const sourceDesc =
-    req.sourceLang === "auto" || !req.sourceLang
-      ? langDisplayName("auto")
-      : langDisplayName(req.sourceLang);
   const targetDesc = langDisplayName(req.targetLang);
-
-  const formatRule = req.organizeFormat
-    ? [
-        "The source text may be messy (broken line wraps, missing paragraph breaks, inconsistent lists).",
-        "Infer the intended document structure and output a clean, well-formatted translation with appropriate paragraphs, blank lines, and list formatting (use plain-text bullets or numbers; do not invent markdown headings or HTML).",
-        "Do not add explanations, and do not invent content that is not in the source.",
-      ].join(" ")
-    : "Preserve the original formatting, line breaks, and document structure exactly.";
-
-  const system = [
-    `You are a professional translator. Translate the user's text from ${sourceDesc} to ${targetDesc}.`,
-    "Output ONLY the translated text — no explanations, no quotes, no preamble.",
-    formatRule,
-  ].join("\n");
-
-  return { system, user: req.text };
+  const system = buildReadFrogDefaultTranslateSystemPrompt(targetDesc, req.organizeFormat);
+  const user = buildReadFrogDefaultTranslateUserPrompt(targetDesc, req.text);
+  return { system, user };
 }

@@ -8,7 +8,7 @@ import type {
 } from "@opentranslator/shared-types";
 import { normalizeOpenAIBaseURL } from "./base-url";
 import { buildPrompt } from "./prompt";
-import { openrouterDisableReasoning } from "./reasoning";
+import { isReasoningDisableRejected, openrouterDisableReasoning } from "./reasoning";
 import { streamFromDeltas } from "./sse";
 
 /**
@@ -39,6 +39,47 @@ function resolveBaseURL(ctx: ProviderContext): string {
 
 function modelOf(ctx: ProviderContext): string {
   return ctx.defaultModel?.trim() || DEFAULT_MODEL;
+}
+
+function chatRequest(
+  model: string,
+  system: string,
+  user: string,
+  stream: boolean,
+  ctx: ProviderContext,
+) {
+  return {
+    model,
+    messages: [
+      { role: "system" as const, content: system },
+      { role: "user" as const, content: user },
+    ],
+    stream,
+    ...openrouterDisableReasoning(ctx),
+  };
+}
+
+async function sendChat(
+  client: Chat,
+  model: string,
+  system: string,
+  user: string,
+  stream: boolean,
+  ctx: ProviderContext,
+) {
+  try {
+    return await client.send({
+      chatRequest: chatRequest(model, system, user, stream, ctx),
+    });
+  } catch (e) {
+    if (!ctx.disableModelReasoning || !isReasoningDisableRejected(e)) throw e;
+    return await client.send({
+      chatRequest: chatRequest(model, system, user, stream, {
+        ...ctx,
+        disableModelReasoning: false,
+      }),
+    });
+  }
 }
 
 function createClient(apiKey: string, serverURL: string): Chat {
@@ -127,17 +168,7 @@ export const openrouterProvider: TranslationProvider = {
     const model = modelOf(ctx);
     const client = createClient(ctx.apiKey, resolveBaseURL(ctx));
     try {
-      const completion = await client.send({
-        chatRequest: {
-          model,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: user },
-          ],
-          stream: false,
-          ...openrouterDisableReasoning(ctx),
-        },
-      });
+      const completion = await sendChat(client, model, system, user, false, ctx);
       if (!isChatResult(completion)) {
         throw new Error("unexpected streaming response");
       }
@@ -168,17 +199,7 @@ async function* openrouterDeltas(
   const model = modelOf(ctx);
   const client = createClient(ctx.apiKey, resolveBaseURL(ctx));
   try {
-    const stream = await client.send({
-      chatRequest: {
-        model,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-        stream: true,
-        ...openrouterDisableReasoning(ctx),
-      },
-    });
+    const stream = await sendChat(client, model, system, user, true, ctx);
     if (!isChatStream(stream)) {
       throw new Error("expected streaming response");
     }

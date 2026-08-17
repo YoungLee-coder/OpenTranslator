@@ -1,5 +1,6 @@
 import type { WriteRequest, WriteStyle } from "@opentranslator/shared-types";
 import type { BuiltPrompt } from "../../experts/prompt";
+import { buildReadFrogPrecisionRewriteSystemPrompt } from "../../experts/read-frog-prompts";
 
 const STYLE_LABELS: Record<WriteStyle, string> = {
   simple: "simple and straightforward, accessible to a broad audience",
@@ -26,10 +27,9 @@ export function buildWritePrompt(req: WriteRequest): BuiltPrompt {
     case "improve":
       return {
         system: [
-          ...baseSystem(),
-          "Fix grammar, spelling, and punctuation.",
-          "Improve clarity, fluency, and natural phrasing.",
-        ].join("\n"),
+          buildReadFrogPrecisionRewriteSystemPrompt(),
+          "Detect the language of the user's text and keep the revised output in the same language.",
+        ].join("\n\n"),
         user: req.text,
       };
     case "style": {

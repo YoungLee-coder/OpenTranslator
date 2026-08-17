@@ -32,6 +32,23 @@ export function openrouterDisableReasoning(
   return { reasoning: { effort: "none" } };
 }
 
+/** 上游拒绝关闭推理（部分模型强制 thinking / reasoning）。 */
+export function isReasoningDisableRejected(e: unknown): boolean {
+  const parts: string[] = [e instanceof Error ? e.message : String(e)];
+  if (e && typeof e === "object") {
+    const err = e as { message?: string; pretty?: () => string };
+    if (typeof err.message === "string") parts.push(err.message);
+    if (typeof err.pretty === "function") {
+      try {
+        parts.push(err.pretty());
+      } catch {
+        // ignore
+      }
+    }
+  }
+  return /reasoning is mandatory|cannot be disabled/i.test(parts.join("\n"));
+}
+
 /** Anthropic Messages：显式关闭 extended / adaptive thinking。 */
 export function claudeDisableReasoning(
   ctx: ProviderContext,
