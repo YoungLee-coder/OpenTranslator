@@ -25,6 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ProviderIcon } from "@/components/ProviderIcon";
 
 const EMPTY_USAGE: UsageSummary = {
   totalRequests: 0,
@@ -45,16 +46,16 @@ export function OverviewSection() {
   const [ready, setReady] = useState(() => !!initial);
   const [error, setError] = useState<string | null>(null);
 
-  const providerNames = useMemo(
-    () => new Map(providers.map((p) => [p.id, p.displayName])),
+  const providerById = useMemo(
+    () => new Map(providers.map((p) => [p.id, p])),
     [providers],
   );
 
   // 已删除供应商不出现在表格里，但其用量仍计入上方总数
   const visibleByProvider = useMemo(
     () =>
-      usage.byProvider.filter((p) => providerNames.has(p.providerId)),
-    [usage, providerNames],
+      usage.byProvider.filter((p) => providerById.has(p.providerId)),
+    [usage, providerById],
   );
 
   const rise = useOnceAnimation(true, 650);
@@ -140,23 +141,31 @@ export function OverviewSection() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {visibleByProvider.map((p) => (
-                      <TableRow key={p.providerId}>
-                        <TableCell>
-                          {providerNames.get(p.providerId) ?? p.providerId}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          <CountCell value={p.requests} animate={!fromCache} />
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          <CountCell
-                            value={p.chars}
-                            format={(n) => n.toLocaleString()}
-                            animate={!fromCache}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {visibleByProvider.map((p) => {
+                      const provider = providerById.get(p.providerId);
+                      return (
+                        <TableRow key={p.providerId}>
+                          <TableCell>
+                            <span className="inline-flex items-center gap-1.5">
+                              {provider ? (
+                                <ProviderIcon type={provider.type} size={16} />
+                              ) : null}
+                              {provider?.displayName ?? p.providerId}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            <CountCell value={p.requests} animate={!fromCache} />
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            <CountCell
+                              value={p.chars}
+                              format={(n) => n.toLocaleString()}
+                              animate={!fromCache}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

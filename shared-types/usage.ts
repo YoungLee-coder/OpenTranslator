@@ -9,3 +9,11 @@ export interface UsageSummary {
   totalChars: number;
   byProvider: UsageByProvider[];
 }
+
+/** 单个账号的翻译 + 写作用量汇总。 */
+export interface UserUsageTotals {
+  requests: number;
+  chars: number;
+}
+
+export const EMPTY_USER_USAGE: UserUsageTotals = { requests: 0, chars: 0 };

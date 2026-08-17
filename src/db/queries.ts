@@ -3,6 +3,7 @@ import type {
   ProviderType,
   PublicModelRef,
   SiteSettings,
+  UserUsageTotals,
 } from "@opentranslator/shared-types";
 import { normalizeStoredProviderBaseUrl } from "../providers/base-url";
 
@@ -435,13 +436,14 @@ export async function logUsage(
   charCount: number,
   isPublic: boolean,
   clientIp: string | null,
+  userId: string | null = null,
 ): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
   await db
     .prepare(
-      "INSERT INTO usage_logs (provider_id, char_count, is_public_request, client_ip, created_at) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO usage_logs (provider_id, char_count, is_public_request, client_ip, user_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
     )
-    .bind(providerId, charCount, isPublic ? 1 : 0, clientIp, now)
+    .bind(providerId, charCount, isPublic ? 1 : 0, clientIp, userId, now)
     .run();
 }
 
@@ -471,6 +473,29 @@ export async function getUsageSummary(db: D1Database): Promise<UsageSummary> {
       chars: r.chars,
     })),
   };
+}
+
+export async function getUsageByUserIds(
+  db: D1Database,
+  userIds: string[],
+): Promise<Map<string, UserUsageTotals>> {
+  const map = new Map<string, UserUsageTotals>();
+  if (userIds.length === 0) return map;
+  const placeholders = userIds.map(() => "?").join(", ");
+  const res = await db
+    .prepare(
+      `SELECT user_id, COUNT(*) AS n, COALESCE(SUM(char_count), 0) AS chars
+       FROM usage_logs
+       WHERE user_id IN (${placeholders})
+       GROUP BY user_id`,
+    )
+    .bind(...userIds)
+    .all<{ user_id: string; n: number; chars: number }>();
+  for (const row of res.results ?? []) {
+    if (!row.user_id) continue;
+    map.set(row.user_id, { requests: row.n, chars: row.chars });
+  }
+  return map;
 }
 
 /* ----------------------------- feature modules ---------------------------- */

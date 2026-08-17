@@ -319,13 +319,15 @@ export const en: Messages = {
 
   "users.title": "Users",
   "users.description":
-    "There is one admin. Create regular users, assign permissions, and enable or disable accounts. Turning this module off does not lock existing accounts.",
+    "There is one admin. Create regular users, assign permissions, view each account's usage, and enable or disable accounts. Turning this module off does not lock existing accounts.",
   "users.username": "Username",
   "users.email": "Email",
   "users.role": "Role",
   "users.status": "Status",
   "users.permissions": "Permissions",
   "users.createdAt": "Created",
+  "users.usage": "Usage",
+  "users.usageSummary": "{{requests}} req · {{chars}} chars",
   "users.actions": "Actions",
   "users.add": "Add user",
   "users.addTitle": "Add user",

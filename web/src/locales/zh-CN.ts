@@ -313,13 +313,15 @@ export const zhCN = {
 
   "users.title": "用户管理",
   "users.description":
-    "全站仅一名管理员。可创建普通用户、分配权限，并启用或停用账号。关闭本模块后已有账号仍可登录。",
+    "全站仅一名管理员。可创建普通用户、分配权限、查看各账号用量，并启用或停用账号。关闭本模块后已有账号仍可登录。",
   "users.username": "用户名",
   "users.email": "邮箱",
   "users.role": "角色",
   "users.status": "状态",
   "users.permissions": "权限",
   "users.createdAt": "创建时间",
+  "users.usage": "用量",
+  "users.usageSummary": "{{requests}} 次 · {{chars}} 字符",
   "users.actions": "操作",
   "users.add": "新增用户",
   "users.addTitle": "新增普通用户",

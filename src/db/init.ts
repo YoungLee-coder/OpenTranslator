@@ -66,8 +66,12 @@ async function v0_1_0({ env }: InitContext): Promise<void> {
       char_count INTEGER,
       is_public_request BOOLEAN,
       client_ip TEXT,
+      user_id TEXT,
       created_at INTEGER
     )`),
+    db.prepare(
+      `CREATE INDEX IF NOT EXISTS idx_usage_logs_user_id ON usage_logs(user_id)`,
+    ),
     db.prepare(`CREATE TABLE IF NOT EXISTS feature_modules (
       key TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -197,6 +201,15 @@ async function v1_0({ env }: InitContext): Promise<void> {
   ).run();
 }
 
+/** v1.1：usage_logs 记录登录用户，供多用户管理展示各账号用量。 */
+async function v1_1({ env }: InitContext): Promise<void> {
+  await addColumn(env.DB, "usage_logs", "user_id", "TEXT");
+  await runSafe(
+    env.DB,
+    "CREATE INDEX IF NOT EXISTS idx_usage_logs_user_id ON usage_logs(user_id)",
+  );
+}
+
 /** 迁移记录表，记录已执行的版本，避免重复跑。 */
 async function ensureMigrationTable(db: D1Database): Promise<void> {
   await db
@@ -223,6 +236,7 @@ const migrations: Migration[] = [
   { version: "0.8.0", run: v0_8_0 },
   { version: "0.9.0", run: v0_9_0 },
   { version: "1.0", run: v1_0 },
+  { version: "1.1", run: v1_1 },
 ];
 
 export async function initDatabase(ctx: InitContext): Promise<{

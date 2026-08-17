@@ -66,6 +66,19 @@ function formatCreatedAt(ts: number | null, locale: Locale): string {
   );
 }
 
+function formatUsage(
+  requests: number,
+  chars: number,
+  locale: Locale,
+  t: (key: MessageKey, params?: Record<string, string | number>) => string,
+): string {
+  const loc = locale === "zh-CN" ? "zh-CN" : "en-US";
+  return t("users.usageSummary", {
+    requests: requests.toLocaleString(loc),
+    chars: chars.toLocaleString(loc),
+  });
+}
+
 function PermissionList({
   value,
   onChange,
@@ -359,13 +372,14 @@ export function MultiUserManager() {
           </div>
         ) : (
           <div className="rounded-md border border-rule">
-            <Table className="min-w-[640px]">
+            <Table className="min-w-[760px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("users.username")}</TableHead>
                   <TableHead>{t("users.role")}</TableHead>
                   <TableHead>{t("users.status")}</TableHead>
                   <TableHead>{t("users.permissions")}</TableHead>
+                  <TableHead>{t("users.usage")}</TableHead>
                   <TableHead>{t("users.createdAt")}</TableHead>
                   <TableHead className="text-right">{t("users.actions")}</TableHead>
                 </TableRow>
@@ -402,6 +416,14 @@ export function MultiUserManager() {
                           : u.permissions.length
                             ? u.permissions.map((p) => t(PERM_LABEL[p])).join("、")
                             : t("users.noPermissions")}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground tabular-nums">
+                        {formatUsage(
+                          u.usage?.requests ?? 0,
+                          u.usage?.chars ?? 0,
+                          locale,
+                          t,
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {formatCreatedAt(u.createdAt, locale)}

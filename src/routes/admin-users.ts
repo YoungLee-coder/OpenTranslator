@@ -8,6 +8,7 @@ import type {
 } from "@opentranslator/shared-types";
 import {
   DEFAULT_USER_PERMISSIONS,
+  EMPTY_USER_USAGE,
   isAdminRole,
   parseUserPermissions,
   USER_PERMISSIONS,
@@ -20,6 +21,7 @@ import {
   getAdminByEmail,
   getAdminById,
   getAdminCount,
+  getUsageByUserIds,
   listAdmins,
   updateAdmin,
 } from "../db/queries";
@@ -54,7 +56,21 @@ function managedUserFromRow(row: AdminUserRow): ManagedUser {
     permissions,
     enabled: row.enabled !== 0,
     createdAt: row.created_at,
+    usage: EMPTY_USER_USAGE,
   };
+}
+
+async function attachUsage(db: D1Database, users: ManagedUser[]): Promise<ManagedUser[]> {
+  const map = await getUsageByUserIds(
+    db,
+    users.map((u) => u.id),
+  );
+  return users.map((u) => ({ ...u, usage: map.get(u.id) ?? EMPTY_USER_USAGE }));
+}
+
+async function attachUsageOne(db: D1Database, user: ManagedUser): Promise<ManagedUser> {
+  const [out] = await attachUsage(db, [user]);
+  return out ?? user;
 }
 
 function isUniqueConstraintError(e: unknown): boolean {
@@ -78,7 +94,10 @@ adminUsersRoute.get("/", async (c) => {
   const me = c.get("user");
   const rows = await listAdmins(c.env.DB);
   const res: ManagedUserListResponse = {
-    users: rows.filter((row) => row.id !== me?.id).map(managedUserFromRow),
+    users: await attachUsage(
+      c.env.DB,
+      rows.filter((row) => row.id !== me?.id).map(managedUserFromRow),
+    ),
   };
   return c.json(res);
 });
@@ -186,13 +205,13 @@ adminUsersRoute.put("/:id", async (c) => {
   }
 
   if (Object.keys(patch).length === 0) {
-    return c.json({ user: managedUserFromRow(target) });
+    return c.json({ user: await attachUsageOne(c.env.DB, managedUserFromRow(target)) });
   }
 
   await updateAdmin(c.env.DB, id, patch);
   const updated = await getAdminById(c.env.DB, id);
   if (!updated) return c.json({ error: "user not found" }, 404);
-  return c.json({ user: managedUserFromRow(updated) });
+  return c.json({ user: await attachUsageOne(c.env.DB, managedUserFromRow(updated)) });
 });
 
 /** DELETE /api/admin/users/:id — delete a regular user. */

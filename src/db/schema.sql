@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS usage_logs (
   char_count INTEGER,
   is_public_request BOOLEAN,
   client_ip TEXT,
+  user_id TEXT,                    -- 登录用户；匿名请求为 NULL
   created_at INTEGER
 );
 

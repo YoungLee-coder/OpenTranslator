@@ -1,3 +1,5 @@
+import type { UserUsageTotals } from "./usage";
+
 export type UserRole = "admin" | "user";
 
 /** 管理员可分配给普通用户的权限。管理员隐式拥有全部权限。 */
@@ -131,6 +133,7 @@ export interface ManagedUser {
   permissions: UserPermission[];
   enabled: boolean;
   createdAt: number | null;
+  usage: UserUsageTotals;
 }
 
 export interface ManagedUserListResponse {

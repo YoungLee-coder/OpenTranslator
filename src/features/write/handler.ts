@@ -90,6 +90,7 @@ export async function handleWrite(c: C): Promise<Response> {
     c.env.DB,
   );
   const isPublic = !user;
+  const userId = user?.id ?? null;
   const settings = await getSiteSettings(c.env.KV, c.env.DB);
 
   if (!settings.sitePublic && !user) {
@@ -249,7 +250,7 @@ export async function handleWrite(c: C): Promise<Response> {
           } satisfies WriteStreamEvent),
         });
         c.executionCtx?.waitUntil(
-          logUsage(c.env.DB, providerRowId, req.text.length, isPublic, getClientIp(c)),
+          logUsage(c.env.DB, providerRowId, req.text.length, isPublic, getClientIp(c), userId),
         );
       } catch (e) {
         await stream.writeSSE({
@@ -273,7 +274,7 @@ export async function handleWrite(c: C): Promise<Response> {
         usage: result.usage,
       };
       c.executionCtx?.waitUntil(
-        logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)),
+        logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c), userId),
       );
       return streamSSE(c, async (stream) => {
         await stream.writeSSE({
@@ -301,7 +302,7 @@ export async function handleWrite(c: C): Promise<Response> {
   try {
     const result = await adapter.translate(translateReq, ctx);
     c.executionCtx?.waitUntil(
-      logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)),
+      logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c), userId),
     );
     return c.json({
       revisedText: result.translatedText,

@@ -358,6 +358,7 @@ export async function handleTranslate(c: C): Promise<Response> {
     c.env.DB,
   );
   const isPublic = !user;
+  const userId = user?.id ?? null;
   const settings = await getSiteSettings(c.env.KV, c.env.DB);
 
   // Private site gate: anonymous users can't pass when the site is closed.
@@ -572,7 +573,7 @@ export async function handleTranslate(c: C): Promise<Response> {
             void setTranslationCache(c.env.KV, cacheKey, final, cacheTtlSeconds);
           }
           c.executionCtx?.waitUntil(
-            logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)),
+            logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c), userId),
           );
         } catch (e) {
           await writeEvent(stream, { type: "error", error: publicProviderError(e) });
@@ -591,7 +592,7 @@ export async function handleTranslate(c: C): Promise<Response> {
         preferStream: false,
       });
       if (cacheKey) void setTranslationCache(c.env.KV, cacheKey, final, cacheTtlSeconds);
-      c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
+      c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c), userId));
       return c.json(final);
     } catch (e) {
       return c.json({ error: publicProviderError(e) }, 502);
@@ -607,7 +608,7 @@ export async function handleTranslate(c: C): Promise<Response> {
         const result = { translatedText: full, provider: providerType };
         await writeEvent(stream, { type: "done", ...result });
         if (cacheKey) void setTranslationCache(c.env.KV, cacheKey, result, cacheTtlSeconds);
-        c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
+        c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c), userId));
       } catch (e) {
         await writeEvent(stream, { type: "error", error: publicProviderError(e) });
       }
@@ -622,7 +623,7 @@ export async function handleTranslate(c: C): Promise<Response> {
       if (promptBuilt.postProcess) text = promptBuilt.postProcess(text);
       const final = { ...result, translatedText: text };
       if (cacheKey) void setTranslationCache(c.env.KV, cacheKey, final, cacheTtlSeconds);
-      c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
+      c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c), userId));
       return streamSSE(c, async (stream) => {
         await writeEvent(stream, { type: "delta", text });
         await writeEvent(stream, { type: "done", ...final });
@@ -641,7 +642,7 @@ export async function handleTranslate(c: C): Promise<Response> {
     if (promptBuilt.postProcess) text = promptBuilt.postProcess(text);
     const final = { ...result, translatedText: text };
     if (cacheKey) void setTranslationCache(c.env.KV, cacheKey, final, cacheTtlSeconds);
-    c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c)));
+    c.executionCtx?.waitUntil(logUsage(c.env.DB, row.id, req.text.length, isPublic, getClientIp(c), userId));
     return c.json(final);
   } catch (e) {
     return c.json({ error: publicProviderError(e) }, 502);

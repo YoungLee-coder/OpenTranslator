@@ -14,7 +14,7 @@ function isMultiUserSnapshot(value: unknown): value is MultiUserSnapshot {
 }
 
 const cache = createSessionSnapshotCache<MultiUserSnapshot>({
-  storageKey: "ot.dashboard.users.v1",
+  storageKey: "ot.dashboard.users.v2",
   isSnapshot: isMultiUserSnapshot,
   async fetchFresh() {
     const res = await apiGet<ManagedUserListResponse>("/api/admin/users");
