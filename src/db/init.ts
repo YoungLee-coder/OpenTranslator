@@ -46,6 +46,7 @@ async function v0_1_0({ env }: InitContext): Promise<void> {
       config_json TEXT,
       enabled BOOLEAN DEFAULT 1,
       is_public_default BOOLEAN DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER,
       updated_at INTEGER
     )`),
@@ -210,6 +211,15 @@ async function v1_1({ env }: InitContext): Promise<void> {
   );
 }
 
+/** v1.2：providers.sort_order，Dashboard 可调顺序；翻译页模型列表跟随。 */
+async function v1_2({ env }: InitContext): Promise<void> {
+  await addColumn(env.DB, "providers", "sort_order", "INTEGER NOT NULL DEFAULT 0");
+  // 已有行默认 0；用 created_at 回填以保持原先「按创建时间」的顺序。
+  await env.DB.prepare(
+    "UPDATE providers SET sort_order = COALESCE(created_at, 0) WHERE sort_order = 0",
+  ).run();
+}
+
 /** 迁移记录表，记录已执行的版本，避免重复跑。 */
 async function ensureMigrationTable(db: D1Database): Promise<void> {
   await db
@@ -237,6 +247,7 @@ const migrations: Migration[] = [
   { version: "0.9.0", run: v0_9_0 },
   { version: "1.0", run: v1_0 },
   { version: "1.1", run: v1_1 },
+  { version: "1.2", run: v1_2 },
 ];
 
 export async function initDatabase(ctx: InitContext): Promise<{

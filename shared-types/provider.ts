@@ -69,8 +69,15 @@ export interface ProviderRecord {
   configJson?: Record<string, unknown>;
   enabled: boolean;
   isPublicDefault: boolean;
+  /** Dashboard 可调的展示顺序；翻译 / Write 模型列表按此展开。 */
+  sortOrder: number;
   createdAt: number;
   updatedAt: number;
+}
+
+/** Admin: persist a complete permutation of provider ids. */
+export interface ReorderProvidersRequest {
+  ids: string[];
 }
 
 export interface CreateProviderRequest {

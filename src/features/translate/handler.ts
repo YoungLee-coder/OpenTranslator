@@ -250,26 +250,31 @@ export async function handleListModels(c: C): Promise<Response> {
   // 匿名：只返回公开白名单中仍有效的项——provider 存在且 enabled、
   // 且 model 仍在该 provider 声明的 models 集合内。读取兜底，避免白名单
   // 残留已删除/已禁用的模型而暴露给访客（写入侧见 admin-providers 的级联清理）。
+  // 列表顺序跟随供应商 sort_order 与各供应商 models 顺序，与登录用户一致。
   const publicModels = settings.publicModels ?? [];
+  const publicSet = new Set(
+    publicModels.map((m) => `${m.providerId}\0${m.model}`),
+  );
   const models: TranslateModelOption[] = [];
   const validRefs: PublicModelRef[] = [];
-  for (const m of publicModels) {
-    const p = records.find((r) => r.id === m.providerId && r.enabled);
-    if (!p) continue;
+  for (const p of records) {
+    if (!p.enabled) continue;
     const allowed = p.models?.length
       ? p.models
       : p.defaultModel
         ? [p.defaultModel]
         : [];
-    if (!allowed.includes(m.model)) continue;
-    models.push({
-      providerId: m.providerId,
-      model: m.model,
-      modelLabel: resolveModelLabel(p.type, m.model),
-      providerName: p.displayName,
-      providerType: p.type,
-    });
-    validRefs.push(m);
+    for (const model of allowed) {
+      if (!publicSet.has(`${p.id}\0${model}`)) continue;
+      models.push({
+        providerId: p.id,
+        model,
+        modelLabel: resolveModelLabel(p.type, model),
+        providerName: p.displayName,
+        providerType: p.type,
+      });
+      validRefs.push({ providerId: p.id, model });
+    }
   }
   const isRefValid = (
     m: PublicModelRef | null | undefined,

@@ -3,6 +3,7 @@ import type {
   CreateProviderRequest,
   ProviderType,
   PublicModelRef,
+  ReorderProvidersRequest,
   TestProviderLatencyRequest,
   TestProviderLatencyResponse,
 } from "@opentranslator/shared-types";
@@ -17,6 +18,7 @@ import {
   insertProvider,
   listProviderRecords,
   providerRowToRecord,
+  reorderProviders,
   updateProvider,
   type ProviderPatch,
 } from "../db/queries";
@@ -72,6 +74,26 @@ adminProvidersRoute.put("/default-model", async (c) => {
   );
   const settings = await getSiteSettings(c.env.KV, c.env.DB);
   return c.json({ defaultModel: settings.defaultModel ?? null });
+});
+
+/**
+ * PUT /api/admin/providers/reorder — persist Dashboard provider order.
+ * Must be registered before /:id routes.
+ */
+adminProvidersRoute.put("/reorder", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as ReorderProvidersRequest | null;
+  const ids = body?.ids;
+  if (
+    !Array.isArray(ids) ||
+    ids.length === 0 ||
+    ids.some((id) => typeof id !== "string" || !id.trim())
+  ) {
+    return c.json({ error: "ids must be a non-empty string array" }, 400);
+  }
+  const result = await reorderProviders(c.env.DB, ids);
+  if (!result.ok) return c.json({ error: result.error }, 400);
+  const providers = await listProviderRecords(c.env.DB);
+  return c.json({ providers });
 });
 
 /**

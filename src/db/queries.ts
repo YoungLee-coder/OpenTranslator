@@ -18,6 +18,7 @@ interface ProviderRow {
   config_json: string | null;
   enabled: number;
   is_public_default: number;
+  sort_order: number | null;
   created_at: number | null;
   updated_at: number | null;
 }
@@ -57,6 +58,7 @@ function toProviderRecord(row: ProviderRow): ProviderRecord {
     configJson: row.config_json ? (JSON.parse(row.config_json) as Record<string, unknown>) : undefined,
     enabled: row.enabled === 1,
     isPublicDefault: row.is_public_default === 1,
+    sortOrder: row.sort_order ?? 0,
     createdAt: row.created_at ?? 0,
     updatedAt: row.updated_at ?? 0,
   };
@@ -107,7 +109,9 @@ export async function getProviderRow(db: D1Database, id: string): Promise<Provid
 
 export async function listProviderRows(db: D1Database): Promise<ProviderRow[]> {
   const result = await db
-    .prepare("SELECT * FROM providers ORDER BY created_at ASC")
+    .prepare(
+      "SELECT * FROM providers ORDER BY sort_order ASC, created_at ASC, id ASC",
+    )
     .all<ProviderRow>();
   return result.results ?? [];
 }
@@ -127,12 +131,14 @@ export async function getPublicDefaultProviderRow(
 ): Promise<ProviderRow | null> {
   const flagged = await db
     .prepare(
-      "SELECT * FROM providers WHERE enabled = 1 AND is_public_default = 1 ORDER BY created_at ASC LIMIT 1",
+      "SELECT * FROM providers WHERE enabled = 1 AND is_public_default = 1 ORDER BY sort_order ASC, created_at ASC, id ASC LIMIT 1",
     )
     .first<ProviderRow>();
   if (flagged) return flagged;
   return db
-    .prepare("SELECT * FROM providers WHERE enabled = 1 ORDER BY created_at ASC LIMIT 1")
+    .prepare(
+      "SELECT * FROM providers WHERE enabled = 1 ORDER BY sort_order ASC, created_at ASC, id ASC LIMIT 1",
+    )
     .first<ProviderRow>();
 }
 
@@ -191,15 +197,24 @@ export interface ProviderInsert {
   config_json?: string | null;
   enabled?: number;
   is_public_default?: number;
+  sort_order?: number;
+}
+
+export async function nextProviderSortOrder(db: D1Database): Promise<number> {
+  const row = await db
+    .prepare("SELECT COALESCE(MAX(sort_order), -1) AS m FROM providers")
+    .first<{ m: number }>();
+  return (row?.m ?? -1) + 1;
 }
 
 export async function insertProvider(db: D1Database, p: ProviderInsert): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
+  const sortOrder = p.sort_order ?? (await nextProviderSortOrder(db));
   await db
     .prepare(
       `INSERT INTO providers
-        (id, type, display_name, encrypted_api_key, base_url, default_model, models, config_json, enabled, is_public_default, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (id, type, display_name, encrypted_api_key, base_url, default_model, models, config_json, enabled, is_public_default, sort_order, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       p.id,
@@ -212,10 +227,40 @@ export async function insertProvider(db: D1Database, p: ProviderInsert): Promise
       p.config_json ?? null,
       p.enabled ?? 1,
       p.is_public_default ?? 0,
+      sortOrder,
       now,
       now,
     )
     .run();
+}
+
+/**
+ * 按给定 id 排列重写 sort_order。必须是现有供应商的完整排列，否则拒绝。
+ */
+export async function reorderProviders(
+  db: D1Database,
+  ids: string[],
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (ids.length === 0) return { ok: false, error: "ids is required" };
+  const unique = new Set(ids);
+  if (unique.size !== ids.length) return { ok: false, error: "duplicate ids" };
+  const existing = await listProviderRows(db);
+  if (existing.length !== ids.length) {
+    return { ok: false, error: "ids must include every provider" };
+  }
+  const existingIds = new Set(existing.map((r) => r.id));
+  for (const id of ids) {
+    if (!existingIds.has(id)) return { ok: false, error: "unknown provider id" };
+  }
+  const now = Math.floor(Date.now() / 1000);
+  await db.batch(
+    ids.map((id, i) =>
+      db
+        .prepare("UPDATE providers SET sort_order = ?, updated_at = ? WHERE id = ?")
+        .bind(i, now, id),
+    ),
+  );
+  return { ok: true };
 }
 
 export interface ProviderPatch {

@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS providers (
   config_json TEXT,
   enabled BOOLEAN DEFAULT 1,
   is_public_default BOOLEAN DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0,  -- Dashboard 可调；翻译页模型列表按此展开
   created_at INTEGER,
   updated_at INTEGER
 );

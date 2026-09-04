@@ -154,8 +154,8 @@ adminBackupRoute.post("/", async (c) => {
       c.env.DB
         .prepare(
           `INSERT INTO providers
-            (id, type, display_name, encrypted_api_key, base_url, default_model, models, config_json, enabled, is_public_default, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            (id, type, display_name, encrypted_api_key, base_url, default_model, models, config_json, enabled, is_public_default, sort_order, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           p.id,
@@ -168,6 +168,7 @@ adminBackupRoute.post("/", async (c) => {
           p.configJson ? JSON.stringify(p.configJson) : null,
           p.enabled ? 1 : 0,
           isPublicDefault ? 1 : 0,
+          importedIds.size - 1,
           now,
           now,
         ),

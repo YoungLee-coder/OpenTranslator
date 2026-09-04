@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   CreateProviderRequest,
   ProviderField,
@@ -58,7 +58,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Gauge, Plus, RotateCw, Server, Trash2 } from "lucide-react";
+import { AlertCircle, Gauge, GripVertical, Plus, RotateCw, Server, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useOnceAnimation } from "@/lib/useOnceAnimation";
 import { useTranslation } from "@/lib/i18n";
@@ -154,6 +154,11 @@ export function ProvidersSection() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ProviderRecord | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [reordering, setReordering] = useState(false);
+  const reorderingRef = useRef(false);
+  const draggingIdRef = useRef<string | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [latencyTesting, setLatencyTesting] = useState(false);
   const [latencyFeedback, setLatencyFeedback] = useState<LatencyFeedback | null>(
     null,
@@ -398,6 +403,72 @@ export function ProvidersSection() {
     } finally {
       setDeleteTarget(null);
     }
+  }
+
+  async function persistOrder(next: ProviderRecord[]) {
+    if (reorderingRef.current) return;
+    reorderingRef.current = true;
+    setReordering(true);
+    const writeGen = beginProvidersWrite();
+    const prev = providers;
+    const ordered = next.map((p, i) => ({ ...p, sortOrder: i }));
+    setProviders(ordered);
+    patchProvidersSnapshot({ providers: ordered }, writeGen);
+    try {
+      await apiPut("/api/admin/providers/reorder", {
+        ids: ordered.map((p) => p.id),
+      });
+      toast.success(t("providers.reordered"));
+    } catch (e) {
+      setProviders(prev);
+      patchProvidersSnapshot({ providers: prev }, writeGen);
+      toast.error(e instanceof ApiError ? e.message : t("common.operationFailed"));
+    } finally {
+      reorderingRef.current = false;
+      setReordering(false);
+    }
+  }
+
+  function onGripDragStart(e: React.DragEvent, id: string) {
+    if (reordering || providers.length < 2) {
+      e.preventDefault();
+      return;
+    }
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", id);
+    draggingIdRef.current = id;
+    setDraggingId(id);
+  }
+
+  function onRowDragOver(e: React.DragEvent, id: string) {
+    const sourceId = draggingIdRef.current;
+    if (!sourceId || sourceId === id) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverId !== id) setDragOverId(id);
+  }
+
+  function onRowDrop(e: React.DragEvent, targetId: string) {
+    e.preventDefault();
+    const sourceId = draggingIdRef.current ?? e.dataTransfer.getData("text/plain");
+    draggingIdRef.current = null;
+    setDraggingId(null);
+    setDragOverId(null);
+    if (!sourceId || sourceId === targetId) return;
+    const from = providers.findIndex((p) => p.id === sourceId);
+    const to = providers.findIndex((p) => p.id === targetId);
+    if (from < 0 || to < 0) return;
+    const next = [...providers];
+    const [item] = next.splice(from, 1);
+    if (!item) return;
+    next.splice(to, 0, item);
+    void persistOrder(next);
+  }
+
+  function onDragEnd() {
+    draggingIdRef.current = null;
+    setDraggingId(null);
+    setDragOverId(null);
   }
 
   // 行内切换启用：乐观更新，失败回滚
@@ -718,19 +789,43 @@ export function ProvidersSection() {
                 ready ? "opacity-100" : "opacity-70",
               )}
             >
-              <Table className="min-w-[640px] lg:table-fixed">
+              <Table className="min-w-[680px] lg:table-fixed">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="lg:w-40">{t("providers.name")}</TableHead>
+                    <TableHead className="w-10 lg:w-10">
+                      <span className="sr-only">{t("providers.order")}</span>
+                    </TableHead>
+                    <TableHead className="lg:w-36">{t("providers.name")}</TableHead>
                     <TableHead className="lg:w-28">{t("providers.type")}</TableHead>
-                    <TableHead className="lg:w-48">{t("providers.models")}</TableHead>
-                    <TableHead className="lg:w-44">{t("providers.status")}</TableHead>
-                    <TableHead className="lg:w-44 text-right">{t("providers.actions")}</TableHead>
+                    <TableHead className="lg:w-44">{t("providers.models")}</TableHead>
+                    <TableHead className="lg:w-40">{t("providers.status")}</TableHead>
+                    <TableHead className="lg:w-40 text-right">{t("providers.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {providers.map((p) => (
-                    <TableRow key={p.id}>
+                    <TableRow
+                      key={p.id}
+                      onDragOver={(e) => onRowDragOver(e, p.id)}
+                      onDrop={(e) => onRowDrop(e, p.id)}
+                      className={cn(
+                        draggingId === p.id && "opacity-50",
+                        dragOverId === p.id && draggingId !== p.id && "bg-accent/70",
+                      )}
+                    >
+                      <TableCell className="w-10 p-1.5">
+                        <button
+                          type="button"
+                          draggable={ready && !reordering && providers.length > 1}
+                          disabled={!ready || reordering || providers.length < 2}
+                          onDragStart={(e) => onGripDragStart(e, p.id)}
+                          onDragEnd={onDragEnd}
+                          aria-label={t("providers.dragHandle", { name: p.displayName })}
+                          className="inline-flex size-7 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground hover:bg-accent/60 hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-40 active:cursor-grabbing"
+                        >
+                          <GripVertical className="size-3.5" />
+                        </button>
+                      </TableCell>
                       <TableCell className="max-w-0 font-medium">
                         <span className="block truncate" title={p.displayName}>
                           {p.displayName}
