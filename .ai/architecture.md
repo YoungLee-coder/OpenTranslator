@@ -60,6 +60,7 @@ wrangler.toml                 # Worker 配置（[assets] 静态资源绑定）
   7. `src/providers/latency-probe.ts` — `PROVIDER_DEFAULTS` + `probeProviderLatency` switch（extra headers 与 adapter 一致）
   8. Dashboard：`web/src/lib/dashboard-providers-cache.ts` 的 `EMPTY_SCHEMAS`、`ProvidersSection.tsx` 的 `PROVIDER_LABELS`、`ProviderIcon.tsx` 的 `@lobehub/icons`
   9. 产品文案按需（landing FAQ 等厂商列表）
+  `custom` 是多格式网关（不是新的上游协议）：一张供应商记录共用一把 API Key，`configJson.endpoints` 挂多条 OpenAI / Claude / Gemini 地址；adapter（`src/providers/custom.ts`）按所选模型分发给已有 inner adapter。Dashboard 用 `ProviderFieldType: "endpoints"` 渲染可增删的地址列表。
   验证：`pnpm typecheck`（改了 shared-types）
 - **新增功能模块**：`web/src/features/` 加组件并在 `features/registry.ts` 注册，预加载在 `features/prefetch.ts` 登记 → `src/features/` 加后端 manifest/handler → Dashboard 模块管理里 DB 开关启用。`FeatureManifest.requiredAccess` 声明谁能看到该模块（`admin` 或具体权限；缺省 `settings`）。新 admin API 还要在 `adminPermissionMiddleware` 的前缀表登记，否则 403。
 - **新增 AI expert**：`src/experts/plugins/*.yml` 加定义 → `pnpm bundle-experts` 重生成 `bundled.ts`。解析逻辑在 `src/experts/resolve.ts`、`registry.ts`。

@@ -9,6 +9,7 @@ import type {
 import type { AppBindings, AppVariables } from "../types";
 import { providerSchemas } from "../providers/schema";
 import { normalizeStoredProviderBaseUrl } from "../providers/base-url";
+import { isCustomProviderType, prepareCustomProvider } from "../providers/endpoints";
 import {
   clearPublicDefaultFlag,
   deleteProvider,
@@ -136,18 +137,30 @@ adminProvidersRoute.post("/", async (c) => {
     await clearPublicDefaultFlag(c.env.DB);
     await invalidateSiteSettings(c.env.KV);
   }
+
+  let models = body.models;
+  let baseUrl = body.baseUrl;
+  let configJson = body.configJson;
+  if (isCustomProviderType(body.type)) {
+    const prepared = prepareCustomProvider(body.configJson);
+    if (!prepared.ok) return c.json({ error: prepared.error }, 400);
+    models = prepared.value.models;
+    baseUrl = prepared.value.baseUrl;
+    configJson = { endpoints: prepared.value.endpoints };
+  }
+
   // models 首项作为默认模型，兼容旧 defaultModel 字段与兜底展示。
-  const modelsJson = body.models?.length ? JSON.stringify(body.models) : null;
-  const defaultModel = body.models?.[0] ?? body.defaultModel ?? null;
+  const modelsJson = models?.length ? JSON.stringify(models) : null;
+  const defaultModel = models?.[0] ?? body.defaultModel ?? null;
   await insertProvider(c.env.DB, {
     id,
     type: body.type,
     display_name: body.displayName,
     encrypted_api_key: encrypted,
-    base_url: normalizeStoredProviderBaseUrl(body.type, body.baseUrl) ?? null,
+    base_url: normalizeStoredProviderBaseUrl(body.type, baseUrl) ?? null,
     default_model: defaultModel,
     models: modelsJson,
-    config_json: body.configJson ? JSON.stringify(body.configJson) : null,
+    config_json: configJson ? JSON.stringify(configJson) : null,
     enabled: body.enabled === false ? 0 : 1,
     is_public_default: body.isPublicDefault ? 1 : 0,
   });
@@ -169,21 +182,33 @@ adminProvidersRoute.put("/:id", async (c) => {
   const patch: ProviderPatch = {};
   if (body.type !== undefined) patch.type = body.type;
   if (body.displayName !== undefined) patch.display_name = body.displayName;
-  if (body.baseUrl !== undefined) {
-    const type = (body.type ?? existing.type) as ProviderType;
-    patch.base_url = normalizeStoredProviderBaseUrl(type, body.baseUrl) ?? null;
+
+  const nextType = (body.type ?? existing.type) as ProviderType;
+  let models = body.models;
+  let baseUrl = body.baseUrl;
+  let configJson = body.configJson;
+  if (isCustomProviderType(nextType) && body.configJson !== undefined) {
+    const prepared = prepareCustomProvider(body.configJson);
+    if (!prepared.ok) return c.json({ error: prepared.error }, 400);
+    models = prepared.value.models;
+    baseUrl = prepared.value.baseUrl ?? "";
+    configJson = { endpoints: prepared.value.endpoints };
+  }
+
+  if (baseUrl !== undefined) {
+    patch.base_url = normalizeStoredProviderBaseUrl(nextType, baseUrl) ?? null;
   }
   // models 与 default_model 联动：传了 models 就从首项派生默认模型。
-  if (body.models !== undefined) {
-    patch.models = body.models.length ? JSON.stringify(body.models) : null;
-    patch.default_model = body.models[0] ?? null;
+  if (models !== undefined) {
+    patch.models = models.length ? JSON.stringify(models) : null;
+    patch.default_model = models[0] ?? null;
   } else if (body.defaultModel !== undefined) {
     patch.default_model = body.defaultModel || null;
   }
-  if (body.configJson !== undefined) {
+  if (configJson !== undefined) {
     patch.config_json =
-      body.configJson && Object.keys(body.configJson).length > 0
-        ? JSON.stringify(body.configJson)
+      configJson && Object.keys(configJson).length > 0
+        ? JSON.stringify(configJson)
         : null;
   }
   if (body.enabled !== undefined) patch.enabled = body.enabled ? 1 : 0;
@@ -199,8 +224,8 @@ adminProvidersRoute.put("/:id", async (c) => {
   }
   await updateProvider(c.env.DB, id, patch);
   // 改了 models 时，级联剔除公开白名单中已被移除的模型引用。
-  if (body.models !== undefined) {
-    const newModels = new Set(body.models);
+  if (models !== undefined) {
+    const newModels = new Set(models);
     await prunePublicModelRefs(c.env.KV, c.env.DB, (r) =>
       r.providerId === id && !newModels.has(r.model),
     );

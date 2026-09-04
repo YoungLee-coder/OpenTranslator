@@ -24,6 +24,7 @@ const EMPTY_SCHEMAS: Record<ProviderType, ProviderField[]> = {
   openrouter: [],
   cloudflare: [],
   deepl: [],
+  custom: [],
 };
 
 function encodeModelKey(providerId: string, model: string): string {

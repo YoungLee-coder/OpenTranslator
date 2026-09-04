@@ -27,6 +27,10 @@ export function normalizeStoredProviderBaseUrl(
       return normalizeAnthropicBaseURL(baseUrl);
     case "gemini":
       return normalizeGeminiBaseURL(baseUrl);
+    case "custom":
+      // Per-endpoint format is applied when saving each address; the row
+      // baseUrl is only a display fallback (first endpoint).
+      return stripTrailingSlash(baseUrl.trim());
     default:
       return stripTrailingSlash(baseUrl.trim());
   }

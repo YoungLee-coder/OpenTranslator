@@ -7,6 +7,7 @@ import type {
   TestProviderLatencyRequest,
   TestProviderLatencyResponse,
 } from "@opentranslator/shared-types";
+import { validateProviderEndpoints } from "@opentranslator/shared-types";
 import {
   apiDelete,
   apiPost,
@@ -62,6 +63,13 @@ import { toast } from "@/components/ui/sonner";
 import { useOnceAnimation } from "@/lib/useOnceAnimation";
 import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import {
+  ProviderEndpointsField,
+  endpointFormToEndpoints,
+  endpointsFromRecord,
+  parseEndpointFormField,
+  serializeEndpointForm,
+} from "./ProviderEndpointsField";
 
 interface FormState {
   type: ProviderType;
@@ -108,9 +116,11 @@ const PROVIDER_LABELS: Record<ProviderType, string> = {
   openrouter: "OpenRouter",
   cloudflare: "Cloudflare",
   deepl: "DeepL",
+  custom: "Custom",
 };
 
-function providerLabel(type: ProviderType): string {
+function providerLabel(type: ProviderType, customLabel: string): string {
+  if (type === "custom") return customLabel;
   return PROVIDER_LABELS[type] ?? type;
 }
 
@@ -125,6 +135,8 @@ function decodeModelKey(key: string): { providerId: string; model: string } {
 
 export function ProvidersSection() {
   const { t } = useTranslation();
+  const typeLabel = (type: ProviderType) =>
+    providerLabel(type, t("providers.label.custom"));
   const initial = getProvidersSnapshot();
   const [providers, setProviders] = useState<ProviderRecord[]>(
     () => initial?.providers ?? [],
@@ -144,6 +156,9 @@ export function ProvidersSection() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [latencyTesting, setLatencyTesting] = useState(false);
   const [latencyFeedback, setLatencyFeedback] = useState<LatencyFeedback | null>(
+    null,
+  );
+  const [endpointTestingIndex, setEndpointTestingIndex] = useState<number | null>(
     null,
   );
   // 站点默认模型：「providerId|model」；不依赖公开访问模块
@@ -201,6 +216,7 @@ export function ProvidersSection() {
 
   function clearLatencyFeedback() {
     setLatencyFeedback(null);
+    setEndpointTestingIndex(null);
   }
 
   function startCreate() {
@@ -219,6 +235,13 @@ export function ProvidersSection() {
       } else if (f.key === "models") {
         // 旧记录可能只有 defaultModel，回填时合并展示
         fields.models = (p.models?.length ? p.models : p.defaultModel ? [p.defaultModel] : []).join("\n");
+      } else if (f.type === "endpoints") {
+        fields.endpoints = serializeEndpointForm(
+          endpointsFromRecord(p.configJson, {
+            baseUrl: p.baseUrl,
+            models: p.models,
+          }),
+        );
       } else {
         const v = p.configJson?.[f.key];
         fields[f.key] = typeof v === "string" ? v : "";
@@ -250,13 +273,51 @@ export function ProvidersSection() {
 
   function buildRequest(): CreateProviderRequest | null {
     const schemaFields = schemas[form.type] ?? [];
-    // 必填校验（preset / defaultValue 恒有值，跳过）
+    // 必填校验（preset / defaultValue 恒有值，跳过；endpoints 走专用校验）
     for (const f of schemaFields) {
+      if (f.type === "endpoints") continue;
       if (f.required && !f.preset && !eff(f.key).trim()) {
         setError(t("providers.fieldRequired", { label: f.label }));
         return null;
       }
     }
+
+    const configJson: Record<string, unknown> = {};
+    for (const f of schemaFields) {
+      if (f.key === "baseUrl" || f.key === "models" || f.type === "endpoints") continue;
+      const v = (f.preset ?? form.fields[f.key] ?? f.defaultValue ?? "").trim();
+      if (v) configJson[f.key] = v;
+    }
+
+    if (form.type === "custom") {
+      const endpoints = endpointFormToEndpoints(
+        parseEndpointFormField(form.fields.endpoints),
+      );
+      const invalid = validateProviderEndpoints(endpoints);
+      if (invalid) {
+        if (invalid.code === "empty") setError(t("providers.endpointsEmpty"));
+        else if (invalid.code === "baseUrl") {
+          setError(t("providers.endpointNeedUrl", { n: invalid.index + 1 }));
+        } else if (invalid.code === "models") {
+          setError(t("providers.endpointNeedModel", { n: invalid.index + 1 }));
+        } else {
+          setError(
+            t("providers.endpointDuplicate", { models: invalid.models.join("、") }),
+          );
+        }
+        return null;
+      }
+      return {
+        type: form.type,
+        displayName: form.displayName.trim(),
+        apiKey: form.apiKey,
+        baseUrl: endpoints[0]?.baseUrl,
+        models: endpoints.flatMap((ep) => ep.models),
+        configJson: { ...configJson, endpoints },
+        enabled: form.enabled,
+      };
+    }
+
     const baseUrl = eff("baseUrl").trim() || undefined;
     // Base URL 需为完整地址（以 http:// 或 https:// 开头）
     if (baseUrl && !/^https?:\/\//i.test(baseUrl)) {
@@ -272,12 +333,6 @@ export function ProvidersSection() {
           .filter(Boolean),
       ),
     );
-    const configJson: Record<string, string> = {};
-    for (const f of schemaFields) {
-      if (f.key === "baseUrl" || f.key === "models") continue;
-      const v = (f.preset ?? form.fields[f.key] ?? f.defaultValue ?? "").trim();
-      if (v) configJson[f.key] = v;
-    }
     return {
       type: form.type,
       displayName: form.displayName.trim(),
@@ -418,6 +473,28 @@ export function ProvidersSection() {
     clearLatencyFeedback();
   }
 
+  async function runLatencyProbe(body: TestProviderLatencyRequest) {
+    const res = await apiPost<TestProviderLatencyResponse>(
+      "/api/admin/providers/test-latency",
+      body,
+    );
+    if (res.ok && res.latencyMs != null) {
+      setLatencyFeedback({
+        tone: latencyToneFromMs(res.latencyMs),
+        message: t("providers.testLatencyOk", {
+          ms: res.latencyMs,
+          preview: res.replyPreview ?? "—",
+        }),
+      });
+    } else {
+      const detail = mapLatencyError(res.error);
+      setLatencyFeedback({
+        tone: "destructive",
+        message: t("providers.testLatencyFail", { error: detail }),
+      });
+    }
+  }
+
   async function testProviderLatency() {
     const built = buildRequest();
     if (!built) return;
@@ -447,26 +524,7 @@ export function ProvidersSection() {
       };
       if (built.apiKey) body.apiKey = built.apiKey;
       else if (editing?.id) body.providerId = editing.id;
-
-      const res = await apiPost<TestProviderLatencyResponse>(
-        "/api/admin/providers/test-latency",
-        body,
-      );
-      if (res.ok && res.latencyMs != null) {
-        setLatencyFeedback({
-          tone: latencyToneFromMs(res.latencyMs),
-          message: t("providers.testLatencyOk", {
-            ms: res.latencyMs,
-            preview: res.replyPreview ?? "—",
-          }),
-        });
-      } else {
-        const detail = mapLatencyError(res.error);
-        setLatencyFeedback({
-          tone: "destructive",
-          message: t("providers.testLatencyFail", { error: detail }),
-        });
-      }
+      await runLatencyProbe(body);
     } catch (e) {
       const raw = e instanceof ApiError ? e.message : String(e);
       const detail = mapLatencyError(raw);
@@ -476,6 +534,58 @@ export function ProvidersSection() {
       });
     } finally {
       setLatencyTesting(false);
+    }
+  }
+
+  async function testEndpointLatency(index: number) {
+    const endpoints = endpointFormToEndpoints(
+      parseEndpointFormField(form.fields.endpoints),
+    );
+    const ep = endpoints[index];
+    if (!ep) return;
+    if (!form.apiKey && !editing?.id) {
+      setLatencyFeedback({
+        tone: "destructive",
+        message: t("providers.testLatencyNeedKey"),
+      });
+      return;
+    }
+    if (!ep.baseUrl || !/^https?:\/\//i.test(ep.baseUrl)) {
+      setLatencyFeedback({
+        tone: "destructive",
+        message: t("providers.endpointNeedUrl", { n: index + 1 }),
+      });
+      return;
+    }
+    const model = ep.models[0];
+    if (!model) {
+      setLatencyFeedback({
+        tone: "destructive",
+        message: t("providers.endpointNeedModel", { n: index + 1 }),
+      });
+      return;
+    }
+    setEndpointTestingIndex(index);
+    setLatencyFeedback(null);
+    setError(null);
+    try {
+      const body: TestProviderLatencyRequest = {
+        type: ep.format,
+        baseUrl: ep.baseUrl,
+        model,
+      };
+      if (form.apiKey) body.apiKey = form.apiKey;
+      else if (editing?.id) body.providerId = editing.id;
+      await runLatencyProbe(body);
+    } catch (e) {
+      const raw = e instanceof ApiError ? e.message : String(e);
+      const detail = mapLatencyError(raw);
+      setLatencyFeedback({
+        tone: "destructive",
+        message: t("providers.testLatencyFail", { error: detail }),
+      });
+    } finally {
+      setEndpointTestingIndex(null);
     }
   }
 
@@ -629,7 +739,7 @@ export function ProvidersSection() {
                       <TableCell className="text-muted-foreground">
                         <span className="inline-flex items-center gap-1.5">
                           <ProviderIcon type={p.type} size={16} />
-                          {providerLabel(p.type)}
+                          {typeLabel(p.type)}
                         </span>
                       </TableCell>
                       <TableCell className="max-w-0">
@@ -684,7 +794,12 @@ export function ProvidersSection() {
 
       {/* 编辑 / 新增 对话框 */}
       <Dialog open={editing !== null} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent
+          className={cn(
+            "sm:max-w-xl",
+            form.type === "custom" && "max-h-[90vh] overflow-y-auto sm:max-w-2xl",
+          )}
+        >
           <DialogHeader>
             <DialogTitle>{editing?.id ? t("providers.editTitle") : t("providers.addTitle")}</DialogTitle>
             <DialogDescription>{t("providers.formDesc")}</DialogDescription>
@@ -706,7 +821,7 @@ export function ProvidersSection() {
                       <SelectItem key={type} value={type}>
                         <span className="inline-flex items-center gap-1.5">
                           <ProviderIcon type={type} size={16} />
-                          {providerLabel(type)}
+                          {typeLabel(type)}
                         </span>
                       </SelectItem>
                     ))}
@@ -746,7 +861,30 @@ export function ProvidersSection() {
               />
             </div>
 
-            {schemas[form.type]?.map((f) => (
+            {schemas[form.type]?.map((f) =>
+              f.type === "endpoints" ? (
+                <div className="flex min-w-0 flex-col gap-2" key={f.key}>
+                  <Label className="flex items-center gap-1.5">
+                    {f.label}
+                    {f.required && (
+                      <span className="text-destructive">*</span>
+                    )}
+                  </Label>
+                  <ProviderEndpointsField
+                    value={form.fields.endpoints ?? ""}
+                    disabled={saving}
+                    testingIndex={endpointTestingIndex}
+                    onTest={(index) => void testEndpointLatency(index)}
+                    onChange={(next) => {
+                      clearLatencyFeedback();
+                      setForm({
+                        ...form,
+                        fields: { ...form.fields, endpoints: next },
+                      });
+                    }}
+                  />
+                </div>
+              ) : (
               <div className="flex min-w-0 flex-col gap-2" key={f.key}>
                 <Label
                   htmlFor={`field-${f.key}`}
@@ -846,7 +984,8 @@ export function ProvidersSection() {
                   />
                 )}
               </div>
-            ))}
+              )
+            )}
 
             <div className="flex flex-wrap gap-6 pt-1">
               <div className="flex items-center gap-2">
@@ -863,6 +1002,7 @@ export function ProvidersSection() {
 
             <DialogFooter className="flex-col items-stretch gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-col gap-1.5 sm:min-w-0 sm:flex-1">
+                {form.type !== "custom" && (
                 <Button
                   type="button"
                   variant="outline"
@@ -876,6 +1016,7 @@ export function ProvidersSection() {
                     ? t("providers.testLatencyTesting")
                     : t("providers.testLatency")}
                 </Button>
+                )}
                 {latencyFeedback && (
                   <div
                     key={latencyFeedback.message}

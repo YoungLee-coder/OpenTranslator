@@ -1,4 +1,8 @@
 import type { ProviderContext, ProviderType } from "@opentranslator/shared-types";
+import {
+  findEndpointForModel,
+  parseProviderEndpoints,
+} from "@opentranslator/shared-types";
 import { assertPublicHttpUrl } from "../lib/url-safety";
 import {
   anthropicMessagesURL,
@@ -291,6 +295,35 @@ export async function probeProviderLatency(
       if (!baseUrl) return { ok: false, latencyMs: 0, error: "baseUrl is required" };
       if (!model) return { ok: false, latencyMs: 0, error: "model is required" };
       return probeGemini(baseUrl, apiKey, model);
+    }
+    case "custom": {
+      const endpoints = parseProviderEndpoints(ctx.configJson?.endpoints);
+      if (model) {
+        const ep = findEndpointForModel(endpoints, model);
+        if (!ep?.baseUrl) {
+          return {
+            ok: false,
+            latencyMs: 0,
+            error: `model "${model}" is not assigned to any API endpoint`,
+          };
+        }
+        return probeProviderLatency(ep.format, {
+          ...ctx,
+          baseUrl: ep.baseUrl,
+          defaultModel: model,
+        });
+      }
+      const ep = endpoints[0];
+      const probeModel = ep?.models[0];
+      if (!ep?.baseUrl) {
+        return { ok: false, latencyMs: 0, error: "baseUrl is required" };
+      }
+      if (!probeModel) return { ok: false, latencyMs: 0, error: "model is required" };
+      return probeProviderLatency(ep.format, {
+        ...ctx,
+        baseUrl: ep.baseUrl,
+        defaultModel: probeModel,
+      });
     }
     case "cloudflare": {
       const accountId =

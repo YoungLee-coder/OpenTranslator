@@ -3,6 +3,7 @@ import { openaiProvider, aihubmixProvider } from "./openai";
 import { openrouterProvider } from "./openrouter";
 import { claudeProvider } from "./claude";
 import { geminiProvider } from "./gemini";
+import { customProvider } from "./custom";
 import { cloudflareProvider } from "./cloudflare";
 import { deeplProvider } from "./deepl";
 
@@ -17,3 +18,4 @@ providerRegistry.register("claude", claudeProvider);
 providerRegistry.register("gemini", geminiProvider);
 providerRegistry.register("cloudflare", cloudflareProvider);
 providerRegistry.register("deepl", deeplProvider);
+providerRegistry.register("custom", customProvider);

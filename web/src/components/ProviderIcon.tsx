@@ -8,6 +8,7 @@ import AiHubMixColor from "@lobehub/icons/es/AiHubMix/components/Color";
 import OpenRouterMono from "@lobehub/icons/es/OpenRouter/components/Mono";
 import CloudflareColor from "@lobehub/icons/es/Cloudflare/components/Color";
 import DeepLColor from "@lobehub/icons/es/DeepL/components/Color";
+import { Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type LobeIconProps = {
@@ -28,6 +29,7 @@ const PROVIDER_COLOR_ICONS: Record<
   openrouter: OpenRouterMono,
   cloudflare: CloudflareColor,
   deepl: DeepLColor,
+  custom: Layers,
 };
 
 const KNOWN_TYPES = new Set<string>(Object.keys(PROVIDER_COLOR_ICONS));

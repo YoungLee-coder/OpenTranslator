@@ -7,7 +7,21 @@ export type ProviderType =
   | "aihubmix"
   | "openrouter"
   | "cloudflare"
-  | "deepl";
+  | "deepl"
+  | "custom";
+
+/** Inner wire formats a custom (multi-endpoint) provider may expose. */
+export const PROVIDER_API_FORMATS = ["openai", "claude", "gemini"] as const;
+export type ProviderApiFormat = (typeof PROVIDER_API_FORMATS)[number];
+
+export const MAX_CUSTOM_ENDPOINTS = 8;
+
+/** One API address on a custom provider: format + SDK root + models on that route. */
+export interface ProviderEndpoint {
+  format: ProviderApiFormat;
+  baseUrl: string;
+  models: string[];
+}
 
 /**
  * Resolved per-provider configuration passed into an adapter.
@@ -94,8 +108,111 @@ export interface TestProviderLatencyResponse {
   replyPreview?: string;
 }
 
+export function isProviderApiFormat(value: unknown): value is ProviderApiFormat {
+  return (PROVIDER_API_FORMATS as readonly string[]).includes(value as string);
+}
+
+/** Split a models textarea into unique trimmed names. */
+export function parseModelLines(text: string): string[] {
+  return Array.from(
+    new Set(
+      text
+        .split("\n")
+        .map((m) => m.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+export function parseProviderEndpoints(raw: unknown): ProviderEndpoint[] {
+  if (!Array.isArray(raw)) return [];
+  const out: ProviderEndpoint[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const rec = item as Record<string, unknown>;
+    if (!isProviderApiFormat(rec.format)) continue;
+    const baseUrl = typeof rec.baseUrl === "string" ? rec.baseUrl.trim() : "";
+    const models = Array.isArray(rec.models)
+      ? Array.from(
+          new Set(
+            rec.models
+              .filter((m): m is string => typeof m === "string")
+              .map((m) => m.trim())
+              .filter(Boolean),
+          ),
+        )
+      : [];
+    out.push({ format: rec.format, baseUrl, models });
+    if (out.length >= MAX_CUSTOM_ENDPOINTS) break;
+  }
+  return out;
+}
+
+export function flattenEndpointModels(endpoints: ProviderEndpoint[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const ep of endpoints) {
+    for (const m of ep.models) {
+      if (seen.has(m)) continue;
+      seen.add(m);
+      out.push(m);
+    }
+  }
+  return out;
+}
+
+export function findEndpointForModel(
+  endpoints: ProviderEndpoint[],
+  model: string,
+): ProviderEndpoint | undefined {
+  const needle = model.trim();
+  if (!needle) return undefined;
+  return endpoints.find((ep) => ep.models.includes(needle));
+}
+
+export function duplicateEndpointModels(endpoints: ProviderEndpoint[]): string[] {
+  const counts = new Map<string, number>();
+  for (const ep of endpoints) {
+    for (const m of ep.models) {
+      counts.set(m, (counts.get(m) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .filter(([, n]) => n > 1)
+    .map(([m]) => m);
+}
+
+export type EndpointValidationError =
+  | { code: "empty" }
+  | { code: "baseUrl"; index: number }
+  | { code: "models"; index: number }
+  | { code: "duplicate"; models: string[] };
+
+export function validateProviderEndpoints(
+  endpoints: ProviderEndpoint[],
+): EndpointValidationError | null {
+  if (endpoints.length === 0) return { code: "empty" };
+  for (let i = 0; i < endpoints.length; i++) {
+    const ep = endpoints[i];
+    if (!ep) continue;
+    if (!ep.baseUrl || !/^https?:\/\//i.test(ep.baseUrl)) {
+      return { code: "baseUrl", index: i };
+    }
+    if (ep.models.length === 0) return { code: "models", index: i };
+  }
+  const dups = duplicateEndpointModels(endpoints);
+  if (dups.length) return { code: "duplicate", models: dups };
+  return null;
+}
+
 /** Dynamic form field descriptor for the dashboard provider form. */
-export type ProviderFieldType = "text" | "password" | "boolean" | "select" | "models";
+export type ProviderFieldType =
+  | "text"
+  | "password"
+  | "boolean"
+  | "select"
+  | "models"
+  | "endpoints";
 
 /** 下拉选项：纯字符串（值即标签）或 { value, label }（值与展示文案分离，用于汉化）。 */
 export type SelectOption = string | { value: string; label?: string };

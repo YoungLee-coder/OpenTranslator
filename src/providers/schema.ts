@@ -12,6 +12,7 @@ import type {
 // select + defaultValue 用于可选预设（如 aihubmix 主站/备用 Base URL）；
 // preset 用于唯一官方端点（如 openrouter）。
 // models 字段一行一个模型名，首项视为该供应商的默认模型。
+// custom 用 endpoints 字段：同一 Key 下多条 OpenAI / Claude / Gemini 地址。
 export const providerSchemas: Record<ProviderType, ProviderField[]> = {
   openai: [
     { key: "baseUrl", label: "Base URL", type: "text", required: true, placeholder: "https://api.openai.com/v1" },
@@ -88,6 +89,14 @@ export const providerSchemas: Record<ProviderType, ProviderField[]> = {
         { value: "prefer_more", label: "偏正式" },
         { value: "prefer_less", label: "偏非正式" },
       ],
+    },
+  ],
+  custom: [
+    {
+      key: "endpoints",
+      label: "API 地址",
+      type: "endpoints",
+      required: true,
     },
   ],
 };
