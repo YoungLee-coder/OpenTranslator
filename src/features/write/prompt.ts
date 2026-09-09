@@ -1,4 +1,4 @@
-import type { WriteRequest, WriteStyle } from "@opentranslator/shared-types";
+import type { WriteRequest, WriteStyle, WriteShortenLevel } from "@opentranslator/shared-types";
 import type { BuiltPrompt } from "../../experts/prompt";
 import { buildReadFrogPrecisionRewriteSystemPrompt } from "../../experts/read-frog-prompts";
 
@@ -7,6 +7,11 @@ const STYLE_LABELS: Record<WriteStyle, string> = {
   business: "professional business tone suitable for workplace emails, reports, and presentations",
   academic: "formal academic tone suitable for research papers, articles, and scholarly writing",
   casual: "informal and conversational, suitable for social media, messaging, and blogs",
+};
+const SHORTEN_LEVEL_LABELS: Record<WriteShortenLevel, string> = {
+  light: "lightly, preserving most details and wording",
+  moderate: "to a moderate length while preserving the key details",
+  aggressive: "substantially, keeping only the essential message and removing non-essential details",
 };
 
 function baseSystem(): string[] {
@@ -56,14 +61,17 @@ export function buildWritePrompt(req: WriteRequest): BuiltPrompt {
         user: req.text,
       };
     }
-    case "shorten":
+    case "shorten": {
+      const level = req.shortenLevel ?? "moderate";
       return {
         system: [
           ...baseSystem(),
-          "Make the text more concise without losing essential meaning or nuance.",
+          `Shorten the text ${SHORTEN_LEVEL_LABELS[level]}.`,
+          "Do not add new information or commentary.",
           "Remove redundancy and wordiness while keeping the core message intact.",
         ].join("\n"),
         user: req.text,
       };
+    }
   }
 }

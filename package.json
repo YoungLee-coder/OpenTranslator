@@ -1,6 +1,6 @@
 {
   "name": "opentranslator",
-  "version": "3.7.0",
+  "version": "3.8.0",
   "private": true,
   "type": "module",
   "description": "DeepL-style AI translator — Vite SPA + Hono Worker on Cloudflare",
@@ -20,7 +20,6 @@
     "db:init": "wrangler d1 execute opentranslator --local -c wrangler.dev.toml --file=src/db/schema.sql",
     "db:init:remote": "wrangler d1 execute opentranslator --remote -c wrangler.dev.toml --file=src/db/schema.sql"
   },
-  "packageManager": "pnpm@11.9.0",
   "engines": {
     "node": ">=22.13"
   },

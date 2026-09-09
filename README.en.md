@@ -70,7 +70,7 @@ Polish, style, formality, and conciseness tools with side-by-side input and outp
 
 ### Prerequisites
 
-- Node 22+ (pnpm 11 requires Node 22.13+), pnpm 11+
+- Node 22.13+, pnpm 12+
 - Cloudflare account (only for deployment; local dev does not require login)
 
 ### Local development

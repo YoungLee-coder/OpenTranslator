@@ -4,6 +4,7 @@ export type WriteMode = "improve" | "style" | "formality" | "shorten";
 export type WriteStyle = "simple" | "business" | "academic" | "casual";
 
 export type WriteFormality = "formal" | "informal";
+export type WriteShortenLevel = "light" | "moderate" | "aggressive";
 
 export interface WriteRequest {
   text: string;
@@ -12,6 +13,7 @@ export interface WriteRequest {
   style?: WriteStyle;
   /** Required when mode is "formality". */
   formality?: WriteFormality;
+  shortenLevel?: WriteShortenLevel;
   stream?: boolean;
   providerId?: string;
   model?: string;

@@ -7,6 +7,7 @@ import type {
   WriteFormality,
   WriteMode,
   WriteStyle,
+  WriteShortenLevel,
 } from "@opentranslator/shared-types";
 import { canUseFeature } from "@opentranslator/shared-types";
 import { ApiError, apiGet, streamWrite } from "@/lib/api-client";
@@ -55,11 +56,20 @@ export function WritePage() {
       ],
     [locale, t],
   );
+  const writeShortenLevels = useMemo(
+    () => [
+      { value: "light" as const, label: t("write.shortenLight") },
+      { value: "moderate" as const, label: t("write.shortenModerate") },
+      { value: "aggressive" as const, label: t("write.shortenAggressive") },
+    ],
+    [locale, t],
+  );
   const [sourceText, setSourceText] = useState("");
   const [revisedText, setRevisedText] = useState("");
   const [mode, setMode] = useState<WriteMode>("improve");
   const [style, setStyle] = useState<WriteStyle>("simple");
   const [formality, setFormality] = useState<WriteFormality>("formal");
+  const [shortenLevel, setShortenLevel] = useState<WriteShortenLevel>("moderate");
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -106,8 +116,8 @@ export function WritePage() {
   const canWrite =
     sourceText.trim().length > 0 && !streaming && !noModel;
 
-  const activeSub = mode === "style" || mode === "formality" ? mode : null;
-  const [heldSub, setHeldSub] = useState<"style" | "formality" | null>(null);
+  const activeSub = mode === "style" || mode === "formality" || mode === "shorten" ? mode : null;
+  const [heldSub, setHeldSub] = useState<"style" | "formality" | "shorten" | null>(null);
   const renderedSub = activeSub ?? heldSub;
   const subExpanded = activeSub !== null;
 
@@ -143,6 +153,7 @@ export function WritePage() {
           mode,
           style: mode === "style" ? style : undefined,
           formality: mode === "formality" ? formality : undefined,
+          shortenLevel: mode === "shorten" ? shortenLevel : undefined,
           stream: true,
           providerId,
           model,
@@ -254,6 +265,15 @@ export function WritePage() {
                       options={writeFormalities}
                       disabled={streaming}
                       label={t("write.toneLabel")}
+                    />
+                  )}
+                  {renderedSub === "shorten" && (
+                    <SubSegment
+                      value={shortenLevel}
+                      onChange={setShortenLevel}
+                      options={writeShortenLevels}
+                      disabled={streaming}
+                      label={t("write.shortenLevelLabel")}
                     />
                   )}
                 </div>

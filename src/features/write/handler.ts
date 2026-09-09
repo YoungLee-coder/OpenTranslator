@@ -53,6 +53,13 @@ function validateWriteRequest(req: WriteRequest): string | null {
   if (req.mode === "formality" && !req.formality) {
     return "formality is required for formality mode";
   }
+  if (
+    req.mode === "shorten" &&
+    req.shortenLevel !== undefined &&
+    !["light", "moderate", "aggressive"].includes(req.shortenLevel)
+  ) {
+    return "shortenLevel must be light, moderate, or aggressive";
+  }
   return null;
 }
 
