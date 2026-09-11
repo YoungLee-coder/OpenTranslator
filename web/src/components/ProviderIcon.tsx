@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 import OpenAI from "@lobehub/icons/es/OpenAI/components/Mono";
 import ClaudeColor from "@lobehub/icons/es/Claude/components/Color";
 import GeminiColor from "@lobehub/icons/es/Gemini/components/Color";
+import DeepSeekColor from "@lobehub/icons/es/DeepSeek/components/Color";
 import AiHubMixColor from "@lobehub/icons/es/AiHubMix/components/Color";
 import OpenRouterMono from "@lobehub/icons/es/OpenRouter/components/Mono";
 import CloudflareColor from "@lobehub/icons/es/Cloudflare/components/Color";
@@ -25,6 +26,7 @@ const PROVIDER_COLOR_ICONS: Record<
   openai: OpenAI,
   claude: ClaudeColor,
   gemini: GeminiColor,
+  deepseek: DeepSeekColor,
   aihubmix: AiHubMixColor,
   openrouter: OpenRouterMono,
   cloudflare: CloudflareColor,

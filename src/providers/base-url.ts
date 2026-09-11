@@ -22,6 +22,7 @@ export function normalizeStoredProviderBaseUrl(
     case "openai":
     case "aihubmix":
     case "openrouter":
+    case "deepseek":
       return normalizeOpenAIBaseURL(baseUrl);
     case "claude":
       return normalizeAnthropicBaseURL(baseUrl);

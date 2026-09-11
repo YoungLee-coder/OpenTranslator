@@ -5,9 +5,12 @@ import type { ProviderContext, ProviderType } from "@opentranslator/shared-types
  *
  * - openai / aihubmix：统一传 `reasoning_effort: "none"`
  *   （aihubmix 统一推理规范推荐值）
+ * - deepseek：OpenAI 格式用 `thinking.type: "disabled"` 关闭思考
+ *   （`reasoning_effort` 只接受 low/high/max，不认 none）
  * - cloudflare 等：再附带常见 hybrid thinking 开关，兼容部分 Workers AI 模型
  *
  * @see https://docs.aihubmix.com/cn/api/unified-inference
+ * @see https://api-docs.deepseek.com/guides/thinking_mode
  */
 export function openAICompatDisableReasoning(
   ctx: ProviderContext,
@@ -16,6 +19,9 @@ export function openAICompatDisableReasoning(
   if (!ctx.disableModelReasoning) return {};
   if (provider === "openai" || provider === "aihubmix") {
     return { reasoning_effort: "none" };
+  }
+  if (provider === "deepseek") {
+    return { thinking: { type: "disabled" } };
   }
   return {
     reasoning_effort: "none",

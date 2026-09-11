@@ -112,6 +112,7 @@ const PROVIDER_LABELS: Record<ProviderType, string> = {
   openai: "OpenAI",
   claude: "Claude",
   gemini: "Gemini",
+  deepseek: "DeepSeek",
   aihubmix: "AIHubMix",
   openrouter: "OpenRouter",
   cloudflare: "Cloudflare",

@@ -20,7 +20,7 @@
 
 ## ✨ 特性
 
-- **多供应商，随时切换** — OpenAI、Claude、Gemini、DeepSeek、OpenRouter、AIHubMix、Azure OpenAI、自定义 OpenAI 兼容端点，八种 adapter 内置；Dashboard 填 Key 即用，无需改代码。
+- **多供应商，随时切换** — OpenAI、Claude、Gemini、DeepSeek、AIHubMix、OpenRouter、Cloudflare、DeepL、自定义（OpenAI / Claude / Gemini 多格式），九种 adapter 内置；Dashboard 填 Key 即用，无需改代码。
 - **流式翻译** — 译文经 SSE 逐字渲染，跟读 DeepL 的即时手感。
 - **插件化扩展** — 供应商走注册表，功能模块走 DB 驱动开关；新增厂商或功能只需加一个 adapter + 一行注册。
 - **密钥加密存储** — 供应商 API Key 用 `ENCRYPTION_KEY` 加密后落 D1，明文绝不入库。

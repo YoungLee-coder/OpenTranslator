@@ -346,7 +346,7 @@ const zhCN: Content = {
     },
     {
       q: "支持哪些模型与厂商？",
-      a: "内置 OpenAI、Claude、Gemini、AIHubMix、OpenRouter、Cloudflare、DeepL，以及自定义（多格式）。OpenAI 类型可通过 Base URL 对接兼容端点；同一厂商若同时提供多种协议，用自定义类型添加多条 API 地址。新厂商可按注册表加 adapter。",
+      a: "内置 OpenAI、Claude、Gemini、DeepSeek、AIHubMix、OpenRouter、Cloudflare、DeepL，以及自定义（多格式）。OpenAI 类型可通过 Base URL 对接兼容端点；同一厂商若同时提供多种协议，用自定义类型添加多条 API 地址。新厂商可按注册表加 adapter。",
     },
   ],
   footer: {
@@ -665,7 +665,7 @@ const en: Content = {
     },
     {
       q: "Which models and vendors are supported?",
-      a: "Built-in: OpenAI, Claude, Gemini, AIHubMix, OpenRouter, Cloudflare, DeepL, and Custom (multi-format). Use the OpenAI type with a custom Base URL for compatible endpoints; if a vendor exposes several API formats, use the Custom type to add multiple addresses. New vendors can be added via the registry.",
+      a: "Built-in: OpenAI, Claude, Gemini, DeepSeek, AIHubMix, OpenRouter, Cloudflare, DeepL, and Custom (multi-format). Use the OpenAI type with a custom Base URL for compatible endpoints; if a vendor exposes several API formats, use the Custom type to add multiple addresses. New vendors can be added via the registry.",
     },
   ],
   footer: {

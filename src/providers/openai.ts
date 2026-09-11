@@ -14,7 +14,7 @@ import { streamFromDeltas } from "./sse";
 /**
  * OpenAI-compatible chat completions via the official `openai` SDK.
  * `baseUrl` is the SDK root (e.g. https://api.openai.com/v1); the SDK appends
- * /chat/completions. aihubmix / Cloudflare share the same wire format.
+ * /chat/completions. aihubmix / deepseek / Cloudflare share the same wire format.
  */
 
 function createClient(
@@ -132,4 +132,9 @@ export const aihubmixProvider = makeOpenAICompat(
   "https://aihubmix.com/v1",
   "gpt-4o-mini",
   { "APP-Code": "JFRG5263" },
+);
+export const deepseekProvider = makeOpenAICompat(
+  "deepseek",
+  "https://api.deepseek.com",
+  "deepseek-flash",
 );

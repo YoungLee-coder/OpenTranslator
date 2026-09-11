@@ -42,6 +42,10 @@ const PROVIDER_DEFAULTS: Partial<
     baseUrl: "https://generativelanguage.googleapis.com",
     model: "gemini-2.0-flash",
   },
+  deepseek: {
+    baseUrl: "https://api.deepseek.com",
+    model: "deepseek-flash",
+  },
   cloudflare: {
     baseUrl: "",
     model: "@cf/google/gemma-4-26b-a4b-it",
@@ -295,6 +299,12 @@ export async function probeProviderLatency(
       if (!baseUrl) return { ok: false, latencyMs: 0, error: "baseUrl is required" };
       if (!model) return { ok: false, latencyMs: 0, error: "model is required" };
       return probeGemini(baseUrl, apiKey, model);
+    }
+    case "deepseek": {
+      const baseUrl = resolveBaseUrl(type, ctx);
+      if (!baseUrl) return { ok: false, latencyMs: 0, error: "baseUrl is required" };
+      if (!model) return { ok: false, latencyMs: 0, error: "model is required" };
+      return probeOpenAICompat(baseUrl, apiKey, model);
     }
     case "custom": {
       const endpoints = parseProviderEndpoints(ctx.configJson?.endpoints);

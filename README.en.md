@@ -20,7 +20,7 @@
 
 ## ✨ Features
 
-- **Multi-provider, switch anytime** — Eight built-in adapters: OpenAI, Claude, Gemini, DeepSeek, OpenRouter, AIHubMix, Azure OpenAI, and custom OpenAI-compatible endpoints. Add API keys in the Dashboard and go — no code changes required.
+- **Multi-provider, switch anytime** — Nine built-in adapters: OpenAI, Claude, Gemini, DeepSeek, AIHubMix, OpenRouter, Cloudflare, DeepL, and Custom (OpenAI / Claude / Gemini multi-format). Add API keys in the Dashboard and go — no code changes required.
 - **Streaming translation** — Translations render token-by-token over SSE, matching DeepL’s instant feel.
 - **Plugin-style extensibility** — Providers use a registry; feature modules are toggled via the database. Add a new vendor or feature with one adapter and one registration line.
 - **Encrypted key storage** — Provider API keys are encrypted with `ENCRYPTION_KEY` before being stored in D1; plaintext never hits the database.

@@ -4,6 +4,7 @@ export type ProviderType =
   | "openai"
   | "claude"
   | "gemini"
+  | "deepseek"
   | "aihubmix"
   | "openrouter"
   | "cloudflare"

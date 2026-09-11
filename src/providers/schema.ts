@@ -25,6 +25,15 @@ export const providerSchemas: Record<ProviderType, ProviderField[]> = {
   gemini: [
     { key: "models", label: "模型", type: "models", placeholder: "gemini-2.0-flash\ngemini-2.5-pro" },
   ],
+  deepseek: [
+    {
+      key: "baseUrl",
+      label: "Base URL",
+      type: "text",
+      preset: "https://api.deepseek.com",
+    },
+    { key: "models", label: "模型", type: "models", placeholder: "deepseek-flash\ndeepseek-v4-pro" },
+  ],
   aihubmix: [
     {
       key: "baseUrl",
