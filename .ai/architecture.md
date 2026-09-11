@@ -62,6 +62,7 @@ wrangler.toml                 # Worker 配置（[assets] 静态资源绑定）
   9. 产品文案按需（landing FAQ 等厂商列表）
   `custom` 是多格式网关（不是新的上游协议）：一张供应商记录共用一把 API Key，`configJson.endpoints` 挂多条 OpenAI / Claude / Gemini 地址；adapter（`src/providers/custom.ts`）按所选模型分发给已有 inner adapter。Dashboard 用 `ProviderFieldType: "endpoints"` 渲染可增删的地址列表。
   验证：`pnpm typecheck`（改了 shared-types）
+- **OpenRouter 供应商锁定**：模型名（Dashboard 的 models 行 / 公开模型白名单 / 站点默认模型）支持 `模型名:供应商1,供应商2` 后缀，只在该上游列表内按顺序路由。解析器是 `shared-types/openrouter.ts` 的 `parseOpenRouterModelRef`（`:free` / `:nitro` 等变体后缀白名单见 `OPENROUTER_MODEL_VARIANTS`；模型自带变体时写 `模型名:free:供应商1,供应商2`）；`src/providers/openrouter.ts` 的 `resolveOpenRouterRoute` 把它转成 `provider.order` + `allow_fallbacks: false`。**adapter 与 `latency-probe.ts` 的 openrouter 分支必须共用同一解析器**——否则带后缀的整串会被当成模型 ID 发给上游。模型串在上层（DB、白名单、缓存 key、翻译/写作请求）按不透明字符串原样存取，不要在别处再切分冒号。
 - **新增功能模块**：`web/src/features/` 加组件并在 `features/registry.ts` 注册，预加载在 `features/prefetch.ts` 登记 → `src/features/` 加后端 manifest/handler → Dashboard 模块管理里 DB 开关启用。`FeatureManifest.requiredAccess` 声明谁能看到该模块（`admin` 或具体权限；缺省 `settings`）。新 admin API 还要在 `adminPermissionMiddleware` 的前缀表登记，否则 403。
 - **新增 AI expert**：`src/experts/plugins/*.yml` 加定义 → `pnpm bundle-experts` 重生成 `bundled.ts`。解析逻辑在 `src/experts/resolve.ts`、`registry.ts`。
 

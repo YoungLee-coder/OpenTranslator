@@ -2,6 +2,7 @@ import type {
   ProviderField,
   ProviderType,
 } from "@opentranslator/shared-types";
+import { parseOpenRouterModelRef } from "@opentranslator/shared-types";
 
 // Drives the dynamic provider form in the Dashboard.
 // Add a vendor here + an adapter file = new provider, no core logic changes.
@@ -60,7 +61,13 @@ export const providerSchemas: Record<ProviderType, ProviderField[]> = {
       type: "text",
       preset: "https://openrouter.ai/api/v1",
     },
-    { key: "models", label: "模型", type: "models", placeholder: "openai/gpt-4o-mini\nanthropic/claude-sonnet-4\ngoogle/gemini-2.5-flash" },
+    {
+      key: "models",
+      label: "模型",
+      type: "models",
+      placeholder:
+        "openai/gpt-4o-mini\nanthropic/claude-sonnet-4\ngoogle/gemini-2.5-flash\nanthropic/claude-sonnet-4.5:anthropic,google",
+    },
   ],
   cloudflare: [
     { key: "accountId", label: "Account ID", type: "text", required: true, placeholder: "Cloudflare 账户 ID（Dashboard 右侧栏可见）" },
@@ -110,17 +117,26 @@ export const providerSchemas: Record<ProviderType, ProviderField[]> = {
   ],
 };
 
-/** select 型 models 字段的 value → 展示 label；无映射时回落到原始 model 值。 */
+/**
+ * select 型 models 字段的 value → 展示 label；无映射时回落到原始 model 值。
+ * OpenRouter 带 `:供应商1,供应商2` 锁定时，在标签里点明锁定的上游供应商。
+ */
 export function resolveModelLabel(type: ProviderType, model: string): string {
   const modelsField = providerSchemas[type]?.find((f) => f.key === "models");
-  if (modelsField?.type !== "select" || !modelsField.options) {
+  if (modelsField?.type === "select" && modelsField.options) {
+    for (const opt of modelsField.options) {
+      if (typeof opt === "string") {
+        if (opt === model) return opt;
+      } else if (opt.value === model) {
+        return opt.label ?? opt.value;
+      }
+    }
     return model;
   }
-  for (const opt of modelsField.options) {
-    if (typeof opt === "string") {
-      if (opt === model) return opt;
-    } else if (opt.value === model) {
-      return opt.label ?? opt.value;
+  if (type === "openrouter") {
+    const ref = parseOpenRouterModelRef(model);
+    if (ref.providers.length > 0) {
+      return `${ref.model}（锁定：${ref.providers.join("、")}）`;
     }
   }
   return model;

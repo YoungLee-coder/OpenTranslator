@@ -217,6 +217,21 @@ Core routes and translation logic stay unchanged.
 1. Add a component under `web/src/features/` and register it in `features/registry.ts`.
 2. Enable it in Dashboard → Modules (DB-driven toggle); navigation and pages appear automatically.
 
+### Lock OpenRouter upstream providers
+
+For an OpenRouter provider, each model goes on its own line; append `:provider1,provider2` to
+route only to those upstream providers (tried in the written order, no fallback outside the list):
+
+```
+anthropic/claude-sonnet-4.5:anthropic,google
+deepseek/deepseek-r1:deepinfra/turbo
+meta-llama/llama-3.2-3b-instruct:free        # :free is a model variant, not a lock
+```
+
+Provider names are OpenRouter provider slugs (copy them from a model page). With a model variant,
+write `model:free:provider1,provider2`. This maps to OpenRouter's `provider.order` +
+`allow_fallbacks: false`; see [Provider Routing](https://openrouter.ai/docs/guides/routing/provider-selection).
+
 ---
 
 ## 🗺️ Roadmap

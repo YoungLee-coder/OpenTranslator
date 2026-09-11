@@ -240,6 +240,8 @@ export const en: Messages = {
   "providers.apiKeyOptional": " (leave blank to keep unchanged)",
   "providers.locked": "Locked",
   "providers.modelsHint": "One per line; first is default",
+  "providers.openrouterLockHint":
+    "On OpenRouter, append :provider1,provider2 to lock upstream providers (tried in order), e.g. anthropic/claude-sonnet-4.5:anthropic,google",
   "providers.label.custom": "Custom",
   "providers.customHint":
     "One API key can have several addresses for OpenAI / Claude / Gemini formats. Translation routes each model to its address.",

@@ -6,6 +6,7 @@ import type {
   TranslateResponse,
   TranslationProvider,
 } from "@opentranslator/shared-types";
+import { parseOpenRouterModelRef } from "@opentranslator/shared-types";
 import { normalizeOpenAIBaseURL } from "./base-url";
 import { buildPrompt } from "./prompt";
 import { isReasoningDisableRejected, openrouterDisableReasoning } from "./reasoning";
@@ -18,7 +19,11 @@ import { streamFromDeltas } from "./sse";
  * full `OpenRouter` facade so unused Speakeasy resources stay out of the
  * Worker bundle.
  *
+ * 模型名（`defaultModel`）支持 `模型名:供应商1,供应商2` 后缀锁定上游供应商，
+ * 由 `resolveOpenRouterRoute` 转为 `provider.order` + `allow_fallbacks: false`。
+ *
  * @see https://openrouter.ai/docs/quickstart#using-the-openrouter-api
+ * @see https://openrouter.ai/docs/guides/routing/provider-selection
  */
 
 const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
@@ -41,6 +46,26 @@ function modelOf(ctx: ProviderContext): string {
   return ctx.defaultModel?.trim() || DEFAULT_MODEL;
 }
 
+/**
+ * 模型名支持 `模型名:供应商1,供应商2` 锁定上游供应商（见 shared-types/openrouter.ts）。
+ * 解除锁定后转成 OpenRouter 请求字段：
+ * `provider.order` 按书写顺序优先，`provider.allow_fallbacks: false`
+ * 保证不会落到列表之外的供应商。
+ *
+ * @see https://openrouter.ai/docs/guides/routing/provider-selection
+ */
+export function resolveOpenRouterRoute(rawModel: string): {
+  model: string;
+  provider?: { order: string[]; allowFallbacks: false };
+} {
+  const ref = parseOpenRouterModelRef(rawModel);
+  if (ref.providers.length === 0) return { model: ref.model };
+  return {
+    model: ref.model,
+    provider: { order: ref.providers, allowFallbacks: false },
+  };
+}
+
 function chatRequest(
   model: string,
   system: string,
@@ -48,13 +73,15 @@ function chatRequest(
   stream: boolean,
   ctx: ProviderContext,
 ) {
+  const route = resolveOpenRouterRoute(model);
   return {
-    model,
+    model: route.model,
     messages: [
       { role: "system" as const, content: system },
       { role: "user" as const, content: user },
     ],
     stream,
+    ...(route.provider ? { provider: route.provider } : {}),
     ...openrouterDisableReasoning(ctx),
   };
 }

@@ -11,7 +11,7 @@ import {
 } from "./base-url";
 import { cloudflareBaseURL } from "./cloudflare";
 import { deeplProvider } from "./deepl";
-import { OPENROUTER_APP_TITLE, OPENROUTER_HTTP_REFERER } from "./openrouter";
+import { OPENROUTER_APP_TITLE, OPENROUTER_HTTP_REFERER, resolveOpenRouterRoute } from "./openrouter";
 import { safeText } from "./sse";
 
 const PROBE_TIMEOUT_MS = 15_000;
@@ -125,6 +125,7 @@ async function probeOpenAICompat(
   apiKey: string,
   model: string,
   extraHeaders?: Record<string, string>,
+  extraBody?: Record<string, unknown>,
 ): Promise<LatencyProbeResult> {
   return timedProbe(openAIChatCompletionsURL(baseURL), {
     method: "POST",
@@ -138,6 +139,7 @@ async function probeOpenAICompat(
       max_tokens: PROBE_MAX_TOKENS,
       stream: false,
       messages: [{ role: "user", content: PROBE_USER }],
+      ...extraBody,
     }),
   }, async (res) => {
     const data = (await res.json()) as {
@@ -286,7 +288,10 @@ export async function probeProviderLatency(
       const baseUrl = resolveBaseUrl(type, ctx);
       if (!baseUrl) return { ok: false, latencyMs: 0, error: "baseUrl is required" };
       if (!model) return { ok: false, latencyMs: 0, error: "model is required" };
-      return probeOpenAICompat(baseUrl, apiKey, model, OPENROUTER_HEADERS);
+      // 模型名可能带 `:供应商1,供应商2` 锁定后缀，探活请求需与 adapter 同样处理，
+      // 否则整串会被当成模型 ID 发给 OpenRouter。
+      const route = resolveOpenRouterRoute(model);
+      return probeOpenAICompat(baseUrl, apiKey, route.model, OPENROUTER_HEADERS, route.provider);
     }
     case "claude": {
       const baseUrl = resolveBaseUrl(type, ctx);

@@ -1,6 +1,7 @@
 export * from "./translate";
 export * from "./write";
 export * from "./provider";
+export * from "./openrouter";
 export * from "./settings";
 export * from "./feature";
 export * from "./auth";

@@ -236,6 +236,8 @@ export const zhCN = {
   "providers.apiKeyOptional": "（留空则不修改）",
   "providers.locked": "已锁定",
   "providers.modelsHint": "一行一个，首项为默认",
+  "providers.openrouterLockHint":
+    "OpenRouter 可用「模型名:供应商1,供应商2」锁定上游供应商（按顺序优先），如 anthropic/claude-sonnet-4.5:anthropic,google",
   "providers.label.custom": "自定义",
   "providers.customHint": "同一把 API Key 可添加多条地址，分别对接 OpenAI / Claude / Gemini 协议。翻译时按模型自动走对应地址。",
   "providers.addEndpoint": "添加 API 地址",

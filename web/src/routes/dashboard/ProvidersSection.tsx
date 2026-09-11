@@ -1002,21 +1002,28 @@ export function ProvidersSection() {
                   )}
                 </Label>
                 {f.type === "models" ? (
-                  <Textarea
-                    id={`field-${f.key}`}
-                    value={f.preset ?? form.fields[f.key] ?? ""}
-                    placeholder={f.placeholder}
-                    required={f.required}
-                    disabled={!!f.preset}
-                    rows={4}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        fields: { ...form.fields, [f.key]: e.target.value },
-                      })
-                    }
-                    className="font-mono text-xs"
-                  />
+                  <>
+                    <Textarea
+                      id={`field-${f.key}`}
+                      value={f.preset ?? form.fields[f.key] ?? ""}
+                      placeholder={f.placeholder}
+                      required={f.required}
+                      disabled={!!f.preset}
+                      rows={4}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          fields: { ...form.fields, [f.key]: e.target.value },
+                        })
+                      }
+                      className="font-mono text-xs"
+                    />
+                    {form.type === "openrouter" && (
+                      <p className="text-xs text-muted-foreground">
+                        {t("providers.openrouterLockHint")}
+                      </p>
+                    )}
+                  </>
                 ) : f.type === "select" ? (
                   <Select
                     value={f.preset ?? form.fields[f.key] ?? f.defaultValue ?? ""}

@@ -217,6 +217,21 @@ docs/images/             # README 截图
 1. 在 `web/src/features/` 加一个组件，并在 `features/registry.ts` 注册。
 2. 在 Dashboard → 模块管理里启用（DB 驱动开关），导航与页面自动出现。
 
+### 锁定 OpenRouter 的上游供应商
+
+OpenRouter 供应商的「模型」一行一个；在模型名后加 `:供应商1,供应商2`，即可只走指定的
+上游供应商（按书写顺序优先，不回落列表外的供应商）：
+
+```
+anthropic/claude-sonnet-4.5:anthropic,google
+deepseek/deepseek-r1:deepinfra/turbo
+meta-llama/llama-3.2-3b-instruct:free        # :free 是模型变体，不是锁定
+```
+
+供应商名用 OpenRouter 的 provider slug（模型页可复制）。模型自带变体后缀时写成
+`模型名:free:供应商1,供应商2`。对应 OpenRouter 的 `provider.order` +
+`allow_fallbacks: false`，详见 [Provider Routing](https://openrouter.ai/docs/guides/routing/provider-selection)。
+
 ---
 
 ## 🗺️ 路线图
