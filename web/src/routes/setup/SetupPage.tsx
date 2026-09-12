@@ -169,7 +169,11 @@ export function SetupPage() {
               {t("setup.title")}
             </h1>
             <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-              {fullyOperational ? t("setup.allReady") : t("setup.description")}
+              {fullyOperational
+                ? t("setup.allReady")
+                : data && !bindingsOk
+                  ? t("setup.bindingsHint")
+                  : t("setup.description")}
             </p>
           </div>
 

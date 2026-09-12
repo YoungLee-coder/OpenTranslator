@@ -12,6 +12,17 @@ run_worker_first = true
 [placement]
 region = "gcp:asia-east2"
 
+# D1 / KV：写入资源 ID 后，Git 部署会自动绑定，不必每次在面板里重配。
+# 部署到其他 Cloudflare 账号时，请先创建自己的 D1/KV，再把下面的 ID 换成你的。
+[[d1_databases]]
+binding = "DB"
+database_name = "opentranslator"
+database_id = "2171e79c-4fe0-424e-b4d5-2347939f9718"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "9a2e9c7091054b79a758a3e99bfa2b4c"
+
 [[durable_objects.bindings]]
 name = "RATE_LIMITER"
 class_name = "RateLimiter"

@@ -98,6 +98,8 @@ export const zhCN = {
   "setup.title": "初始化 OpenTranslator",
   "setup.description":
     "部署后首次打开本页。绑定就绪后，在此建表并设定管理员账号，完成后进入控制台。",
+  "setup.bindingsHint":
+    "如果你是直接部署后打开本页，多半还没有自己的 D1 数据库和 KV 命名空间。请先在 Cloudflare 创建，再到本 Worker 面板里绑定。",
   "setup.stepBindingsTitle": "存储绑定",
   "setup.stepDbTitle": "数据库升级",
   "setup.stepAdminTitle": "管理员账号",
@@ -106,9 +108,9 @@ export const zhCN = {
   "setup.notConnected": "未连接",
   "setup.connected": "已连接",
   "setup.step1":
-    "Cloudflare Dashboard → Workers & Pages → 选择本 Worker → Settings → Bindings",
-  "setup.step2": "添加 D1 数据库，binding 名填 DB",
-  "setup.step3": "添加 KV 命名空间，binding 名填 KV",
+    "在 Cloudflare Dashboard 创建自己的 D1 数据库和 KV 命名空间（直接部署不会自动生成）",
+  "setup.step2": "打开本 Worker → Settings → Bindings",
+  "setup.step3": "添加 D1（binding 名填 DB）和 KV（binding 名填 KV），保存后重新检测",
   "setup.initHint":
     "首次建表需要 Worker 的 JWT_SECRET（Settings → Variables and Secrets）。密钥只用于本次请求，不会写入地址栏。",
   "setup.migrateHint":

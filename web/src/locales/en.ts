@@ -100,6 +100,8 @@ export const en: Messages = {
   "setup.title": "Initialize OpenTranslator",
   "setup.description":
     "This page opens on first visit after deploy. Once bindings are ready, create tables and the admin account here, then continue to the dashboard.",
+  "setup.bindingsHint":
+    "If you deployed and opened this page right away, you probably have not created your own D1 database and KV namespace yet. Create them first, then bind them to this Worker in the Cloudflare dashboard.",
   "setup.stepBindingsTitle": "Storage bindings",
   "setup.stepDbTitle": "Database update",
   "setup.stepAdminTitle": "Admin account",
@@ -108,9 +110,10 @@ export const en: Messages = {
   "setup.notConnected": "Not connected",
   "setup.connected": "Connected",
   "setup.step1":
-    "Cloudflare Dashboard → Workers & Pages → select this Worker → Settings → Bindings",
-  "setup.step2": "Add a D1 database with binding name DB",
-  "setup.step3": "Add a KV namespace with binding name KV",
+    "Create your own D1 database and KV namespace in the Cloudflare Dashboard (a deploy does not create them for you)",
+  "setup.step2": "Open this Worker → Settings → Bindings",
+  "setup.step3":
+    "Add D1 with binding name DB and KV with binding name KV, save, then check again",
   "setup.initHint":
     "First-time table creation needs the Worker JWT_SECRET (Settings → Variables and Secrets). It is sent only with this request and never written to the address bar.",
   "setup.migrateHint":

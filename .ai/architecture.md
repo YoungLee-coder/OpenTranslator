@@ -14,7 +14,7 @@
 
 - **后端入口** `src/index.ts` — Hono app。挂 `logger` + `cors`；`/api/ping` 健康检查；`POST /api/init`（首次建表需 `X-Init-Secret` = JWT_SECRET；仅待迁移时可无密钥）幂等建表/升级；`/api/translate`、`/api/write`、`/api/auth` 公开；`/api/admin/*` 挂在 `authMiddleware`（JWT + D1 实时用户）与 `adminPermissionMiddleware`（路径权限，未登记前缀 403）之后；`/api/admin/backup` 与 `/api/admin/db` 仅管理员。catch-all 把非 `/api` 请求交给 `ASSETS` 绑定服务 SPA。`import "./providers"` 以副作用在启动时注册全部 adapter。导出 `RateLimiter` DO。
 - **前端入口** `web/src/main.tsx` → `web/src/App.tsx`（React Router）。未就绪（缺绑定 / 未建表 / 待迁移 / 无管理员）时强制进入 `/setup` 初始化向导。
-- **Worker 配置** `wrangler.toml` — `[assets]` 指向 `./dist`，`run_worker_first = true`；D1/KV 绑定在 Dashboard 网页配（toml 里注释掉）。
+- **Worker 配置** `wrangler.toml` — `[assets]` 指向 `./dist`，`run_worker_first = true`；D1/KV 的 `database_id` / `id` 写在 toml 里，Git 部署会自动绑定。部署到其他 Cloudflare 账号时换成自己的资源 ID。
 
 ## 仓库地图
 
