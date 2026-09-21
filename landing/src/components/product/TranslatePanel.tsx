@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useContent } from "@/lib/i18n";
-import { AppChrome } from "./AppChrome";
+import { MockSelect, type MockOption } from "./mock-ui";
 
 function SwapIcon() {
   return (
@@ -13,14 +13,15 @@ function SwapIcon() {
   );
 }
 
-function cycleNext(list: readonly string[], current: string): string {
-  const i = list.indexOf(current);
-  return list[(i + 1) % list.length]!;
+function toOptions(list: readonly string[]): MockOption[] {
+  return list.map((item) => ({ value: item, label: item }));
 }
 
-/** Interactive translator workbench — mirrors web TranslatorPage card. */
-export function TranslateWorkbench() {
-  const data = useContent().product.translate;
+/** Translator body — mirrors web TranslatorPage card. Shell lives in AppChrome. */
+export function TranslatePanel() {
+  const content = useContent();
+  const data = content.product.translate;
+  const ui = content.product.ui;
   const [sourceLang, setSourceLang] = useState(data.sourceLang);
   const [targetLang, setTargetLang] = useState(data.targetLang);
   const [sourceText, setSourceText] = useState(data.sourceText);
@@ -31,8 +32,16 @@ export function TranslateWorkbench() {
   const [copied, setCopied] = useState(false);
 
   function swap() {
-    setSourceLang(targetLang);
-    setTargetLang(sourceLang);
+    const nextSource = targetLang;
+    // The source list alone carries "auto detect"; never leave the target
+    // select on a value it has no option for.
+    let nextTarget = sourceLang;
+    if (nextTarget === data.sourceLang || nextTarget === nextSource) {
+      nextTarget =
+        data.targetLanguages.find((lang) => lang !== nextSource) ?? nextTarget;
+    }
+    setSourceLang(nextSource);
+    setTargetLang(nextTarget);
     setSourceText(targetText);
     setTargetText(sourceText);
     setStreaming(false);
@@ -50,41 +59,51 @@ export function TranslateWorkbench() {
   }
 
   return (
-    <AppChrome active="translate" title={data.pageTitle}>
+    <>
       <div className="mock-card">
         <div className="mock-card-accent" />
         <div className="mock-toolbar">
           <div className="mock-toolbar-left">
-            <button type="button" className="mock-select" disabled>
-              {sourceLang}
-            </button>
+            <MockSelect
+              value={sourceLang}
+              options={toOptions(data.languages)}
+              onChange={(next) => {
+                setSourceLang(next);
+                setStreaming(false);
+              }}
+              label={ui.sourceLangLabel}
+            />
             <button
               type="button"
               className="mock-select mock-select-icon"
-              aria-label="Swap languages"
+              aria-label={content.product.swapLabel}
               onClick={swap}
             >
               <SwapIcon />
             </button>
-            <button type="button" className="mock-select" disabled>
-              {targetLang}
-            </button>
+            <MockSelect
+              value={targetLang}
+              options={toOptions(data.targetLanguages)}
+              onChange={(next) => {
+                setTargetLang(next);
+                setStreaming(false);
+              }}
+              label={ui.targetLangLabel}
+            />
           </div>
           <div className="mock-toolbar-right">
-            <button
-              type="button"
-              className="mock-select"
-              onClick={() => setExpert(cycleNext(data.experts, expert))}
-            >
-              {expert}
-            </button>
-            <button
-              type="button"
-              className="mock-select"
-              onClick={() => setModel(cycleNext(data.models, model))}
-            >
-              {model}
-            </button>
+            <MockSelect
+              value={expert}
+              options={toOptions(data.experts)}
+              onChange={setExpert}
+              label={ui.expertLabel}
+            />
+            <MockSelect
+              value={model}
+              options={toOptions(data.models)}
+              onChange={setModel}
+              label={ui.modelLabel}
+            />
             <button type="button" className="mock-btn" onClick={runTranslate}>
               {data.action}
             </button>
@@ -113,6 +132,6 @@ export function TranslateWorkbench() {
           </div>
         </div>
       </div>
-    </AppChrome>
+    </>
   );
 }

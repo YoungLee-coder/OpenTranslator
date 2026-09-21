@@ -1,19 +1,15 @@
 import { useState } from "react";
 import { useContent } from "@/lib/i18n";
-import { AppChrome } from "./AppChrome";
+import { MockSelect, type MockOption } from "./mock-ui";
 
-function cycleNext(list: readonly string[], current: string): string {
-  const i = Math.max(0, list.indexOf(current));
-  return list[(i + 1) % list.length]!;
+function toOptions(list: readonly string[]): MockOption[] {
+  return list.map((item) => ({ value: item, label: item }));
 }
 
-/** Interactive write workbench — mirrors web WritePage card. */
-export function WriteWorkbench() {
-  const data = useContent().product.write;
-  const modelOptions =
-    data.model === "Default"
-      ? (["Default", "GPT-4.1 mini", "Claude Sonnet"] as const)
-      : (["默认", "GPT-4.1 mini", "Claude Sonnet"] as const);
+/** Write body — mirrors web WritePage card. Shell lives in AppChrome. */
+export function WritePanel() {
+  const { product } = useContent();
+  const data = product.write;
 
   const initialMode =
     data.modes.find((m) => m.active)?.id ?? data.modes[0]?.id ?? "polish";
@@ -55,11 +51,11 @@ export function WriteWorkbench() {
   }
 
   return (
-    <AppChrome active="write" title={data.pageTitle}>
+    <>
       <div className="mock-card">
         <div className="mock-card-accent" />
         <div className="mock-toolbar">
-          <div className="mock-toolbar-left" role="tablist">
+          <div className="mock-toolbar-left" role="tablist" aria-label={data.pageTitle}>
             {data.modes.map((mode) => (
               <button
                 key={mode.id}
@@ -74,13 +70,12 @@ export function WriteWorkbench() {
             ))}
           </div>
           <div className="mock-toolbar-right">
-            <button
-              type="button"
-              className="mock-select"
-              onClick={() => setModel(cycleNext(modelOptions, model))}
-            >
-              {model}
-            </button>
+            <MockSelect
+              value={model}
+              options={toOptions(data.models)}
+              onChange={setModel}
+              label={product.ui.modelLabel}
+            />
             <button type="button" className="mock-btn" onClick={runImprove}>
               {data.action}
             </button>
@@ -119,6 +114,6 @@ export function WriteWorkbench() {
           </div>
         </div>
       </div>
-    </AppChrome>
+    </>
   );
 }

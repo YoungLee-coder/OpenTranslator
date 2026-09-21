@@ -6,6 +6,19 @@
   z-index: 1;
 }
 
+/* One mounted view per surface; hidden ones keep their state.
+   The inverse width/height + scale renders the app at `--mock-zoom` while
+   still filling the frame exactly. Keyframes must not touch `transform`. */
+.demo-view {
+  width: calc(100% / var(--mock-zoom, 1));
+  height: calc(100% / var(--mock-zoom, 1));
+  transform: scale(var(--mock-zoom, 1));
+  transform-origin: top left;
+}
+.demo-view:not([hidden]) {
+  animation: mock-view-in 220ms ease both;
+}
+
 .mock-app {
   --background: oklch(0.985 0.003 80);
   --foreground: oklch(0.22 0.012 260);
@@ -17,6 +30,8 @@
   --rule: oklch(0.86 0.004 80);
   --border: oklch(0.9 0.004 80);
   --destructive: oklch(0.5 0.18 25);
+  /* Keep the global focus ring on-brand inside the mock surface. */
+  --focus-ring: var(--primary);
 
   --glass-bg: color-mix(in oklch, var(--card) 18%, transparent);
   --glass-bg-fallback: color-mix(in oklch, var(--card) 95%, transparent);
@@ -74,6 +89,8 @@
   align-items: center;
   gap: 6px;
   height: 40px;
+  max-width: 100%;
+  min-width: 0;
   padding: 0 8px;
   border-radius: 999px;
   border: 1px solid var(--glass-edge);
@@ -124,6 +141,12 @@
   display: flex;
   align-items: center;
   gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mock-nav-links::-webkit-scrollbar {
+  display: none;
 }
 .mock-nav-links button {
   position: relative;
@@ -151,19 +174,29 @@
 .mock-nav-links button.on {
   color: var(--foreground);
 }
-.mock-nav-links button.on::before {
-  content: "";
+/* Single chip that slides between items (mirrors the real app's GlassNav). */
+.mock-nav-indicator {
   position: absolute;
-  inset: 0;
-  z-index: -1;
+  top: 50%;
+  height: 28px;
   border-radius: 999px;
   border: 1px solid var(--glass-chip-edge);
   background-color: var(--glass-chip-bg-fallback);
   background-image: var(--glass-chip-sheen);
   box-shadow: var(--glass-chip-shadow);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-50%);
+  transition:
+    left 300ms cubic-bezier(0.32, 0.72, 0, 1),
+    width 300ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 200ms ease;
+}
+.mock-nav-indicator.is-ready {
+  opacity: 1;
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .mock-nav-links button.on::before {
+  .mock-nav-indicator {
     background-color: var(--glass-chip-bg);
     backdrop-filter: blur(14px) saturate(170%);
     -webkit-backdrop-filter: blur(14px) saturate(170%);
@@ -473,13 +506,20 @@
   gap: 0;
   overflow-x: auto;
   border-bottom: 1px solid var(--rule);
-  padding: 0 8px;
+  padding: 0;
   flex-shrink: 0;
-  background: var(--card);
+  background: transparent;
+  scrollbar-width: none;
+}
+.mock-tabs::-webkit-scrollbar {
+  display: none;
 }
 .mock-tabs button {
+  position: relative;
   appearance: none;
   border: 0;
+  /* Reserves the underline's space; the visible rule is the ::after below. */
+  border-bottom: 2px solid transparent;
   background: transparent;
   cursor: pointer;
   padding: 9px 11px;
@@ -487,9 +527,21 @@
   font-size: 11.5px;
   font-weight: 500;
   color: var(--muted-foreground);
-  border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   white-space: nowrap;
+  transition: color 200ms ease;
+}
+/* Hairline that grows out of the centre on activation (app: scale-x-0 -> 100). */
+.mock-tabs button::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  background: var(--primary);
+  transform: scaleX(0);
+  transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 @media (hover: hover) {
   .mock-tabs button:not(:disabled):hover {
@@ -502,20 +554,9 @@
 }
 .mock-tabs button.on {
   color: var(--foreground);
-  border-bottom-color: var(--primary);
 }
-.mock-dash {
-  flex: 1;
-  min-height: 0;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow: hidden;
-  background: var(--card);
-}
-.mock-dash-flush {
-  padding-top: 0;
+.mock-tabs button.on::after {
+  transform: scaleX(1);
 }
 .mock-card-title {
   font-family: var(--font-serif);
@@ -676,18 +717,433 @@
   letter-spacing: -0.01em;
 }
 
+/* ---- Dark theme (mirrors web/src/index.css `.dark`) ---- */
+.mock-app.is-dark {
+  color-scheme: dark;
+  --background: oklch(0.17 0.006 260);
+  --foreground: oklch(0.96 0.003 80);
+  --card: oklch(0.2 0.006 260);
+  --primary: oklch(0.72 0.1 255);
+  --primary-foreground: oklch(0.17 0.006 260);
+  --muted: oklch(0.25 0.005 260);
+  --muted-foreground: oklch(0.68 0.01 260);
+  --rule: oklch(0.32 0.006 260);
+  --border: oklch(0.3 0.006 260);
+  --destructive: oklch(0.68 0.18 25);
+  --glass-bg: color-mix(in oklch, var(--card) 22%, transparent);
+  --glass-bg-fallback: color-mix(in oklch, var(--card) 95%, transparent);
+  --glass-sheen: linear-gradient(to bottom, oklch(1 0 0 / 0.08), oklch(1 0 0 / 0) 55%);
+  --glass-edge: color-mix(in oklch, var(--rule) 55%, transparent);
+  --glass-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.06),
+    0 8px 24px oklch(0 0 0 / 0.4);
+  --glass-chip-bg: color-mix(in oklch, var(--card) 62%, transparent);
+  --glass-chip-bg-fallback: color-mix(in oklch, var(--card) 94%, transparent);
+  --glass-chip-sheen: linear-gradient(to bottom, oklch(1 0 0 / 0.12), oklch(1 0 0 / 0) 70%);
+  --glass-chip-edge: color-mix(in oklch, var(--rule) 80%, transparent);
+  --glass-chip-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.1),
+    0 2px 6px oklch(0 0 0 / 0.35);
+}
+
+/* ---- Dashboard panels ---- */
+
+.mock-panel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
+}
+/* No `display` here: the `hidden` attribute must keep winning. */
+.mock-view:not([hidden]) { animation: mock-view-in 220ms ease both; }
+@keyframes mock-view-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.mock-stack { display: flex; flex-direction: column; gap: 12px; }
+
+/* Body slot of the shared shell: one mounted view at a time, others collapsed.
+   The explicit [hidden] guard matters — `display: flex` would otherwise win
+   over the UA `[hidden] { display: none }` rule. */
+.mock-keep {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.mock-keep[hidden] {
+  display: none;
+}
+
+.mock-card-block {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px oklch(0.3 0.04 260 / 0.04);
+}
+.mock-card-pad {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mock-card-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 12px;
+  border-top: 1px solid var(--rule);
+}
+.mock-editor { border-color: color-mix(in oklch, var(--primary) 30%, var(--rule)); }
+.mock-card-subtitle {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--muted-foreground);
+}
+.mock-card-subtitle-pad { padding: 0 12px 10px; }
+.mock-section-title {
+  font-family: var(--font-serif);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.mock-hint {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+/* ---- Form controls ---- */
+.mock-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.mock-field-label {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+.mock-field-hint {
+  font-size: 10px;
+  color: color-mix(in oklch, var(--muted-foreground) 82%, transparent);
+}
+.mock-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.mock-input {
+  appearance: none;
+  width: 100%;
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 11px;
+}
+.mock-input::placeholder {
+  color: color-mix(in oklch, var(--muted-foreground) 70%, transparent);
+}
+textarea.mock-input {
+  height: auto;
+  min-height: 56px;
+  padding: 7px 9px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.6;
+  resize: vertical;
+}
+.mock-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.mock-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+.mock-select-wrap select.mock-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 22px;
+  cursor: pointer;
+  max-width: 100%;
+}
+.mock-select-caret {
+  position: absolute;
+  right: 7px;
+  display: grid;
+  place-items: center;
+  width: 10px;
+  height: 10px;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+.mock-select-caret svg { width: 10px; height: 10px; display: block; }
+.mock-select-wide select.mock-select { min-width: 190px; }
+/* A select inside a field must not stretch to the column width. */
+.mock-field .mock-select-wrap { align-self: flex-start; min-width: 120px; }
+
+/* ---- Switch rows ---- */
+.mock-switch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mock-switch-title { font-size: 11px; font-weight: 500; color: var(--foreground); }
+
+/* ---- Settings rows ---- */
+.mock-settings { display: flex; flex-direction: column; }
+.mock-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--rule);
+}
+.mock-settings-row:last-child { border-bottom: 0; }
+.mock-settings-row.is-disabled { opacity: 0.5; }
+.mock-settings-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mock-settings-title { font-size: 11.5px; font-weight: 500; color: var(--foreground); }
+.mock-settings-desc { font-size: 10.5px; line-height: 1.5; color: var(--muted-foreground); }
+.mock-settings-row .mock-input,
+.mock-inline-row .mock-input {
+  width: 72px;
+  flex: none;
+}
+
+/* ---- Inline rows ---- */
+.mock-inline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+}
+.mock-inline-bar {
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: color-mix(in oklch, var(--muted) 35%, var(--card));
+}
+.mock-inline-label { font-size: 11px; color: var(--muted-foreground); }
+
+/* ---- Profile card ---- */
+.mock-profile {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 16px;
+  padding: 12px;
+}
+.mock-profile-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+.mock-profile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklch, var(--muted) 70%, var(--card));
+  border: 1px solid var(--rule);
+  color: var(--muted-foreground);
+  font-size: 20px;
+  font-weight: 600;
+}
+.mock-profile-avatar.has-image {
+  background: color-mix(in oklch, var(--primary) 14%, var(--card));
+  color: var(--primary);
+}
+.mock-profile-actions { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.mock-profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-left: 1px solid var(--rule);
+  padding-left: 16px;
+}
+
+/* ---- Expert grid ---- */
+.mock-expert-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 1180px) {
+  .mock-expert-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.mock-expert-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--card);
+}
+.mock-expert-card.is-on {
+  border-color: color-mix(in oklch, var(--primary) 30%, var(--rule));
+  background: color-mix(in oklch, var(--primary) 5%, var(--card));
+}
+.mock-expert-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklch, var(--primary) 12%, var(--card));
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+}
+.mock-expert-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.mock-expert-name { font-size: 11px; font-weight: 500; color: var(--foreground); }
+.mock-expert-desc {
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mock-expert-card .mock-toggle { margin-top: 2px; }
+
+/* ---- Permission list ---- */
+.mock-perm-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.mock-perm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  font-size: 11px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--card);
+}
+.mock-perm-row:last-child { border-bottom: 0; }
+
+/* ---- Tables ---- */
+.mock-table-plain { flex: none; min-height: 0; }
+.mock-table th.mock-col-actions,
+.mock-table td.mock-col-actions { text-align: right; }
+.mock-table th.mock-col-status,
+.mock-table td.mock-col-status { width: 1%; white-space: nowrap; }
+.mock-cell-strong { font-weight: 500; color: var(--foreground); }
+.mock-cell-desc { color: var(--muted-foreground); font-size: 10.5px; }
+.mock-provider { display: inline-flex; align-items: center; gap: 6px; }
+.mock-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--muted-foreground);
+}
+.mock-dot-openai { background: oklch(0.62 0.12 160); }
+.mock-dot-claude { background: oklch(0.66 0.13 55); }
+.mock-dot-gemini { background: oklch(0.62 0.14 255); }
+.mock-dot-deepseek { background: oklch(0.6 0.15 280); }
+.mock-dot-aihubmix { background: oklch(0.62 0.12 200); }
+.mock-dot-openrouter { background: oklch(0.6 0.1 300); }
+.mock-dot-cloudflare { background: oklch(0.68 0.14 60); }
+.mock-dot-deepl { background: oklch(0.58 0.12 220); }
+.mock-dot-custom { background: oklch(0.6 0.02 260); }
+
+/* ---- Empty state ---- */
+.mock-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 26px 16px;
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.mock-empty p { margin: 0; }
+.mock-empty-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklch, var(--muted) 70%, var(--card));
+}
+.mock-empty-icon svg { width: 15px; height: 15px; }
+
+/* ---- Buttons carrying icons ---- */
+.mock-btn { gap: 5px; }
+.mock-btn svg,
+.mock-foot-action svg { width: 12px; height: 12px; }
+.mock-btn.ghost.danger {
+  color: var(--destructive);
+  border-color: color-mix(in oklch, var(--destructive) 30%, var(--border));
+}
+.mock-foot-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.mock-foot-action:disabled { opacity: 0.4; cursor: default; }
+.mock-row-actions { display: inline-flex; align-items: center; gap: 10px; }
+
 @media (max-width: 880px) {
-  .mock-nav-links button:nth-child(3) { display: none; }
   .mock-h1 { font-size: 16px; }
   .mock-pane-body { font-size: 12px; padding: 10px 12px; }
   .mock-stat .v { font-size: 17px; }
   .mock-body { padding: 4px 14px 14px; }
+  .mock-expert-desc { -webkit-line-clamp: 1; line-clamp: 1; }
 }
 
 @media (max-width: 640px) {
   .mock-nav {
     padding: 8px 8px 2px;
   }
+  .mock-panel { padding-right: 0; }
+  .mock-field-row { grid-template-columns: 1fr; }
+  .mock-profile { grid-template-columns: 1fr; gap: 12px; }
+  .mock-profile-form {
+    border-left: 0;
+    padding-left: 0;
+    border-top: 1px solid var(--rule);
+    padding-top: 12px;
+  }
+  .mock-profile-side { flex-direction: row; text-align: left; align-items: center; }
+  .mock-profile-actions { flex-direction: row; width: auto; }
+  .mock-expert-grid { grid-template-columns: 1fr; }
+  .mock-select-wide select.mock-select { min-width: 150px; }
+  .mock-settings-row { gap: 10px; }
   .mock-nav-pill {
     max-width: 100%;
     height: 36px;
@@ -698,6 +1154,9 @@
     padding: 0 10px;
     height: 26px;
     font-size: 11px;
+  }
+  .mock-nav-indicator {
+    height: 26px;
   }
   .mock-body {
     padding: 2px 10px 10px;
@@ -825,4 +1284,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mock-cursor { animation: none; }
+  .mock-nav-indicator,
+  .mock-tabs button,
+  .mock-tabs button::after { transition: none; }
 }

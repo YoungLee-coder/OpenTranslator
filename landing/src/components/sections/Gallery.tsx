@@ -1,190 +1,222 @@
-import {
-  useEffect,
-  useEffectEvent,
-  useRef,
-  useState,
-} from "react";
-import type { GallerySlideId } from "@/content";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { CaptionKey, DemoRoute, DemoView, QuickTabKey } from "@/content";
 import { useContent } from "@/lib/i18n";
 import { ProductWindow } from "@/components/product/ProductWindow";
-import { TranslateWorkbench } from "@/components/product/TranslateWorkbench";
-import { WriteWorkbench } from "@/components/product/WriteWorkbench";
-import { OverviewWorkbench } from "@/components/product/OverviewWorkbench";
-import { ProvidersWorkbench } from "@/components/product/ProvidersWorkbench";
-import { GalleryNavProvider } from "@/components/product/gallery-nav";
+import { AppChrome } from "@/components/product/AppChrome";
+import { TranslatePanel } from "@/components/product/TranslatePanel";
+import { WritePanel } from "@/components/product/WritePanel";
+import { DashboardPanel } from "@/components/product/dashboard/DashboardPanel";
+import {
+  DemoNavProvider,
+  captionKey,
+  sameRoute,
+} from "@/components/product/demo-nav";
 
 const INTERVAL_MS = 4500;
-const SWITCH_MS = 920;
 
-function SlideView({ id }: { id: GallerySlideId }) {
-  switch (id) {
-    case "translate":
-      return <TranslateWorkbench />;
-    case "write":
-      return <WriteWorkbench />;
-    case "overview":
-      return <OverviewWorkbench />;
-    case "providers":
-      return <ProvidersWorkbench />;
-  }
+/** Stops the idle tour cycles through. */
+const TOUR: readonly DemoRoute[] = [
+  { view: "translate" },
+  { view: "write" },
+  { view: "dashboard", tab: "overview" },
+  { view: "dashboard", tab: "providers" },
+];
+
+const QUICK_ROUTES: Record<QuickTabKey, DemoRoute> = {
+  translate: { view: "translate" },
+  write: { view: "write" },
+  overview: { view: "dashboard", tab: "overview" },
+  providers: { view: "dashboard", tab: "providers" },
+};
+
+function nextTourStop(current: DemoRoute): DemoRoute {
+  const i = TOUR.findIndex((stop) => sameRoute(stop, current));
+  return TOUR[(i + 1) % TOUR.length] ?? TOUR[0]!;
+}
+
+/**
+ * One persistent app shell whose body swaps between mounted views — the same
+ * shape as the real `RootLayout` + `<Outlet/>`. Keeping the chrome mounted is
+ * what lets the glass pill slide between nav items instead of blinking.
+ */
+function DemoSurface({ route }: { route: DemoRoute }) {
+  const { product } = useContent();
+  const [mounted, setMounted] = useState<ReadonlySet<DemoView>>(
+    () => new Set([route.view]),
+  );
+
+  useEffect(() => {
+    setMounted((prev) =>
+      prev.has(route.view) ? prev : new Set(prev).add(route.view),
+    );
+  }, [route.view]);
+
+  const title =
+    route.view === "translate"
+      ? product.translate.pageTitle
+      : route.view === "write"
+        ? product.write.pageTitle
+        : product.dashboard.pageTitle;
+
+  return (
+    <div className="demo-view">
+      <AppChrome active={route.view} title={title}>
+        {mounted.has("translate") ? (
+          <div className="mock-keep" hidden={route.view !== "translate"}>
+            <TranslatePanel />
+          </div>
+        ) : null}
+        {mounted.has("write") ? (
+          <div className="mock-keep" hidden={route.view !== "write"}>
+            <WritePanel />
+          </div>
+        ) : null}
+        {mounted.has("dashboard") ? (
+          <div className="mock-keep" hidden={route.view !== "dashboard"}>
+            <DashboardPanel
+              activeTab={route.view === "dashboard" ? route.tab : "overview"}
+            />
+          </div>
+        ) : null}
+      </AppChrome>
+    </div>
+  );
 }
 
 export function Gallery() {
   const { gallery } = useContent();
-  const slides = gallery.slides;
-  const [index, setIndex] = useState(0);
-  const [prevIndex, setPrevIndex] = useState<number | null>(null);
-  const [direction, setDirection] = useState<"next" | "prev">("next");
-  const [switching, setSwitching] = useState(false);
+  const [route, setRoute] = useState<DemoRoute>({ view: "translate" });
+  const [dark, setDark] = useState(false);
+  const [engaged, setEngaged] = useState(false);
   const [paused, setPaused] = useState(false);
-  const timerRef = useRef<number | null>(null);
-  const switchTimerRef = useRef<number | null>(null);
+  const [inView, setInView] = useState(true);
+  const [tabVisible, setTabVisible] = useState(true);
+  const sectionRef = useRef<HTMLElement | null>(null);
   const reduceMotion =
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const slide = slides[index]!;
-  const activeId = slide.id;
+  const engage = useCallback(() => setEngaged(true), []);
 
-  const stop = useEffectEvent(() => {
-    if (timerRef.current != null) {
-      window.clearInterval(timerRef.current);
-      timerRef.current = null;
+  const go = useCallback((view: DemoView) => {
+    if (view === "dashboard") {
+      // Same as the real app: re-entering the dashboard from another surface
+      // starts on 概览, but staying put keeps the tab you were on.
+      setRoute((prev) => ({
+        view: "dashboard",
+        tab: prev.view === "dashboard" ? prev.tab : "overview",
+      }));
+      return;
     }
-  });
+    setRoute({ view });
+  }, []);
 
-  const start = useEffectEvent(() => {
-    if (reduceMotion || paused || timerRef.current != null) return;
-    timerRef.current = window.setInterval(() => {
-      activate((index + 1) % slides.length);
+  useEffect(() => {
+    const node = sectionRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry) setInView(entry.isIntersecting);
+      },
+      { threshold: 0.2 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const onVisibilityChange = () => setTabVisible(!document.hidden);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, []);
+
+  // Idle tour. Any click or keystroke inside the demo stops it for good.
+  useEffect(() => {
+    if (reduceMotion || paused || !inView || !tabVisible || engaged) return;
+    const timer = window.setInterval(() => {
+      setRoute((prev) => nextTourStop(prev));
     }, INTERVAL_MS);
-  });
+    return () => window.clearInterval(timer);
+  }, [reduceMotion, paused, inView, tabVisible, engaged, route]);
 
-  const activate = useEffectEvent((next: number) => {
-    if (next === index) return;
-    const len = slides.length;
-    const delta = (next - index + len) % len;
-    setDirection(delta > len / 2 ? "prev" : "next");
-    setPrevIndex(index);
-    setSwitching(true);
-    if (switchTimerRef.current != null) {
-      window.clearTimeout(switchTimerRef.current);
-    }
-    switchTimerRef.current = window.setTimeout(() => {
-      setSwitching(false);
-      setPrevIndex(null);
-      switchTimerRef.current = null;
-    }, SWITCH_MS);
-    setIndex(next);
-  });
-
-  useEffect(() => {
-    start();
-    return () => {
-      stop();
-      if (switchTimerRef.current != null) {
-        window.clearTimeout(switchTimerRef.current);
-      }
-    };
-  }, [start, stop]);
-
-  useEffect(() => {
-    stop();
-    start();
-  }, [index, paused, start, stop]);
-
-  function go(next: number) {
-    stop();
-    activate(next);
-    start();
-  }
-
-  function goTo(id: GallerySlideId) {
-    const next = slides.findIndex((s) => s.id === id);
-    if (next < 0) return;
-    setPaused(true);
-    go(next);
-  }
+  const current = captionKey(route);
+  const caption = gallery.captions[current];
 
   return (
-    <section className="gallery-section" aria-label={gallery.sectionTitle}>
+    <section
+      className="gallery-section"
+      aria-label={gallery.sectionTitle}
+      ref={sectionRef}
+    >
       <div
-        className={switching ? "gallery is-switching" : "gallery"}
-        data-gallery
-        data-direction={direction}
-        onMouseEnter={() => {
-          setPaused(true);
-          stop();
-        }}
-        onMouseLeave={() => {
-          setPaused(false);
-        }}
-        onFocusCapture={() => {
-          setPaused(true);
-          stop();
-        }}
+        className="gallery"
+        onPointerDownCapture={engage}
+        onKeyDownCapture={engage}
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onFocusCapture={() => setPaused(true)}
         onBlurCapture={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
             setPaused(false);
           }
         }}
       >
-        <GalleryNavProvider value={{ activeId, goTo }}>
+        <DemoNavProvider
+          value={{
+            route,
+            go,
+            openTab: (tab) => setRoute({ view: "dashboard", tab }),
+            dark,
+            toggleDark: () => setDark((prev) => !prev),
+          }}
+        >
           <div className="product-stage">
-            <ProductWindow title={slide.windowTitle}>
-              <div className="gallery-frame-surface">
-                {slides.map((s, i) => {
-                  const active = i === index;
-                  const wasActive = i === prevIndex;
-                  let className = "gallery-panel";
-                  if (active) className += " is-active";
-                  if (wasActive) className += " was-active";
-                  return (
-                    <div
-                      key={s.id}
-                      className={className}
-                      aria-hidden={active ? false : true}
-                      inert={!active}
-                    >
-                      <SlideView id={s.id} />
-                    </div>
-                  );
-                })}
-              </div>
-            </ProductWindow>
-            {gallery.chips?.map((chip, i) => (
-              <div
-                key={chip.label}
-                className={`gallery-chip gallery-chip-${i + 1}`}
-                aria-hidden
-              >
-                <kbd>{chip.key}</kbd>
-                <span>{chip.label}</span>
-              </div>
-            ))}
+            <div className="product-frame">
+              <ProductWindow title={gallery.windowTitle}>
+                <div className="gallery-frame-surface">
+                  <DemoSurface route={route} />
+                </div>
+              </ProductWindow>
+              {gallery.chips?.map((chip, i) => (
+                <div
+                  key={chip.label}
+                  className={`gallery-chip gallery-chip-${i + 1}`}
+                  aria-hidden
+                >
+                  <kbd>{chip.key}</kbd>
+                  <span>{chip.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </GalleryNavProvider>
+        </DemoNavProvider>
 
         <div className="gallery-footer">
           <div className="gallery-caption">
-            <p className="title">{slide.title}</p>
-            <p className="line">{slide.line}</p>
+            <p className="title">{caption.title}</p>
+            <p className="line">{caption.line}</p>
           </div>
           <div className="gallery-tabs" aria-label={gallery.tabsAria}>
-            {slides.map((s, i) => (
-              <button
-                key={s.id}
-                type="button"
-                className={i === index ? "is-active" : undefined}
-                aria-pressed={i === index}
-                onClick={() => {
-                  setPaused(true);
-                  go(i);
-                }}
-              >
-                {s.tab}
-              </button>
-            ))}
+            {gallery.quickTabs.map((tab) => {
+              const target = QUICK_ROUTES[tab.key];
+              const on = sameRoute(target, route);
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  className={on ? "is-active" : undefined}
+                  aria-pressed={on}
+                  onClick={() => {
+                    engage();
+                    setRoute(target);
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

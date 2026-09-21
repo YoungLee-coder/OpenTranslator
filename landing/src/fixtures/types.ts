@@ -20,30 +20,12 @@ export type WriteFixture = {
   /** Result text keyed by mode id — used when switching write modes. */
   modeResults: Readonly<Record<string, string>>;
   model: string;
+  /** Cycle options for the interactive model select. */
+  models: readonly string[];
   sourceText: string;
   resultText: string;
   sourceMeta: string;
   resultMetaLeft: string;
   resultMetaRight: string;
   streaming?: boolean;
-};
-
-export type OverviewFixture = {
-  tabs: ReadonlyArray<{ id: string; label: string; active?: boolean }>;
-  totalRequests: string;
-  totalChars: string;
-  rows: ReadonlyArray<{ provider: string; requests: string; chars: string }>;
-};
-
-export type ProviderRow = {
-  name: string;
-  type: string;
-  model: string;
-  enabled: boolean;
-  isDefault?: boolean;
-};
-
-export type ProvidersFixture = {
-  tabs: ReadonlyArray<{ id: string; label: string; active?: boolean }>;
-  rows: ReadonlyArray<ProviderRow>;
 };

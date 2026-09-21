@@ -1,15 +1,16 @@
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { NavKey } from "@/fixtures/types";
-import type { GallerySlideId } from "@/content";
 import { LogoMark } from "@/components/LogoMark";
 import { useContent } from "@/lib/i18n";
-import { useGalleryNav } from "./gallery-nav";
+import { useDemoNav, type DemoView } from "./demo-nav";
 
 type AppChromeProps = {
   active: NavKey;
   title: string;
   children: ReactNode;
 };
+
+const NAV_ORDER: readonly DemoView[] = ["translate", "write", "dashboard"];
 
 function MoonIcon() {
   return (
@@ -19,21 +20,64 @@ function MoonIcon() {
   );
 }
 
-function navToSlide(key: NavKey, activeId: GallerySlideId | undefined): GallerySlideId {
-  if (key === "translate") return "translate";
-  if (key === "write") return "write";
-  if (activeId === "providers") return "providers";
-  return "overview";
+/**
+ * One glass pill that slides between items, mirroring the real app's `GlassNav`:
+ * the active item is measured and a single absolutely-positioned chip animates
+ * `left` / `width` instead of each item toggling its own background.
+ */
+function useSlidingIndicator(active: DemoView) {
+  const navRef = useRef<HTMLDivElement | null>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [indicator, setIndicator] = useState({
+    left: 0,
+    width: 0,
+    ready: false,
+  });
+
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+
+    const measure = () => {
+      const index = NAV_ORDER.indexOf(active);
+      const el = index >= 0 ? itemRefs.current[index] : null;
+      // Hidden views measure 0; stay invisible until a ResizeObserver reports.
+      const ready = Boolean(el && el.offsetWidth > 0);
+      const left = ready && el ? el.offsetLeft : 0;
+      const width = ready && el ? el.offsetWidth : 0;
+      setIndicator((prev) =>
+        prev.left === left && prev.width === width && prev.ready === ready
+          ? prev
+          : { left, width, ready },
+      );
+    };
+
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(nav);
+    for (const el of itemRefs.current) {
+      if (el) observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, [active]);
+
+  return { navRef, itemRefs, indicator };
 }
 
 /** Interactive app shell mirroring web RootLayout (liquid-glass nav). */
 export function AppChrome({ active, title, children }: AppChromeProps) {
   const { product, site } = useContent();
   const labels = product.nav;
-  const galleryNav = useGalleryNav();
+  const demo = useDemoNav();
+  const { navRef, itemRefs, indicator } = useSlidingIndicator(active);
 
   return (
-    <div className="mock-app" role="region" aria-label={title}>
+    <div
+      className={demo?.dark ? "mock-app is-dark" : "mock-app"}
+      role="region"
+      aria-label={title}
+    >
       <div className="mock-nav">
         <div className="mock-nav-pill">
           <div className="mock-brand">
@@ -48,19 +92,29 @@ export function AppChrome({ active, title, children }: AppChromeProps) {
             <span>{site.productName}</span>
           </div>
           <span className="mock-nav-rule" aria-hidden />
-          <div className="mock-nav-links" role="tablist" aria-label={title}>
-            {(Object.keys(labels) as NavKey[]).map((key) => {
+          {/* Real in-window navigation: this swaps the surface, not the carousel. */}
+          <div className="mock-nav-links" ref={navRef}>
+            <span
+              className={
+                indicator.ready
+                  ? "mock-nav-indicator is-ready"
+                  : "mock-nav-indicator"
+              }
+              aria-hidden
+              style={{ left: indicator.left, width: indicator.width }}
+            />
+            {NAV_ORDER.map((key, index) => {
               const on = key === active;
               return (
                 <button
                   key={key}
                   type="button"
-                  role="tab"
-                  aria-selected={on}
+                  ref={(el) => {
+                    itemRefs.current[index] = el;
+                  }}
+                  aria-current={on ? "page" : undefined}
                   className={on ? "on" : undefined}
-                  onClick={() =>
-                    galleryNav?.goTo(navToSlide(key, galleryNav.activeId))
-                  }
+                  onClick={() => demo?.go(key)}
                 >
                   {labels[key]}
                 </button>
@@ -69,7 +123,13 @@ export function AppChrome({ active, title, children }: AppChromeProps) {
           </div>
           <span className="mock-nav-rule" aria-hidden />
           <div className="mock-nav-trail">
-            <button type="button" className="mock-icon-btn" aria-label="Theme">
+            <button
+              type="button"
+              className="mock-icon-btn"
+              aria-label={product.themeLabel}
+              aria-pressed={Boolean(demo?.dark)}
+              onClick={() => demo?.toggleDark()}
+            >
               <MoonIcon />
             </button>
             <span className="mock-avatar" aria-hidden>
@@ -78,8 +138,9 @@ export function AppChrome({ active, title, children }: AppChromeProps) {
           </div>
         </div>
       </div>
+      {/* Not a document heading: this is the mock's own title bar. */}
       <div className="mock-body">
-        <h3 className="mock-h1">{title}</h3>
+        <p className="mock-h1">{title}</p>
         {children}
       </div>
     </div>

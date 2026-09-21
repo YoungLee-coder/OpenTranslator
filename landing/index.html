@@ -8,8 +8,18 @@
       name="description"
       content="OpenTranslator 是 DeepL 风格的自托管 AI 翻译器：多供应商、SSE 流式、Cloudflare Workers 单 Worker 部署。"
     />
+    <meta name="author" content="YoungLee" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#fdfdfc" />
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
     <link rel="canonical" href="https://github.com/YoungLee-coder/OpenTranslator" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="OpenTranslator" />
+    <meta property="og:url" content="https://github.com/YoungLee-coder/OpenTranslator" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:locale:alternate" content="en_US" />
     <meta property="og:title" content="OpenTranslator · 自托管 AI 翻译器" />
     <meta
       property="og:description"
@@ -19,12 +29,53 @@
       property="og:image"
       content="https://raw.githubusercontent.com/YoungLee-coder/OpenTranslator/main/docs/images/OpenTranslator-homepage.png"
     />
-    <meta property="og:type" content="website" />
-    <meta property="og:locale" content="zh_CN" />
-    <link rel="alternate" type="text/plain" href="/llms.txt" />
+    <meta property="og:image:alt" content="OpenTranslator 翻译页：左右对照的中英译文" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="OpenTranslator · 自托管 AI 翻译器" />
+    <meta
+      name="twitter:description"
+      content="DeepL 手感的自托管 AI 翻译器。多供应商切换，SSE 流式输出，前后端同 Worker 部署到 Cloudflare 边缘。"
+    />
+    <meta
+      name="twitter:image"
+      content="https://raw.githubusercontent.com/YoungLee-coder/OpenTranslator/main/docs/images/OpenTranslator-homepage.png"
+    />
+
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "OpenTranslator",
+        "alternateName": "自托管 AI 翻译器",
+        "description": "DeepL 风格的自托管 AI 翻译器：多供应商切换、SSE 流式翻译、前后端合并部署到同一个 Cloudflare Worker。",
+        "url": "https://github.com/YoungLee-coder/OpenTranslator",
+        "codeRepository": "https://github.com/YoungLee-coder/OpenTranslator",
+        "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Web (Cloudflare Workers)",
+        "programmingLanguage": "TypeScript",
+        "inLanguage": ["zh-CN", "en"],
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <p>
+        OpenTranslator 是 DeepL 风格的自托管 AI 翻译器：多供应商切换、SSE 流式翻译，
+        前后端一起部署到 Cloudflare Workers。
+        <a href="https://github.com/YoungLee-coder/OpenTranslator">在 GitHub 上查看</a>。
+      </p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

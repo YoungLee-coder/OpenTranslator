@@ -6,10 +6,14 @@ export function Footer() {
   const { locale, setLocale } = useLocale();
 
   const links = [
-    { href: site.repoUrl, label: footer.links.github, external: true },
-    { href: site.readmeMdUrl, label: footer.links.readme, external: true },
-    { href: site.issuesUrl, label: footer.links.contact, external: true },
+    { href: site.repoUrl, label: footer.links.github },
+    { href: site.readmeMdUrl, label: footer.links.readme },
+    { href: site.releasesUrl, label: footer.links.releases },
+    { href: site.licenseUrl, label: footer.links.license },
+    { href: site.issuesUrl, label: footer.links.contact },
   ] as const;
+
+  const nextLocale = locale === "zh-CN" ? "en" : "zh-CN";
 
   return (
     <footer className="foot">
@@ -22,11 +26,7 @@ export function Footer() {
                   ·
                 </span>
               ) : null}
-              <a
-                href={link.href}
-                target={link.external ? "_blank" : undefined}
-                rel={link.external ? "noopener noreferrer" : undefined}
-              >
+              <a href={link.href} target="_blank" rel="noopener noreferrer">
                 {link.label}
               </a>
             </Fragment>
@@ -37,12 +37,24 @@ export function Footer() {
           <button
             type="button"
             className="foot-lang"
-            onClick={() => setLocale(locale === "zh-CN" ? "en" : "zh-CN")}
+            lang={nextLocale}
+            onClick={() => setLocale(nextLocale)}
           >
-            {locale === "zh-CN" ? footer.links.switchEn : footer.links.switchZh}
+            {nextLocale === "en" ? footer.links.switchEn : footer.links.switchZh}
           </button>
         </div>
-        <p className="ethos">{footer.credit}</p>
+        <p className="ethos">
+          {footer.credit}
+          {" · "}
+          <a
+            className="foot-version"
+            href={site.releasesUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {site.version}
+          </a>
+        </p>
       </div>
     </footer>
   );

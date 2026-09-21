@@ -21,7 +21,7 @@ Platform: Web · Cloudflare Workers（Node 22.13+ / pnpm 本地开发）.
 ## Features
 
 ### 多供应商切换
-内置 OpenAI、Claude、Gemini、DeepSeek、OpenRouter、AIHubMix、Azure OpenAI 与自定义 OpenAI 兼容端点。Dashboard 填 Key 并设公开默认即可换模型，无需改代码。
+内置 OpenAI、Claude、Gemini、DeepSeek、AIHubMix、OpenRouter、Cloudflare、DeepL 与自定义（多格式）共九种 adapter。Dashboard 填 Key 并设公开默认即可换模型，无需改代码。
 
 ### 流式翻译
 译文经 SSE 逐字渲染，双语对照页跟读式输出。另有 AI 写作（润色、风格、正式度等）双栏对照。
@@ -67,7 +67,7 @@ pnpm build 后 wrangler deploy，或用 Cloudflare Git 连接。部署后 POST /
 GPL-3.0。派生项目必须以同等协议开源。详见仓库 LICENSE。
 
 ### 支持哪些模型与厂商？
-内置 OpenAI、Claude、Gemini、DeepSeek、OpenRouter、AIHubMix、Azure OpenAI 与自定义 OpenAI 兼容端点。新厂商可按注册表加 adapter。
+内置 OpenAI、Claude、Gemini、DeepSeek、AIHubMix、OpenRouter、Cloudflare、DeepL 八家厂商的 adapter，另有自定义类型（一张供应商记录下挂 OpenAI / Claude / Gemini 多格式地址），共九种 adapter。新厂商可按注册表加 adapter。
 
 ### Who is it not for?
 不适合不想自备 API Key、或不想运维 Cloudflare Worker 的用户；也不适合需要官方托管翻译引擎或 SLA 的纯 SaaS 买家。

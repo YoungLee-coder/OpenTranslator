@@ -1,25 +1,35 @@
-/** Landing copy + gallery slide metadata. Keep in sync with public/llms*.txt. */
-import type {
-  OverviewFixture,
-  ProvidersFixture,
-  TranslateFixture,
-  WriteFixture,
-} from "./fixtures/types";
+/** Landing copy + product-demo metadata. Keep in sync with public/llms*.txt. */
+import type { TranslateFixture, WriteFixture } from "./fixtures/types";
+import { demoCatalogs, type DashboardContent } from "./demo-content";
 
 export type Locale = "zh-CN" | "en";
 
-export type GallerySlideId =
-  | "translate"
-  | "write"
-  | "overview"
-  | "providers";
+/** Top-level surfaces of the in-window product demo. */
+export type DemoView = "translate" | "write" | "dashboard";
 
-export type GallerySlide = {
-  id: GallerySlideId;
-  tab: string;
+/** Dashboard tabs, in the order the real app renders them. */
+export type DashboardTabId =
+  | "overview"
+  | "providers"
+  | "settings"
+  | "public"
+  | "experts"
+  | "users";
+
+export type DemoRoute =
+  | { view: "translate" }
+  | { view: "write" }
+  | { view: "dashboard"; tab: DashboardTabId };
+
+/** Route → caption key; dashboard tabs each carry their own caption. */
+export type CaptionKey = "translate" | "write" | DashboardTabId;
+
+/** The subset of routes the landing page's quick-jump tabs point at. */
+export type QuickTabKey = "translate" | "write" | "overview" | "providers";
+
+export type GalleryCaption = {
   title: string;
   line: string;
-  windowTitle: string;
 };
 
 export type Content = {
@@ -29,11 +39,9 @@ export type Content = {
   };
   site: {
     productName: string;
-    category: string;
     version: string;
     headline: string;
     tagline: string;
-    tokens: readonly string[];
     repoUrl: string;
     releasesUrl: string;
     readmeUrl: string;
@@ -42,7 +50,11 @@ export type Content = {
     issuesUrl: string;
     readmeMdUrl: string;
   };
+  a11y: {
+    skipToContent: string;
+  };
   nav: {
+    ariaLabel: string;
     features: string;
     principles: string;
     followCta: string;
@@ -53,22 +65,23 @@ export type Content = {
     meta: string;
     cloneHint: string;
     cloneCommand: string;
-    langLabel: string;
-    langZh: string;
-    langEn: string;
+    copyLabel: string;
+    copiedLabel: string;
   };
   gallery: {
     sectionTitle: string;
     tabsAria: string;
+    windowTitle: string;
+    windowBadge: string;
     chips: readonly { key: string; label: string }[];
-    slides: readonly GallerySlide[];
+    quickTabs: readonly { key: QuickTabKey; label: string }[];
+    captions: Record<CaptionKey, GalleryCaption>;
   };
   featuresSection: {
     sectionTitle: string;
   };
   features: readonly {
     name: string;
-    subtitle: string;
     description: string;
   }[];
   principlesSection: {
@@ -100,47 +113,42 @@ export type Content = {
   };
   faq: readonly { q: string; a: string }[];
   footer: {
-    tagline: string;
     ethos: string;
     credit: string;
     links: {
       github: string;
       readme: string;
+      releases: string;
+      license: string;
       contact: string;
       switchEn: string;
       switchZh: string;
     };
   };
   product: {
+    themeLabel: string;
+    swapLabel: string;
+    /** Accessible names for the demo's form controls. */
+    ui: {
+      sourceLangLabel: string;
+      targetLangLabel: string;
+      expertLabel: string;
+      modelLabel: string;
+      savedLabel: string;
+    };
     nav: {
       translate: string;
       write: string;
       dashboard: string;
     };
-    translate: TranslateFixture & { action: string; pageTitle: string };
+    translate: TranslateFixture & {
+      action: string;
+      pageTitle: string;
+      languages: readonly string[];
+      targetLanguages: readonly string[];
+    };
     write: WriteFixture & { action: string; pageTitle: string };
-    overview: OverviewFixture & {
-      pageTitle: string;
-      cardTitle: string;
-      totalRequestsLabel: string;
-      totalCharsLabel: string;
-      providerCol: string;
-      requestsCol: string;
-      charsCol: string;
-    };
-    providers: ProvidersFixture & {
-      pageTitle: string;
-      heading: string;
-      addLabel: string;
-      nameCol: string;
-      typeCol: string;
-      modelCol: string;
-      statusCol: string;
-      actionsCol: string;
-      defaultBadge: string;
-      editLabel: string;
-      deleteLabel: string;
-    };
+    dashboard: DashboardContent;
   };
 };
 
@@ -166,17 +174,19 @@ const zhCN: Content = {
   },
   site: {
     ...sharedUrls,
-    category: "自托管 AI 翻译器",
     headline: "DeepL 的手感，钥匙在你手里。",
     tagline:
       "把你自己的大模型接到 DeepL 手感的翻译页上。多供应商、SSE 流式，一次部署到 Cloudflare 边缘。",
-    tokens: ["流式输出", "边缘部署", "密钥自持"],
     readmeUrl:
       "https://github.com/YoungLee-coder/OpenTranslator#-%E7%89%B9%E6%80%A7",
     deployUrl:
       "https://github.com/YoungLee-coder/OpenTranslator#-%E9%83%A8%E7%BD%B2",
   },
+  a11y: {
+    skipToContent: "跳到正文",
+  },
   nav: {
+    ariaLabel: "主导航",
     features: "能力",
     principles: "原则",
     followCta: "打开仓库",
@@ -187,47 +197,34 @@ const zhCN: Content = {
     meta: "GPL-3.0 开源 · 自托管 · Cloudflare Workers",
     cloneHint: "用 Git 也行：",
     cloneCommand: "git clone https://github.com/YoungLee-coder/OpenTranslator",
-    langLabel: "语言",
-    langZh: "中文",
-    langEn: "EN",
+    copyLabel: "复制 git clone 命令",
+    copiedLabel: "已复制",
   },
   gallery: {
     sectionTitle: "工作台",
     tabsAria: "选择界面",
+    windowTitle: "OpenTranslator",
+    windowBadge: "已固定",
     chips: [
       { key: "SSE", label: "流式翻译" },
       { key: "D1", label: "密钥加密" },
     ],
-    slides: [
-      {
-        id: "translate",
-        tab: "翻译",
-        title: "翻译页",
-        line: "左右对照，字随流至",
-        windowTitle: "OpenTranslator",
-      },
-      {
-        id: "write",
-        tab: "写作",
-        title: "AI 写作",
-        line: "润色改写，双栏同屏",
-        windowTitle: "OpenTranslator",
-      },
-      {
-        id: "overview",
-        tab: "用量",
-        title: "用量概览",
-        line: "请求与字符一目了然",
-        windowTitle: "OpenTranslator",
-      },
-      {
-        id: "providers",
-        tab: "供应商",
-        title: "供应商",
-        line: "一家一家接上",
-        windowTitle: "OpenTranslator",
-      },
+    quickTabs: [
+      { key: "translate", label: "翻译" },
+      { key: "write", label: "写作" },
+      { key: "overview", label: "用量" },
+      { key: "providers", label: "供应商" },
     ],
+    captions: {
+      translate: { title: "翻译页", line: "左右对照，字随流至" },
+      write: { title: "AI 写作", line: "润色改写，双栏同屏" },
+      overview: { title: "用量概览", line: "请求与字符一目了然" },
+      providers: { title: "供应商", line: "一家一家接上" },
+      settings: { title: "站点设置", line: "缓存、限流与推理开关" },
+      public: { title: "公开访问", line: "挑几个模型对外开放" },
+      experts: { title: "AI 专家", line: "按场景换一套译法" },
+      users: { title: "多用户管理", line: "分账号、分权限、看用量" },
+    },
   },
   featuresSection: {
     sectionTitle: "它能做什么",
@@ -235,28 +232,23 @@ const zhCN: Content = {
   features: [
     {
       name: "多供应商切换",
-      subtitle: "一把钥匙开多家门",
       description:
         "OpenAI、Claude、Gemini、DeepSeek 等内置。Dashboard 填 Key 即可换模型。",
     },
     {
       name: "流式翻译",
-      subtitle: "字跟着来",
       description: "译文经 SSE 逐字渲染，长文也不再闷在加载圈里。",
     },
     {
       name: "插件化扩展",
-      subtitle: "注册一行就够",
       description: "供应商走注册表，功能模块走 DB 开关，核心路由保持不动。",
     },
     {
       name: "边缘单 Worker",
-      subtitle: "前后端同址",
       description: "Vite SPA 与 Hono API 打进同一个 Cloudflare Worker，一次部署。",
     },
     {
       name: "密钥加密落库",
-      subtitle: "明文不入库",
       description: "API Key 加密写入 D1，也可一键关掉公开访问。",
     },
   ],
@@ -302,7 +294,7 @@ const zhCN: Content = {
     price: "GPL-3.0 · 免费开源",
     benefits: [
       "完整源码与自托管权限",
-      "八种供应商 adapter 开箱可用",
+      "九种 adapter 开箱可用",
       "Dashboard 管理用量与站点开关",
       "术语库与 AI 专家可按需启用",
       "派生项目须以同等协议开源",
@@ -350,18 +342,28 @@ const zhCN: Content = {
     },
   ],
   footer: {
-    tagline: "自托管 · 多供应商 · 边缘部署",
     ethos: "字在边缘流转，钥在你手。",
     credit: "OpenTranslator · GPL-3.0 · © 2026",
     links: {
       github: "GitHub",
       readme: "README",
+      releases: "版本记录",
+      license: "许可证",
       contact: "Issues",
       switchEn: "English",
       switchZh: "中文",
     },
   },
   product: {
+    themeLabel: "切换主题",
+    swapLabel: "交换语言",
+    ui: {
+      sourceLangLabel: "源语言",
+      targetLangLabel: "目标语言",
+      expertLabel: "AI 专家",
+      modelLabel: "模型",
+      savedLabel: "已保存",
+    },
     nav: {
       translate: "翻译",
       write: "写作",
@@ -376,11 +378,40 @@ const zhCN: Content = {
       model: "默认",
       experts: ["通用", "技术", "文学", "商务"],
       models: ["默认", "GPT-4.1 mini", "Claude Sonnet", "DeepSeek"],
+      languages: [
+        "自动检测",
+        "简体中文",
+        "繁體中文（台灣）",
+        "English",
+        "日本語",
+        "한국어",
+        "Français",
+        "Deutsch",
+        "Español",
+        "Русский",
+      ],
+      targetLanguages: [
+        "简体中文",
+        "繁體中文（台灣）",
+        "繁體中文（香港）",
+        "English",
+        "日本語",
+        "한국어",
+        "Français",
+        "Deutsch",
+        "Español",
+        "Italiano",
+        "Português",
+        "Русский",
+        "العربية",
+        "Tiếng Việt",
+        "ไทย",
+      ],
       sourceText:
         "边缘网络上的自托管翻译器，密钥加密落库，译文经 SSE 逐字渲染。",
       targetText:
         "A self-hosted translator on the edge: keys encrypted at rest, output streamed token by token via SSE.",
-      sourceMeta: "42 字符",
+      sourceMeta: "33 字符",
       targetMeta: "复制",
       streaming: true,
     },
@@ -400,77 +431,15 @@ const zhCN: Content = {
         shorten: "帮用户更快润色文稿，表达更清楚。",
       },
       model: "默认",
+      models: ["默认", "GPT-4.1 mini", "Claude Sonnet"],
       sourceText: "这个功能可以让用户很快把文章改得更好看一点。",
       resultText: "该功能帮助用户迅速润色文稿，使表达更清晰、更有节奏。",
-      sourceMeta: "24 字符",
+      sourceMeta: "22 字符",
       resultMetaLeft: "替换原文",
       resultMetaRight: "复制",
       streaming: true,
     },
-    overview: {
-      pageTitle: "控制台",
-      cardTitle: "用量概览",
-      totalRequestsLabel: "总请求数",
-      totalCharsLabel: "总字符数",
-      providerCol: "供应商",
-      requestsCol: "请求数",
-      charsCol: "字符数",
-      tabs: [
-        { id: "overview", label: "概览", active: true },
-        { id: "providers", label: "供应商" },
-        { id: "settings", label: "设置" },
-        { id: "public", label: "公开访问" },
-        { id: "experts", label: "AI 专家" },
-      ],
-      totalRequests: "1,280",
-      totalChars: "420K",
-      rows: [
-        { provider: "OpenAI", requests: "640", chars: "210K" },
-        { provider: "Claude", requests: "390", chars: "128K" },
-        { provider: "Gemini", requests: "250", chars: "82K" },
-      ],
-    },
-    providers: {
-      pageTitle: "控制台",
-      heading: "供应商",
-      addLabel: "新增",
-      nameCol: "名称",
-      typeCol: "类型",
-      modelCol: "模型",
-      statusCol: "状态",
-      actionsCol: "操作",
-      defaultBadge: "默认",
-      editLabel: "编辑",
-      deleteLabel: "删除",
-      tabs: [
-        { id: "overview", label: "概览" },
-        { id: "providers", label: "供应商", active: true },
-        { id: "settings", label: "设置" },
-        { id: "public", label: "公开访问" },
-        { id: "experts", label: "AI 专家" },
-      ],
-      rows: [
-        {
-          name: "OpenAI",
-          type: "openai",
-          model: "gpt-4.1-mini",
-          enabled: true,
-          isDefault: true,
-        },
-        {
-          name: "Claude",
-          type: "claude",
-          model: "claude-sonnet",
-          enabled: true,
-        },
-        {
-          name: "DeepSeek",
-          type: "openai",
-          model: "deepseek-chat",
-          enabled: true,
-        },
-      ],
-    },
+    dashboard: demoCatalogs["zh-CN"].dashboard,
   },
 };
 
@@ -482,15 +451,17 @@ const en: Content = {
   },
   site: {
     ...sharedUrls,
-    category: "Self-hosted AI translator",
     headline: "DeepL feel. Keys stay yours.",
     tagline:
       "Plug your own models into a DeepL-feel translation page. Multi-provider, SSE streaming, one Cloudflare Worker deploy.",
-    tokens: ["Streaming", "Edge deploy", "Keys stay yours"],
     readmeUrl: "https://github.com/YoungLee-coder/OpenTranslator#readme",
     deployUrl: "https://github.com/YoungLee-coder/OpenTranslator#readme",
   },
+  a11y: {
+    skipToContent: "Skip to content",
+  },
   nav: {
+    ariaLabel: "Primary",
     features: "Features",
     principles: "Why",
     followCta: "GitHub",
@@ -501,47 +472,34 @@ const en: Content = {
     meta: "GPL-3.0 · Self-hosted · Cloudflare Workers",
     cloneHint: "Or clone it:",
     cloneCommand: "git clone https://github.com/YoungLee-coder/OpenTranslator",
-    langLabel: "Language",
-    langZh: "中文",
-    langEn: "EN",
+    copyLabel: "Copy the git clone command",
+    copiedLabel: "Copied",
   },
   gallery: {
     sectionTitle: "Workbench",
     tabsAria: "Choose a screen",
+    windowTitle: "OpenTranslator",
+    windowBadge: "Pinned",
     chips: [
       { key: "SSE", label: "Streaming" },
       { key: "D1", label: "Encrypted keys" },
     ],
-    slides: [
-      {
-        id: "translate",
-        tab: "Translate",
-        title: "Translate",
-        line: "Side by side, tokens as they arrive",
-        windowTitle: "OpenTranslator",
-      },
-      {
-        id: "write",
-        tab: "Write",
-        title: "AI Write",
-        line: "Polish and rewrite, dual panes",
-        windowTitle: "OpenTranslator",
-      },
-      {
-        id: "overview",
-        tab: "Usage",
-        title: "Usage overview",
-        line: "Requests and characters at a glance",
-        windowTitle: "OpenTranslator",
-      },
-      {
-        id: "providers",
-        tab: "Providers",
-        title: "Providers",
-        line: "Wire them up one by one",
-        windowTitle: "OpenTranslator",
-      },
+    quickTabs: [
+      { key: "translate", label: "Translate" },
+      { key: "write", label: "Write" },
+      { key: "overview", label: "Usage" },
+      { key: "providers", label: "Providers" },
     ],
+    captions: {
+      translate: { title: "Translate", line: "Side by side, tokens as they arrive" },
+      write: { title: "AI Write", line: "Polish and rewrite, dual panes" },
+      overview: { title: "Usage overview", line: "Requests and characters at a glance" },
+      providers: { title: "Providers", line: "Wire them up one by one" },
+      settings: { title: "Site settings", line: "Cache, rate limits, reasoning" },
+      public: { title: "Public access", line: "Open a few models to guests" },
+      experts: { title: "AI experts", line: "A different voice per scenario" },
+      users: { title: "Users", line: "Accounts, permissions, usage" },
+    },
   },
   featuresSection: {
     sectionTitle: "What it can do",
@@ -549,31 +507,26 @@ const en: Content = {
   features: [
     {
       name: "Multi-provider switching",
-      subtitle: "One key, many doors",
       description:
         "OpenAI, Claude, Gemini, DeepSeek, and more. Add a key in the Dashboard to switch models.",
     },
     {
       name: "Streaming translation",
-      subtitle: "Words as they come",
       description:
         "Translations render token by token over SSE. Long text never sits behind a spinner.",
     },
     {
       name: "Plugin-style extension",
-      subtitle: "One registry line",
       description:
         "Providers go through a registry; feature modules use DB toggles. Core routes stay put.",
     },
     {
       name: "Single edge Worker",
-      subtitle: "Frontend and API colocated",
       description:
         "Vite SPA and Hono API ship in one Cloudflare Worker. One deploy, same origin.",
     },
     {
       name: "Encrypted keys at rest",
-      subtitle: "No plaintext in the DB",
       description:
         "Provider API keys are encrypted before D1. Flip a switch for a private deploy.",
     },
@@ -620,7 +573,7 @@ const en: Content = {
     price: "GPL-3.0 · Free & open source",
     benefits: [
       "Full source and self-host rights",
-      "Eight provider adapters out of the box",
+      "Nine adapters out of the box",
       "Dashboard for usage and site switches",
       "Glossary and AI experts when you need them",
       "Derivatives must stay under the same license",
@@ -669,18 +622,28 @@ const en: Content = {
     },
   ],
   footer: {
-    tagline: "Self-hosted · Multi-provider · Edge deploy",
     ethos: "Words move at the edge. Keys stay in your hands.",
     credit: "OpenTranslator · GPL-3.0 · © 2026",
     links: {
       github: "GitHub",
       readme: "README",
+      releases: "Releases",
+      license: "License",
       contact: "Issues",
       switchEn: "English",
       switchZh: "中文",
     },
   },
   product: {
+    themeLabel: "Toggle theme",
+    swapLabel: "Swap languages",
+    ui: {
+      sourceLangLabel: "Source language",
+      targetLangLabel: "Target language",
+      expertLabel: "AI expert",
+      modelLabel: "Model",
+      savedLabel: "Saved",
+    },
     nav: {
       translate: "Translate",
       write: "Write",
@@ -695,11 +658,40 @@ const en: Content = {
       model: "Default",
       experts: ["General", "Technical", "Literary", "Business"],
       models: ["Default", "GPT-4.1 mini", "Claude Sonnet", "DeepSeek"],
+      languages: [
+        "Detect language",
+        "English",
+        "简体中文",
+        "繁體中文（台灣）",
+        "日本語",
+        "한국어",
+        "Français",
+        "Deutsch",
+        "Español",
+        "Русский",
+      ],
+      targetLanguages: [
+        "English",
+        "简体中文",
+        "繁體中文（台灣）",
+        "繁體中文（香港）",
+        "日本語",
+        "한국어",
+        "Français",
+        "Deutsch",
+        "Español",
+        "Italiano",
+        "Português",
+        "Русский",
+        "العربية",
+        "Tiếng Việt",
+        "ไทย",
+      ],
       sourceText:
         "A self-hosted translator on the edge: keys encrypted at rest, output streamed token by token via SSE.",
       targetText:
         "边缘网络上的自托管翻译器，密钥加密落库，译文经 SSE 逐字渲染。",
-      sourceMeta: "108 chars",
+      sourceMeta: "101 chars",
       targetMeta: "Copy",
       streaming: true,
     },
@@ -722,79 +714,17 @@ const en: Content = {
         shorten: "Helps users polish drafts faster and write more clearly.",
       },
       model: "Default",
+      models: ["Default", "GPT-4.1 mini", "Claude Sonnet"],
       sourceText:
         "This feature lets users quickly make their writing look a bit better.",
       resultText:
         "This feature helps users polish drafts quickly: clearer wording, tighter rhythm.",
-      sourceMeta: "68 chars",
+      sourceMeta: "69 chars",
       resultMetaLeft: "Replace source",
       resultMetaRight: "Copy",
       streaming: true,
     },
-    overview: {
-      pageTitle: "Dashboard",
-      cardTitle: "Usage overview",
-      totalRequestsLabel: "Total requests",
-      totalCharsLabel: "Total characters",
-      providerCol: "Provider",
-      requestsCol: "Requests",
-      charsCol: "Characters",
-      tabs: [
-        { id: "overview", label: "Overview", active: true },
-        { id: "providers", label: "Providers" },
-        { id: "settings", label: "Settings" },
-        { id: "public", label: "Public access" },
-        { id: "experts", label: "AI experts" },
-      ],
-      totalRequests: "1,280",
-      totalChars: "420K",
-      rows: [
-        { provider: "OpenAI", requests: "640", chars: "210K" },
-        { provider: "Claude", requests: "390", chars: "128K" },
-        { provider: "Gemini", requests: "250", chars: "82K" },
-      ],
-    },
-    providers: {
-      pageTitle: "Dashboard",
-      heading: "Providers",
-      addLabel: "Add",
-      nameCol: "Name",
-      typeCol: "Type",
-      modelCol: "Model",
-      statusCol: "Status",
-      actionsCol: "Actions",
-      defaultBadge: "Default",
-      editLabel: "Edit",
-      deleteLabel: "Delete",
-      tabs: [
-        { id: "overview", label: "Overview" },
-        { id: "providers", label: "Providers", active: true },
-        { id: "settings", label: "Settings" },
-        { id: "public", label: "Public access" },
-        { id: "experts", label: "AI experts" },
-      ],
-      rows: [
-        {
-          name: "OpenAI",
-          type: "openai",
-          model: "gpt-4.1-mini",
-          enabled: true,
-          isDefault: true,
-        },
-        {
-          name: "Claude",
-          type: "claude",
-          model: "claude-sonnet",
-          enabled: true,
-        },
-        {
-          name: "DeepSeek",
-          type: "openai",
-          model: "deepseek-chat",
-          enabled: true,
-        },
-      ],
-    },
+    dashboard: demoCatalogs.en.dashboard,
   },
 };
 

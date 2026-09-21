@@ -47,25 +47,18 @@ const LocaleContext = createContext<LocaleContextValue | null>(null);
 function applyDocumentMeta(locale: Locale, content: Content) {
   document.documentElement.lang = locale;
   document.title = content.meta.title;
-  const description = document.querySelector('meta[name="description"]');
-  if (description) {
-    description.setAttribute("content", content.meta.description);
-  }
-  const ogTitle = document.querySelector('meta[property="og:title"]');
-  if (ogTitle) ogTitle.setAttribute("content", content.meta.title);
-  const ogDescription = document.querySelector(
-    'meta[property="og:description"]',
-  );
-  if (ogDescription) {
-    ogDescription.setAttribute("content", content.meta.description);
-  }
-  const ogLocale = document.querySelector('meta[property="og:locale"]');
-  if (ogLocale) {
-    ogLocale.setAttribute(
-      "content",
-      locale === "en" ? "en_US" : "zh_CN",
-    );
-  }
+
+  const setMeta = (selector: string, value: string) => {
+    const node = document.querySelector(selector);
+    if (node) node.setAttribute("content", value);
+  };
+
+  setMeta('meta[name="description"]', content.meta.description);
+  setMeta('meta[property="og:title"]', content.meta.title);
+  setMeta('meta[property="og:description"]', content.meta.description);
+  setMeta('meta[property="og:locale"]', locale === "en" ? "en_US" : "zh_CN");
+  setMeta('meta[name="twitter:title"]', content.meta.title);
+  setMeta('meta[name="twitter:description"]', content.meta.description);
 }
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
